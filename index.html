@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CXO TC8｜台中第 8 分會 成員儀表板</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #f0f4f8; color: #222; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #1B3A5C 0%, #1B5E7B 60%, #2E86AB 100%); color: white; padding: 36px 40px 28px; }
+  .header h1 { font-size: 2rem; letter-spacing: 2px; margin-bottom: 6px; }
+  .header p  { font-size: 1rem; opacity: .8; }
+  .stats { display: flex; gap: 32px; margin-top: 20px; }
+  .stat { text-align: center; }
+  .stat .num { font-size: 2rem; font-weight: 700; }
+  .stat .lbl { font-size: .75rem; opacity: .7; margin-top: 2px; }
+
+  /* SEARCH / FILTER */
+  .toolbar { background: white; padding: 16px 40px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+             box-shadow: 0 2px 8px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 100; }
+  .toolbar input { flex: 1; min-width: 200px; padding: 10px 16px; border: 1.5px solid #d0d8e4; border-radius: 8px; font-size: .95rem; outline: none; }
+  .toolbar input:focus { border-color: #2E86AB; }
+  .filter-btn { padding: 8px 16px; border: 1.5px solid #d0d8e4; border-radius: 20px; background: white; cursor: pointer; font-size: .85rem; color: #555; transition: all .2s; white-space: nowrap; }
+  .filter-btn:hover, .filter-btn.active { background: #1B5E7B; color: white; border-color: #1B5E7B; }
+  .count-badge { margin-left: auto; background: #1B3A5C; color: white; padding: 6px 14px; border-radius: 16px; font-size: .85rem; white-space: nowrap; }
+
+  /* GRID */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding: 28px 40px; }
+
+  /* CARD */
+  .card { background: white; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.07); overflow: hidden; transition: transform .2s, box-shadow .2s; display: flex; flex-direction: column; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .card.hidden { display: none; }
+
+  .card-top { padding: 20px 20px 14px; border-bottom: 1px solid #f0f4f8; display: flex; gap: 14px; align-items: flex-start; }
+  .avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+             font-size: 1.3rem; font-weight: 700; color: white; flex-shrink: 0; }
+  .name-block { flex: 1; }
+  .name-block .name { font-size: 1.1rem; font-weight: 700; color: #1B3A5C; margin-bottom: 3px; }
+  .name-block .role { font-size: .82rem; color: #888; }
+  .industry-tag { font-size: .72rem; padding: 3px 10px; border-radius: 12px; color: white; font-weight: 600; white-space: nowrap; margin-top: 2px; display: inline-block; }
+
+  .card-company { padding: 12px 20px; background: #f7f9fc; border-bottom: 1px solid #f0f4f8; }
+  .card-company .co-name { font-size: .95rem; font-weight: 600; color: #1B5E7B; margin-bottom: 2px; }
+  .card-company .co-title { font-size: .82rem; color: #666; }
+
+  .card-desc { padding: 14px 20px; font-size: .85rem; line-height: 1.65; color: #444; flex: 1; }
+
+  .card-footer { padding: 12px 20px; border-top: 1px solid #f0f4f8; display: flex; align-items: center; gap: 10px; }
+  .web-link { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #2E86AB; text-decoration: none; font-weight: 600; }
+  .web-link:hover { color: #1B3A5C; text-decoration: underline; }
+  .web-link svg { flex-shrink: 0; }
+  .no-web { font-size: .78rem; color: #bbb; font-style: italic; }
+
+  /* INDUSTRY COLORS */
+  .ind-edu { background: #8E44AD; }
+  .ind-sport { background: #27AE60; }
+  .ind-health { background: #16A085; }
+  .ind-car { background: #2980B9; }
+  .ind-food { background: #E67E22; }
+  .ind-retail { background: #C0392B; }
+  .ind-mfg { background: #7F8C8D; }
+  .ind-it { background: #2C3E50; }
+  .ind-re { background: #1ABC9C; }
+  .ind-fin { background: #F39C12; }
+  .ind-media { background: #D35400; }
+  .ind-mkt { background: #8E44AD; }
+  .ind-ag { background: #27AE60; }
+  .ind-trade { background: #2E86AB; }
+  .ind-other { background: #95A5A6; }
+
+  footer { text-align: center; padding: 24px; color: #aaa; font-size: .8rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>CXO TC8　台中第 8 分會</h1>
+  <p>成員產業儀表板　·　No Warrior Left Behind</p>
+  <div class="stats">
+    <div class="stat"><div class="num" id="totalCount">61</div><div class="lbl">總成員數</div></div>
+    <div class="stat"><div class="num" id="webCount">23</div><div class="lbl">有官網</div></div>
+    <div class="stat"><div class="num">15+</div><div class="lbl">不同產業</div></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="searchBox" placeholder="🔍 搜尋姓名、公司、產業..." oninput="filterCards()">
+  <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
+  <button class="filter-btn" onclick="setFilter('edu', this)">教育</button>
+  <button class="filter-btn" onclick="setFilter('health', this)">醫療保健</button>
+  <button class="filter-btn" onclick="setFilter('food', this)">餐飲</button>
+  <button class="filter-btn" onclick="setFilter('it', this)">資訊科技</button>
+  <button class="filter-btn" onclick="setFilter('mfg', this)">製造業</button>
+  <button class="filter-btn" onclick="setFilter('re', this)">不動產</button>
+  <button class="filter-btn" onclick="setFilter('mkt', this)">行銷顧問</button>
+  <button class="filter-btn" onclick="setFilter('has-web', this)">有官網</button>
+  <div class="count-badge" id="visibleCount">顯示 61 人</div>
+</div>
+
+<div class="grid" id="cardGrid"></div>
+<footer>CXO TC8 台中第 8 分會　·　2026 年度成員資料　·　資料來源：分會名單</footer>
+
+<script>
+const members = [
+  { name:"李海碩（海碩校長）", company:"葳格國際學校", title:"總校長", industry:"edu", tag:"教育業",
+    desc:"全台知名國際學校集團，提供幼兒園至高中全程國際雙語教育，課程以英語沉浸式教學為核心，涵蓋 IB、AP 等國際認證課程，培育具全球競爭力的雙語人才。",
+    web:"https://www.wagor.tc.edu.tw/" },
+  { name:"陳大黑（大黑哥）", company:"博克多運動產業有限公司", title:"負責人", industry:"sport", tag:"運動產業",
+    desc:"專注運動產業整合，提供企業體能訓練課程設計、運動場館規劃與管理、運動健身活動策劃等服務，並代理或銷售運動器材與訓練輔具。",
+    web:"https://www.bogoto.com.tw/" },
+  { name:"楊紹民", company:"楊紹民心靈自然診所", title:"負責人", industry:"health", tag:"醫療保健",
+    desc:"身心靈整合診所，結合自然醫學與心理諮商，提供情緒釋放、壓力管理、能量療癒及整體身心調理等服務，走向自然無藥療癒路線。",
+    web:"https://www.non-drug.clinic/" },
+  { name:"黃鳳雅（風扇）", company:"健康減脂顧問", title:"", industry:"health", tag:"醫療保健",
+    desc:"個人健康管理顧問服務，提供客製化減脂計畫、體態雕塑指導、飲食調整建議及代謝分析，協助客戶達成健康體重管理目標。",
+    web:"" },
+  { name:"蔡政璋（小飛）", company:"聚勤力有限公司", title:"負責人", industry:"food", tag:"住宿餐飲業",
+    desc:"餐飲業者，經營餐廳或餐飲服務品牌，提供正餐、外帶或外送等餐食服務，聚焦台灣在地飲食文化與顧客體驗。",
+    web:"" },
+  { name:"郭靜玉", company:"全家便利商店", title:"加盟者", industry:"retail", tag:"流通零售",
+    desc:"全家便利商店加盟門市，提供 24 小時全年無休的零售服務，商品涵蓋鮮食、飲料、日用品，並整合繳費、取件、ATM 等多元生活服務。",
+    web:"https://www.family.com.tw/" },
+  { name:"陳定緯（Jim）", company:"鈞豐國際", title:"經理", industry:"mfg", tag:"製造業",
+    desc:"國際貿易與製造公司，主要從事工業零件或消費品的生產與進出口業務，提供 OEM/ODM 代工製造及海外市場開發服務。",
+    web:"https://genfore-bag.com/" },
+  { name:"廖宜威（Tony）", company:"得利誠健康生活科技股份有限公司", title:"總經理", industry:"health", tag:"健康科技",
+    desc:"健康生活科技公司，研發並銷售保健食品、健康管理器材或生技相關產品，結合電商平台進行 B2C 及 B2B 通路銷售，聚焦提升現代人生活健康品質。",
+    web:"https://www.gootencn.com/" },
+  { name:"林士峯", company:"舜暉鋼鐵股份有限公司", title:"業務經理", industry:"mfg", tag:"鋼鐵製造",
+    desc:"鋼鐵製造與貿易公司，提供型鋼、板材、棒材、管材等各式工業用鋼鐵材料，服務營建、機械、製造等下游產業客戶。",
+    web:"https://www.shunhuisteel.com/" },
+  { name:"何少緯", company:"Melody美加生活顧問", title:"諮詢顧問", industry:"other", tag:"移民顧問",
+    desc:"美國、加拿大移民及留學顧問公司，提供移民申請規劃、留學選校諮詢、海外生活安置及相關文件代辦等一站式服務。",
+    web:"https://www.melodyusbaby.com/" },
+  { name:"陳建誠（Jerry）", company:"泰規實業股份有限公司", title:"", industry:"mfg", tag:"製造業",
+    desc:"製造業，生產工業規格零件、機械組件或相關製品，提供客製化製造服務，服務國內外工業客戶的零件採購需求。",
+    web:"https://www.tayguei.com.tw/" },
+  { name:"陳慧如", company:"大自然生技素材", title:"總經理", industry:"health", tag:"生技素材",
+    desc:"天然生技素材供應商，專門提供植物萃取物、天然保健食品原料及功能性食品素材，主要客群為保健食品、食品及化妝品製造商，強調天然、安全、高品質。",
+    web:"https://www.healthmate.com.tw/" },
+  { name:"廖欣怡", company:"壹博士資訊科技有限公司", title:"創辦人", industry:"it", tag:"科技身心靈",
+    desc:"跨域科技公司，結合資訊科技與身心靈理念，提供 AI 工具應用開發、企業數位轉型顧問，以及融合科技的身心靈課程或平台服務。",
+    web:"https://phdsay.com/" },
+  { name:"楊燈賢（Sam）", company:"貝示運動生技有限公司", title:"負責人", industry:"sport", tag:"運動生技",
+    desc:"運動生技公司，開發並銷售運動保健產品（如機能飲料、運動補給品）、復健器材，同時提供休閒娛樂活動規劃與運動場域相關服務。",
+    web:"" },
+  { name:"楊鈞勝", company:"晶漾金飾鑽石", title:"負責人", industry:"retail", tag:"珠寶零售",
+    desc:"珠寶零售商，專營黃金飾品、鑽石戒指、婚戒及各式貴金屬珠寶首飾的銷售，提供客製化訂製、鑑定估價及珠寶修繕等服務。",
+    web:"https://www.jy-jewel.com.tw/" },
+  { name:"林怡如（Ruru）", company:"嘉祥美術印刷有限公司", title:"業務經理", industry:"mfg", tag:"美術印刷",
+    desc:"美術印刷製造商，提供彩色印刷、包裝盒設計與生產、型錄製作、標籤印刷等服務，服務各產業客戶的品牌視覺印刷需求。",
+    web:"http://jiastor.com.tw/" },
+  { name:"陳亭君", company:"牛奶坊", title:"傳產2代", industry:"food", tag:"乳品製造",
+    desc:"傳統乳品加工廠第二代，生產及銷售保久乳、調味乳及相關乳製品，正積極導入 AI 與現代管理工具進行傳產數位轉型升級。",
+    web:"" },
+  { name:"蔡瑋恩", company:"自由業", title:"老闆", industry:"other", tag:"自由工作者",
+    desc:"自由工作者，具備多元技能，提供個人化專業服務（詳細業務範疇待進一步了解）。",
+    web:"" },
+  { name:"許時與（Ken）", company:"品卓企業股份有限公司", title:"特助", industry:"mfg", tag:"製造業",
+    desc:"製造業，生產工業用品、精密零組件或消費性產品，提供 OEM/ODM 代工製造服務，服務台灣及海外市場客戶。",
+    web:"" },
+  { name:"張現傑", company:"磐石地產", title:"業務協理", industry:"re", tag:"不動產",
+    desc:"不動產仲介公司，提供住宅及商業不動產買賣仲介、土地開發評估及不動產投資顧問服務，強調穩健如磐石的交易安全保障。",
+    web:"https://www.ps520.com.tw/" },
+  { name:"詹惟任", company:"瑞允國際行銷有限公司", title:"創辦人 執行長", industry:"mkt", tag:"國際行銷",
+    desc:"國際行銷公司，提供跨境電商平台經營、品牌海外市場開拓、數位廣告投放及整合行銷策略服務，協助台灣品牌進軍國際市場。",
+    web:"https://www.luredada.com/" },
+  { name:"邱彥霖（羅伯特）", company:"羅伯特農場", title:"農場主人", industry:"ag", tag:"科技農業",
+    desc:"科技農業顧問與農場主，以現代溫室技術結合 AI 數據管理種植高品質農產品，主打無農藥、安全食材，同時整合荷蘭頂級農業技術，提供農業投資顧問與溫室規劃服務。",
+    web:"" },
+  { name:"呂家豪（Nick）", company:"鼎兆元股份有限公司", title:"總經理", industry:"food", tag:"住宿餐飲",
+    desc:"餐飲業，經營複合式餐廳品牌，提供特色餐食服務，聚焦顧客用餐體驗與食材品質，並積極導入數位點餐與營運管理系統。",
+    web:"" },
+  { name:"簡妙珊（Miao）", company:"大綠地家具", title:"負責人", industry:"mfg", tag:"家具製造",
+    desc:"家具製造與零售商，提供各式住宅及商業空間家具設計、訂製生產及銷售服務，主打環保材質與台灣在地製造，提供空間整體搭配方案。",
+    web:"https://www.outdoors-tw.com.tw/" },
+  { name:"李政麾", company:"希望綠豆湯 執行長", title:"", industry:"food", tag:"餐飲伴手禮",
+    desc:"台灣傳統甜品餐飲品牌，以招牌綠豆湯為核心產品，延伸開發各式台灣傳統甜品，同時切入伴手禮市場，主打「希望」品牌精神與在地食材。",
+    web:"https://hemung.tw/" },
+  { name:"陳瑞民", company:"鯊師傅傳統整復推拿", title:"負責人", industry:"health", tag:"傳統醫療保健",
+    desc:"傳統整復推拿店，提供中式推拿、筋骨整復、運動傷害復健、肩頸舒緩等保健服務，走古法整復路線，強調即時舒緩效果。",
+    web:"" },
+  { name:"沈倉禾", company:"寇比手工皮件，執行長", title:"", industry:"retail", tag:"手工皮件",
+    desc:"台灣在地手工皮件品牌，提供客製化真皮包包、皮夾、皮帶、名片夾等精品，以手工縫製工藝為核心，同時經營電商通路銷售，強調個性化訂製體驗。",
+    web:"https://www.colbieleather.com/" },
+  { name:"賴冠維", company:"三民書局", title:"協理", industry:"edu", tag:"出版教育",
+    desc:"台灣知名出版社與書局，出版各級教科書、參考書、辭典及一般圖書，是台灣教育出版龍頭之一，同時提供教育內容數位化及行銷推廣服務。",
+    web:"https://www.sanmin.com.tw/" },
+  { name:"張瓊如（Tammy）", company:"筌鎰實業有限公司", title:"二代／轉型PM", industry:"mfg", tag:"製造業轉型",
+    desc:"製造業傳產第二代，生產工業零件、模具或相關設備，現積極推動數位轉型（PM），導入 AI 生產管理與流程優化，提升傳統製造競爭力。",
+    web:"" },
+  { name:"謝楷立", company:"正昌塗料／新事業體主持人", title:"", industry:"retail", tag:"塗料建材",
+    desc:"油漆塗料批發零售商，銷售各式室內外油漆、工業塗料、防水材料及建材相關產品，同時開拓新事業體，發展塗料相關的服務型商業模式。",
+    web:"" },
+  { name:"吳惇恩（Zoey）", company:"À Voir・洞見", title:"品牌形象策略顧問／主理人", industry:"mkt", tag:"品牌顧問",
+    desc:"品牌形象策略顧問公司，提供企業整體品牌策略規劃、視覺識別系統設計（VI）、媒體公關策略及整體形象升級服務，協助品牌建立獨特市場定位。",
+    web:"" },
+  { name:"顧瀚鈞（Jacky）", company:"宏富科技", title:"執行長", industry:"it", tag:"科技金融顧問",
+    desc:"科技顧問公司，結合金融保險、資訊科技與決策分析，提供企業 AI 決策支援系統、數位金融解決方案及高階管理決策顧問服務。",
+    web:"" },
+  { name:"陳美秀（Amy）", company:"雲冠行銷", title:"執行長", industry:"mkt", tag:"整合行銷",
+    desc:"整合行銷公司，提供品牌電商經營管理、活動策劃執行、餐飲及娛樂產業行銷推廣等服務，擅長跨產業的整合式行銷策略規劃與落地執行。",
+    web:"" },
+  { name:"繆志誠（Jack）", company:"Pearl Garden development Ltd 業務總監", title:"", industry:"re", tag:"不動產開發",
+    desc:"不動產開發公司，從事建案開發規劃、新建住宅或商業地產銷售，並涉及海外不動產投資業務開發，以「珍珠花園」為品牌形象。",
+    web:"" },
+  { name:"吳建邦（James）", company:"益揚實業有限公司", title:"負責人", industry:"mfg", tag:"製造業",
+    desc:"製造業，生產工業設備、五金零組件或相關製品，提供 OEM 代工及客製化製造服務，服務機械、建築或電子等下游產業客戶。",
+    web:"" },
+  { name:"張智豪（Tyson）", company:"睦唐建設", title:"規劃部主任", industry:"re", tag:"建設開發",
+    desc:"建設公司，負責住宅及商業建案的規劃設計、工程管理與銷售推廣，從土地取得到交屋提供完整開發服務，注重社區規劃品質與居住環境設計。",
+    web:"" },
+  { name:"林泰禾（Kevin）", company:"眾源企業社", title:"執行長", industry:"media", tag:"媒體製作",
+    desc:"媒體製作公司，提供企業形象影片製作、品牌宣傳影音內容、活動紀錄及商業攝影服務，協助企業透過影像內容強化品牌傳播效果。",
+    web:"" },
+  { name:"蔡雅嫻（Joy）", company:"成緯數位有限公司", title:"創意總監(負責人)", industry:"mkt", tag:"數位行銷",
+    desc:"數位行銷公司，提供社群媒體經營、網路廣告投放（Google/Meta Ads）、數位創意設計及品牌公關策略服務，協助企業提升線上品牌聲量。",
+    web:"" },
+  { name:"蔡昀琛", company:"安保", title:"業務部", industry:"it", tag:"安防系統",
+    desc:"安防系統公司，銷售及安裝監控攝影設備、門禁系統、保全警報器及智慧安防電子產品，服務住宅、商辦及工廠等各類場域的安全防護需求。",
+    web:"" },
+  { name:"鄭鎧鏑（凱迪拉克）", company:"愷文國際有限公司", title:"負責人", industry:"retail", tag:"電商直銷",
+    desc:"電商暨直銷公司，代理 Nuskin 紐崔萊健康保養品牌，銷售護膚、營養保健及個人護理產品，同時透過電商平台多管道銷售，並發展直銷人脈網絡。",
+    web:"https://www.nuskin.com.tw/" },
+  { name:"張博智（Paul）", company:"鍋泰山（暖）", title:"執行長", industry:"food", tag:"餐飲品牌",
+    desc:"火鍋暖食品牌，以養生暖鍋為主打，提供多樣化鍋物餐飲體驗，強調食材品質與湯底健康，致力打造台灣在地特色火鍋餐飲連鎖品牌。",
+    web:"https://gotarzen.com/" },
+  { name:"蕭雅方（Avon）", company:"Aspire嚮往廣告行銷有限公司", title:"負責人", industry:"mkt", tag:"廣告行銷",
+    desc:"廣告行銷公司，提供品牌公關策略、媒體企劃、廣告創意製作、整合行銷傳播及活動執行服務，協助品牌精準觸達目標受眾。",
+    web:"https://aspire-taiwan.com/" },
+  { name:"龔秋敏", company:"MMT人際關係探索分析師", title:"", industry:"other", tag:"人際顧問",
+    desc:"以 MMT（Mind Mapping Typology）天賦系統為核心的人際關係顧問，提供個人天賦特質分析、人際溝通改善諮詢及保險規劃等服務，協助個人和企業優化團隊溝通與協作效能。",
+    web:"https://one-mercury.com/" },
+  { name:"吳思佳", company:"歐娜國際股份有限公司", title:"中區督導", industry:"retail", tag:"美容保養品",
+    desc:"美容保養品公司，批發零售護膚、彩妝及個人護理相關產品，以中區督導身分負責通路管理與業績推動，服務美容沙龍、藥妝通路及直銷會員等多元客群。",
+    web:"" },
+  { name:"邱柏萍", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"楊雅如", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"王俊杰（JJ）", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"郭俊村", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"張書宇", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"蕭順基", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Darren 慕煾", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"kevin 呂", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"謝明達", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"邱建瑋", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Angela Joe", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Kevin(只有漏臉那位)", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Paul 寶羅", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Rex", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"盧玟成", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"Sylvia_Chang", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+  { name:"WEIEN,Cash", company:"", title:"", industry:"other", tag:"資料待補",
+    desc:"（成員資料待補充，歡迎提供）",
+    web:"" },
+];
+
+const avatarColors = {
+  edu:"#8E44AD", sport:"#27AE60", health:"#16A085", car:"#2980B9",
+  food:"#E67E22", retail:"#C0392B", mfg:"#7F8C8D", it:"#2C3E50",
+  re:"#1ABC9C", fin:"#F39C12", media:"#D35400", mkt:"#8E44AD",
+  ag:"#27AE60", trade:"#2E86AB", other:"#95A5A6"
+};
+
+let currentFilter = 'all';
+
+function buildCards() {
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = '';
+  members.forEach((m, i) => {
+    const color = avatarColors[m.industry] || '#95A5A6';
+    const initial = m.name.charAt(0);
+    const webHtml = m.web
+      ? `<a class="web-link" href="${m.web}" target="_blank">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          ${m.web.replace(/https?:\/\//, '').replace(/\/$/, '')}
+        </a>`
+      : `<span class="no-web">尚無官方網站資料</span>`;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.industry = m.industry;
+    card.dataset.name = m.name;
+    card.dataset.company = m.company;
+    card.dataset.tag = m.tag;
+    card.dataset.hasWeb = m.web ? 'yes' : 'no';
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="avatar" style="background:${color}">${initial}</div>
+        <div class="name-block">
+          <div class="name">${m.name}</div>
+          <div class="role">${m.title}</div>
+          <span class="industry-tag" style="background:${color}">${m.tag}</span>
+        </div>
+      </div>
+      <div class="card-company">
+        <div class="co-name">${m.company}</div>
+        <div class="co-title">${m.title}</div>
+      </div>
+      <div class="card-desc">${m.desc}</div>
+      <div class="card-footer">${webHtml}</div>`;
+    grid.appendChild(card);
+  });
+  updateCount();
+}
+
+function filterCards() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  document.querySelectorAll('.card').forEach(card => {
+    const matchSearch = !q
+      || card.dataset.name.includes(q)
+      || card.dataset.company.toLowerCase().includes(q)
+      || card.dataset.tag.toLowerCase().includes(q)
+      || card.querySelector('.card-desc').textContent.toLowerCase().includes(q);
+    const matchFilter = currentFilter === 'all'
+      || (currentFilter === 'has-web' && card.dataset.hasWeb === 'yes')
+      || card.dataset.industry === currentFilter;
+    card.classList.toggle('hidden', !(matchSearch && matchFilter));
+  });
+  updateCount();
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterCards();
+}
+
+function updateCount() {
+  const visible = document.querySelectorAll('.card:not(.hidden)').length;
+  document.getElementById('visibleCount').textContent = `顯示 ${visible} 人`;
+}
+
+buildCards();
+</script>
+</body>
+</html>
