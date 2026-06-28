@@ -10,7 +10,9 @@
   body { font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #f0f4f8; color: #222; }
 
   /* HEADER */
-  .header { background: linear-gradient(135deg, #1B3A5C 0%, #1B5E7B 60%, #2E86AB 100%); color: white; padding: 36px 40px 28px; }
+  .header { background: linear-gradient(135deg, #15296B 0%, #1E40A0 58%, #2B57C4 100%); color: white; padding: 30px 40px 26px; display: flex; align-items: center; gap: 30px; }
+  .logo { width: 112px; height: 112px; border-radius: 20px; flex-shrink: 0; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
+  .header-text { flex: 1; }
   .header h1 { font-size: 2rem; letter-spacing: 2px; margin-bottom: 6px; }
   .header p  { font-size: 1rem; opacity: .8; }
   .stats { display: flex; gap: 32px; margin-top: 20px; }
@@ -22,17 +24,17 @@
   .toolbar { background: white; padding: 16px 40px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
              box-shadow: 0 2px 8px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 100; }
   .toolbar input { flex: 1; min-width: 200px; padding: 10px 16px; border: 1.5px solid #d0d8e4; border-radius: 8px; font-size: .95rem; outline: none; }
-  .toolbar input:focus { border-color: #2E86AB; }
+  .toolbar input:focus { border-color: #2B57C4; }
   .filter-btn { padding: 8px 16px; border: 1.5px solid #d0d8e4; border-radius: 20px; background: white; cursor: pointer; font-size: .85rem; color: #555; transition: all .2s; white-space: nowrap; }
-  .filter-btn:hover, .filter-btn.active { background: #1B5E7B; color: white; border-color: #1B5E7B; }
-  .count-badge { margin-left: auto; background: #1B3A5C; color: white; padding: 6px 14px; border-radius: 16px; font-size: .85rem; white-space: nowrap; }
+  .filter-btn:hover, .filter-btn.active { background: #1E40A0; color: white; border-color: #1E40A0; }
+  .count-badge { margin-left: auto; background: #15296B; color: white; padding: 6px 14px; border-radius: 16px; font-size: .85rem; white-space: nowrap; }
 
   /* GRID */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding: 28px 40px; }
 
   /* CARD */
   .card { background: white; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.07); overflow: hidden; position: relative; transition: transform .2s, box-shadow .2s; display: flex; flex-direction: column; }
-  .officer { position: absolute; top: 12px; right: 12px; background: #1B3A5C; color: #F5D76E; font-weight: 700; font-size: .74rem; padding: 3px 11px; border-radius: 11px; box-shadow: 0 1px 5px rgba(0,0,0,.18); z-index: 2; white-space: nowrap; }
+  .officer { position: absolute; top: 12px; right: 12px; background: #E76318; color: #fff; font-weight: 700; font-size: .74rem; padding: 3px 11px; border-radius: 11px; box-shadow: 0 1px 5px rgba(0,0,0,.18); z-index: 2; white-space: nowrap; }
   .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
   .card.hidden { display: none; }
 
@@ -40,19 +42,19 @@
   .avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
              font-size: 1.3rem; font-weight: 700; color: white; flex-shrink: 0; }
   .name-block { flex: 1; }
-  .name-block .name { font-size: 1.1rem; font-weight: 700; color: #1B3A5C; margin-bottom: 3px; }
+  .name-block .name { font-size: 1.1rem; font-weight: 700; color: #15296B; margin-bottom: 3px; }
   .name-block .role { font-size: .82rem; color: #888; }
   .industry-tag { font-size: .72rem; padding: 3px 10px; border-radius: 12px; color: white; font-weight: 600; white-space: nowrap; margin-top: 2px; display: inline-block; }
 
   .card-company { padding: 12px 20px; background: #f7f9fc; border-bottom: 1px solid #f0f4f8; }
-  .card-company .co-name { font-size: .95rem; font-weight: 600; color: #1B5E7B; margin-bottom: 2px; }
+  .card-company .co-name { font-size: .95rem; font-weight: 600; color: #1E40A0; margin-bottom: 2px; }
   .card-company .co-title { font-size: .82rem; color: #666; }
 
   .card-desc { padding: 14px 20px; font-size: .85rem; line-height: 1.65; color: #444; flex: 1; }
 
   .card-footer { padding: 12px 20px; border-top: 1px solid #f0f4f8; display: flex; align-items: center; gap: 10px; }
-  .web-link { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #2E86AB; text-decoration: none; font-weight: 600; }
-  .web-link:hover { color: #1B3A5C; text-decoration: underline; }
+  .web-link { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #2B57C4; text-decoration: none; font-weight: 600; }
+  .web-link:hover { color: #15296B; text-decoration: underline; }
   .web-link svg { flex-shrink: 0; }
   .no-web { font-size: .78rem; color: #bbb; font-style: italic; }
 
@@ -79,12 +81,15 @@
 <body>
 
 <div class="header">
+  <img class="logo" src="logo.jpg" alt="CXO TC8 Logo">
+  <div class="header-text">
   <h1>CXO TC8　台中第 8 分會</h1>
   <p>成員產業儀表板　·　No Warrior Left Behind</p>
   <div class="stats">
     <div class="stat"><div class="num" id="totalCount">61</div><div class="lbl">總成員數</div></div>
     <div class="stat"><div class="num" id="webCount">23</div><div class="lbl">有官網</div></div>
     <div class="stat"><div class="num">15+</div><div class="lbl">不同產業</div></div>
+  </div>
   </div>
 </div>
 
