@@ -19,10 +19,9 @@
     filter: drop-shadow(0 3px 9px rgba(0,0,0,.34)); }
   .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 13px; }
   .slogan { font-size: 1.08rem; opacity: .92; white-space: nowrap; }
-  .bottom-row { display: flex; align-items: center; gap: 16px; }
   .stats { display: flex; gap: 30px; }
-  .edit-link { background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.5); color: #fff; padding: 8px 16px; border-radius: 9px; font-weight: 700; font-size: .82rem; text-decoration: none; white-space: nowrap; transition: background .2s; }
-  .edit-link:hover { background: rgba(255,255,255,.30); }
+  .edit-link { background: #E76318; color: #fff; padding: 8px 17px; border-radius: 18px; font-weight: 700; font-size: .85rem; text-decoration: none; white-space: nowrap; transition: background .2s; }
+  .edit-link:hover { background: #cf5413; }
   .stat { text-align: center; }
   .stat .num { font-size: 2rem; font-weight: 700; }
   .stat .lbl { font-size: .75rem; opacity: .7; margin-top: 2px; }
@@ -97,10 +96,7 @@
       <div class="stat"><div class="num" id="totalCount">61</div><div class="lbl">總成員數</div></div>
       <div class="stat"><div class="num">15+</div><div class="lbl">不同產業</div></div>
     </div>
-    <div class="bottom-row">
-      <span class="slogan">No Warrior Left Behind　我們不拋下任何一位夥伴</span>
-      <a class="edit-link" href="edit.html">✏️ 更新我的資料</a>
-    </div>
+    <span class="slogan">No Warrior Left Behind　我們不拋下任何一位夥伴</span>
   </div>
 </div>
 
@@ -116,6 +112,7 @@
   <button class="filter-btn" onclick="setFilter('mkt', this)">行銷顧問</button>
   <button class="filter-btn" onclick="setFilter('has-web', this)">有官網</button>
   <div class="count-badge" id="visibleCount">顯示 61 人</div>
+  <a class="edit-link" href="edit.html">✏️ 更新我的資料</a>
 </div>
 
 <div class="grid" id="cardGrid"></div>
