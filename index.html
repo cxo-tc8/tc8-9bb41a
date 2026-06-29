@@ -10,7 +10,9 @@
   body { font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #f0f4f8; color: #222; }
 
   /* HEADER */
-  .header { background: linear-gradient(135deg, #15296B 0%, #1E40A0 58%, #2B57C4 100%); color: white; padding: 30px 40px 26px; display: flex; align-items: center; gap: 30px; }
+  .header { background: linear-gradient(135deg, #15296B 0%, #1E40A0 58%, #2B57C4 100%); color: white; padding: 30px 40px 26px; display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
+  .edit-link { margin-left: auto; align-self: center; background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.55); color: #fff; padding: 11px 20px; border-radius: 10px; font-weight: 700; font-size: .92rem; text-decoration: none; white-space: nowrap; transition: background .2s; }
+  .edit-link:hover { background: rgba(255,255,255,.30); }
   .logo { width: 112px; height: 112px; border-radius: 20px; flex-shrink: 0; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
   .header-text { flex: 1; }
   .header h1 { font-size: 2rem; letter-spacing: 2px; margin-bottom: 6px; }
@@ -90,6 +92,7 @@
     <div class="stat"><div class="num">15+</div><div class="lbl">不同產業</div></div>
   </div>
   </div>
+  <a class="edit-link" href="edit.html">✏️ 更新我的資料</a>
 </div>
 
 <div class="toolbar">
