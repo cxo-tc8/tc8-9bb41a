@@ -125,15 +125,31 @@ function render() {
   }).join('');
 }
 
-async function approve(i) {
+async function approve(i, mergeId) {
   const p = pending[i];
   const edited = {
     name: val('n'+i), company: val('c'+i), title: val('t'+i),
     industry: val('ind'+i), tag: val('tag'+i), desc: val('d'+i), web: val('w'+i),
     intro: val('intro'+i), resource: val('res'+i), wish: val('wish'+i), topic: val('topic'+i)
   };
-  const data = await post({ action: 'approve', password, row: p.row, edited });
-  if (data.ok) { msg(i, '已核可上線 ✓', true); setTimeout(login, 700); }
+  const body = { action: 'approve', password, row: p.row, edited };
+  if (mergeId) body.mergeId = mergeId;
+  const data = await post(body);
+
+  if (data.error === 'DUPLICATE') {
+    const co = data.existingCompany ? `（${data.existingCompany}）` : '';
+    const was = data.wasRemoved ? '\n\n※ 這個人先前被標記為已退出，確定的話會一併讓他重新上線。' : '';
+    const ok = confirm(
+      `名單上已經有「${data.existingName}」${co}了，編號 ${data.existingId}。${was}\n\n` +
+      `是同一個人嗎？\n\n` +
+      `按「確定」→ 更新既有那筆，不會產生重複\n` +
+      `按「取消」→ 先不處理，你再自己確認`);
+    if (ok) return approve(i, data.existingId);
+    msg(i, '已取消，沒有做任何變更', false);
+    return;
+  }
+
+  if (data.ok) { msg(i, mergeId ? '已更新既有資料 ✓' : '已核可上線 ✓', true); setTimeout(login, 700); }
   else msg(i, '失敗：' + data.error, false);
 }
 
