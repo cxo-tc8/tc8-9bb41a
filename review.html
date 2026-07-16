@@ -32,6 +32,13 @@
   .msg.err { background: #fdecea; color: #c0392b; }
   .hidden { display: none; }
   .empty { text-align: center; color: #888; padding: 30px; }
+  .mgr h3 { color: #15296B; font-size: 1.05rem; }
+  .mgr .hint { font-size: .78rem; color: #888; margin: 6px 0 12px; line-height: 1.6; }
+  .mrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef2f7; }
+  .mrow .info { flex: 1; min-width: 0; }
+  .mrow .info b { font-size: .92rem; color: #15296B; }
+  .mrow .info span { display: block; font-size: .76rem; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn-remove { background: #fdecea; color: #c0392b; font-size: .82rem; padding: 7px 12px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -49,10 +56,11 @@
     <div id="loginMsg"></div>
   </div>
   <div id="list"></div>
+  <div id="manage"></div>
 </div>
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxda24yHBLXrum3p3CTiLkUTh3ZIE-4XOvAW06Ovy3oAdnx0Xmr-mmBfeRmGmCp5V2VsA/exec';
-let password = '', pending = [], membersById = {};
+let password = '', pending = [], membersById = {}, allMembers = [];
 
 async function post(body) {
   const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
@@ -64,8 +72,9 @@ async function login() {
   // 取現有資料做新舊對照
   try {
     const md = await (await fetch(API_URL + '?action=members')).json();
+    allMembers = md.members || [];
     membersById = {};
-    (md.members || []).forEach(m => membersById[m.id] = m);
+    allMembers.forEach(m => membersById[m.id] = m);
   } catch (e) {}
   const data = await post({ action: 'list_pending', password });
   if (!data.ok) {
@@ -76,6 +85,7 @@ async function login() {
   }
   pending = data.pending;
   render();
+  renderManage();
 }
 
 function fld(label, id, oldVal, newVal, isArea) {
@@ -132,6 +142,46 @@ async function reject(i) {
   const data = await post({ action: 'reject', password, row: pending[i].row });
   if (data.ok) { msg(i, '已退回', true); setTimeout(login, 700); }
   else msg(i, '失敗：' + data.error, false);
+}
+
+function renderManage() {
+  document.getElementById('manage').innerHTML = `<div class="card mgr">
+    <h3>成員管理（現任 ${allMembers.length} 人）</h3>
+    <div class="hint">標記退出後，該成員會立刻從公開頁消失，也無法再更新自己的資料。<br>要復原：到 Google 試算表把他那一列 status 欄的「已退出」刪掉即可。</div>
+    <input id="mSearch" placeholder="搜尋姓名或公司…" oninput="filterManage()">
+    <div id="mList"></div>
+    <div id="mMsg"></div>
+  </div>`;
+  filterManage();
+}
+
+function filterManage() {
+  const kw = document.getElementById('mSearch').value.trim().toLowerCase();
+  const hit = allMembers.filter(m => !kw
+    || String(m.name || '').toLowerCase().includes(kw)
+    || String(m.company || '').toLowerCase().includes(kw));
+  const box = document.getElementById('mList');
+  if (!hit.length) { box.innerHTML = '<div class="empty">找不到符合的成員</div>'; return; }
+  box.innerHTML = hit.map(m => `<div class="mrow">
+      <div class="info"><b>${escapeHtml(m.name)}</b><span>${escapeHtml(m.company || '（未填公司）')}</span></div>
+      <button class="btn-remove" onclick="removeMember('${m.id}')">標記退出</button>
+    </div>`).join('');
+}
+
+async function removeMember(id) {
+  const m = allMembers.find(x => String(x.id) === String(id));
+  if (!m) return;
+  if (!confirm('確定將「' + m.name + '」標記為已退出？\n\n他會立刻從公開頁消失，也不能再更新自己的資料。')) return;
+  const data = await post({ action: 'remove', password, id });
+  const box = document.getElementById('mMsg');
+  if (data.ok) {
+    box.className = 'msg ok';
+    box.textContent = '已將「' + m.name + '」標記為退出 ✓';
+    setTimeout(login, 900);
+  } else {
+    box.className = 'msg err';
+    box.textContent = '失敗：' + data.error;
+  }
 }
 
 function val(id){ return document.getElementById(id).value; }
