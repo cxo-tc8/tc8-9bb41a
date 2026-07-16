@@ -31,8 +31,14 @@
              box-shadow: 0 2px 8px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 100; }
   .toolbar input { flex: 1; min-width: 200px; padding: 10px 16px; border: 1.5px solid #d0d8e4; border-radius: 8px; font-size: .95rem; outline: none; }
   .toolbar input:focus { border-color: #2B57C4; }
-  .filter-btn { padding: 8px 16px; border: 1.5px solid #d0d8e4; border-radius: 20px; background: white; cursor: pointer; font-size: .85rem; color: #555; transition: all .2s; white-space: nowrap; }
-  .filter-btn:hover, .filter-btn.active { background: #1E40A0; color: white; border-color: #1E40A0; }
+  .industry-select { padding: 10px 34px 10px 14px; border: 1.5px solid #d0d8e4; border-radius: 8px; background: white; cursor: pointer;
+    font-size: .9rem; color: #333; outline: none; font-family: inherit; white-space: nowrap;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23555' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; }
+  .industry-select:focus { border-color: #2B57C4; }
+  .industry-select.active { background-color: #1E40A0; color: white; border-color: #1E40A0;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23fff' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); }
   .count-badge { margin-left: auto; background: #15296B; color: white; padding: 6px 14px; border-radius: 16px; font-size: .85rem; white-space: nowrap; }
 
   /* GRID */
@@ -118,14 +124,7 @@
 
 <div class="toolbar">
   <input type="text" id="searchBox" placeholder="🔍 搜尋姓名、公司、產業..." oninput="filterCards()">
-  <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
-  <button class="filter-btn" onclick="setFilter('edu', this)">教育</button>
-  <button class="filter-btn" onclick="setFilter('health', this)">醫療保健</button>
-  <button class="filter-btn" onclick="setFilter('food', this)">餐飲</button>
-  <button class="filter-btn" onclick="setFilter('it', this)">資訊科技</button>
-  <button class="filter-btn" onclick="setFilter('mfg', this)">製造業</button>
-  <button class="filter-btn" onclick="setFilter('re', this)">不動產</button>
-  <button class="filter-btn" onclick="setFilter('mkt', this)">行銷顧問</button>
+  <select class="industry-select" id="industrySelect" onchange="setFilter(this.value)"></select>
   <a class="edit-link" href="edit.html">✏️ 更新我的資料</a>
 </div>
 
@@ -153,6 +152,13 @@ const avatarColors = {
   food:"#E67E22", retail:"#C0392B", mfg:"#5DADE2", it:"#2C3E50",
   re:"#1ABC9C", fin:"#F39C12", media:"#D35400", mkt:"#8E44AD",
   ag:"#27AE60", trade:"#2E86AB", other:"#95A5A6"
+};
+
+// 產業代碼 → 顯示名稱。選單只會列出「實際有人」的產業，所以這裡多列幾個備用不影響畫面
+const industryNames = {
+  edu:"教育", health:"醫療保健", food:"餐飲", it:"資訊科技", mfg:"製造業",
+  re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
+  media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
 
 let currentFilter = 'all';
@@ -202,6 +208,7 @@ function buildCards() {
     grid.appendChild(card);
   });
   updateStats();
+  buildIndustryOptions();
   updateCount();
 }
 
@@ -209,6 +216,20 @@ function updateStats() {
   document.getElementById('totalCount').textContent = members.length;
   const inds = new Set(members.map(m => m.industry).filter(Boolean));
   document.getElementById('industryCount').textContent = inds.size;
+}
+
+// 選項照人數多寡排，「其他」永遠押底
+function buildIndustryOptions() {
+  const count = {};
+  members.forEach(m => { if (m.industry) count[m.industry] = (count[m.industry] || 0) + 1; });
+  const codes = Object.keys(count).sort((a, b) => {
+    if (a === 'other') return 1;
+    if (b === 'other') return -1;
+    return count[b] - count[a];
+  });
+  document.getElementById('industrySelect').innerHTML =
+    `<option value="all">全部產業（${members.length} 人）</option>`
+    + codes.map(c => `<option value="${c}">${industryNames[c] || c}（${count[c]} 人）</option>`).join('');
 }
 
 function filterCards() {
@@ -227,10 +248,9 @@ function filterCards() {
   updateCount();
 }
 
-function setFilter(f, btn) {
+function setFilter(f) {
   currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.getElementById('industrySelect').classList.toggle('active', f !== 'all');
   filterCards();
 }
 
