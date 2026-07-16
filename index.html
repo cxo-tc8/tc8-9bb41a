@@ -109,8 +109,8 @@
   </div>
   <div class="header-right">
     <div class="stats">
-      <div class="stat"><div class="num" id="totalCount">61</div><div class="lbl">總成員數</div></div>
-      <div class="stat"><div class="num">15+</div><div class="lbl">不同產業</div></div>
+      <div class="stat"><div class="num" id="totalCount">—</div><div class="lbl">總成員數</div></div>
+      <div class="stat"><div class="num" id="industryCount">—</div><div class="lbl">不同產業</div></div>
     </div>
     <span class="slogan">No Warrior Left Behind　我們不拋下任何一位夥伴</span>
   </div>
@@ -201,7 +201,14 @@ function buildCards() {
       <div class="card-footer">${webHtml}</div>`;
     grid.appendChild(card);
   });
+  updateStats();
   updateCount();
+}
+
+function updateStats() {
+  document.getElementById('totalCount').textContent = members.length;
+  const inds = new Set(members.map(m => m.industry).filter(Boolean));
+  document.getElementById('industryCount').textContent = inds.size;
 }
 
 function filterCards() {
