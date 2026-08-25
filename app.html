@@ -206,6 +206,30 @@ a{color:inherit;text-decoration:none}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+/* ── 夥伴卡片牆（64 人固定名冊，資訊一次看完，不收起來）── */
+#v-members{max-width:1280px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;margin-top:10px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:15px 16px 14px;display:flex;flex-direction:column;cursor:pointer;transition:box-shadow .18s,transform .12s}
+.mcard:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
+.mcard:active{transform:scale(.995)}
+.mhead{display:flex;gap:11px;align-items:flex-start}
+.mhead .ava{width:42px;height:42px;font-size:1rem}
+.mhead .n{font-weight:800;font-size:1.02rem;line-height:1.35}
+.mhead .t{font-size:.8rem;color:var(--muted);margin-top:2px}
+.mhead .badge{margin-left:0;margin-top:0;align-self:flex-start;flex:none}
+.itag{display:inline-block;background:var(--chip);color:var(--chip-text);font-size:.72rem;font-weight:700;
+  padding:3px 9px;border-radius:6px;margin-top:7px}
+.mco{font-weight:700;color:var(--blue-700);font-size:.9rem;margin-top:11px;padding-top:11px;border-top:1px solid var(--line-soft)}
+.mdesc{font-size:.85rem;line-height:1.7;color:var(--text);margin-top:8px}
+.mline{font-size:.82rem;line-height:1.65;margin-top:7px}
+.mline b{color:var(--orange);font-weight:800;margin-right:4px}
+.mweb{font-size:.79rem;color:var(--blue-500);margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft);word-break:break-all}
+.mnone{font-size:.79rem;color:var(--muted);font-style:italic;margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
+@media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
+
 /* ── 登入 / 認領 ───────────────────────────── */
 .center{max-width:420px;margin:0 auto;padding:30px 16px}
 .linebtn{display:flex;align-items:center;justify-content:center;gap:9px;background:#06C755;color:#fff;
@@ -269,6 +293,12 @@ const LINE_CHANNEL_ID = "2011250229";
 const REDIRECT = location.origin + location.pathname;
 const FN = SB + "/functions/v1/auth";
 // ⚠️ 不能用 select=* —— members 有刻意不授權的欄位（line_user_id），用 * 會整個查詢被拒
+// 產業代碼→中文（沿用 v1 index.html 的對照表；tag 是自由填的，不能拿來分類）
+const industryNames = {
+  edu:"教育", health:"醫療保健", food:"餐飲", it:"資訊科技", mfg:"製造業",
+  re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
+  media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
+};
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
 let ME = null, MEMBERS = [];
@@ -345,18 +375,24 @@ function render(v){
     <div class="card"><div class="empty">還沒有人分享 AI 案例<br><span style="font-size:.82rem">${ME?'到「我的」寫下第一個':'用 LINE 登入後就能寫'}</span></div></div>`;
 
   if(v==="members"){
-    const rows = MEMBERS.map(m=>`
-      <div class="mrow" onclick="openMember(${m.id})" style="cursor:pointer">
-        ${avatar(m.name)}
-        <div style="flex:1"><div class="n">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</div>
-          <div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ ")) || "資料待補"}</div></div>
-        <svg class="go" width="18" height="18"><use href="#i-go"/></svg>
-      </div>`).join("");
     el("v-members").innerHTML = `
-      <div class="tools"><div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
-        <input id="mq" placeholder="找人：姓名、公司、產業" oninput="filterMembers(this.value)"></div>
-        <div class="hint" id="mcount">${MEMBERS.length} 位現任夥伴</div></div>
-      <div class="card" id="mlist" style="margin-top:10px">${rows}</div>`;
+      <div class="tools">
+        <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
+          <input id="mq" placeholder="搜尋姓名、公司、產業、想找什麼…" oninput="filterMembers()"></div>
+        <div class="filters">
+          <select id="mind" onchange="filterMembers()"></select>
+          <span class="hint" id="mcount"></span>
+        </div>
+      </div>
+      <div class="mgrid" id="mlist"></div>`;
+    const counts = {};
+    MEMBERS.forEach(m => { const k=m.industry||"other"; counts[k]=(counts[k]||0)+1; });
+    // 「其他」押底（v1 學到的：它是最大宗，排前面會蓋掉真正的產業）
+    const opts = Object.entries(counts)
+      .sort((a,b)=> (a[0]==="other")-(b[0]==="other") || b[1]-a[1])
+      .map(([k,c])=>`<option value="${esc(k)}">${esc(industryNames[k]||k)}（${c}）</option>`).join("");
+    el("mind").innerHTML = `<option value="">全部產業（${MEMBERS.length} 人）</option>` + opts;
+    filterMembers();
   }
 
   if(v==="cases") el("v-cases").innerHTML = `
@@ -389,14 +425,38 @@ function render(v){
       </div></div>`;
 }
 
-function filterMembers(q){
-  q=(q||"").trim().toLowerCase();
-  const hit = MEMBERS.filter(m=> !q || [m.name,m.company,m.tag,m.title,m.description].some(x=>(x||"").toLowerCase().includes(q)));
-  el("mlist").innerHTML = hit.map(m=>`
-    <div class="mrow" onclick="openMember(${m.id})" style="cursor:pointer">${avatar(m.name)}
-      <div style="flex:1"><div class="n">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</div>
-        <div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ ")) || "資料待補"}</div></div>
-      <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>`).join("") || '<div class="empty">找不到符合的夥伴</div>';
+function memberCard(m){
+  const line = (lbl,v) => v ? `<div class="mline"><b>${lbl}</b>${esc(v)}</div>` : "";
+  return `<article class="mcard" onclick="openMember(${m.id})">
+    <div class="mhead">
+      ${avatar(m.name)}
+      <div style="flex:1;min-width:0">
+        <div class="n">${esc(m.name)}</div>
+        <div class="t">${esc(m.title||"")}</div>
+        ${m.tag?`<span class="itag">${esc(m.tag)}</span>`:""}
+      </div>
+      ${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
+    </div>
+    ${m.company?`<div class="mco">${esc(m.company)}</div>`:""}
+    ${m.description?`<div class="mdesc">${esc(m.description)}</div>`:""}
+    ${m.intro?`<div class="mline" style="color:var(--blue-700);font-style:italic">「${esc(m.intro)}」</div>`:""}
+    ${line("可提供：", m.resource)}
+    ${line("想找：", m.wish)}
+    ${line("關注：", m.topic)}
+    ${m.web?`<div class="mweb">${esc(m.web.replace(/^https?:\/\//,""))}</div>`:`<div class="mnone">尚無官方網站資料</div>`}
+  </article>`;
+}
+
+function filterMembers(){
+  const q = (el("mq")?.value||"").trim().toLowerCase();
+  const ind = el("mind")?.value || "";
+  const hit = MEMBERS.filter(m=>{
+    if(ind && (m.industry||"other")!==ind) return false;
+    if(!q) return true;
+    return [m.name,m.company,m.tag,m.title,m.description,m.intro,m.resource,m.wish,m.topic]
+      .some(x=>(x||"").toLowerCase().includes(q));
+  });
+  el("mlist").innerHTML = hit.map(memberCard).join("") || '<div class="empty" style="grid-column:1/-1">找不到符合的夥伴</div>';
   el("mcount").textContent = `${hit.length} 位`;
 }
 
