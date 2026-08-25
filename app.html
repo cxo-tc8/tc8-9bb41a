@@ -282,9 +282,9 @@ a.btn{text-decoration:none}
 .spcell{display:flex;flex-direction:column;gap:8px}
 .spcell .ph{width:100%;aspect-ratio:1/1;object-fit:contain;background:var(--chip);border:1px solid var(--line);border-radius:var(--r-sm);display:block}
 .spcell .noph{width:100%;aspect-ratio:1/1;display:grid;place-items:center;background:var(--chip);color:var(--chip-text);border:1px solid var(--line);border-radius:var(--r-sm);font-weight:800;font-size:1.7rem}
-.spcell .nm{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.spcell .n{font-weight:800;font-size:1.24rem;line-height:1.25}
-.spcell .r{font-size:.78rem;color:var(--muted);flex:none}
+.spcell .nm{position:relative;padding:0 42px}
+.spcell .n{font-weight:800;font-size:1.24rem;line-height:1.25;text-align:center}
+.spcell .r{position:absolute;right:0;bottom:2px;font-size:.78rem;color:var(--muted)}
 
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
 .cmt{display:flex;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line-soft);align-items:flex-start}
@@ -384,7 +384,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:24</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:26</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
