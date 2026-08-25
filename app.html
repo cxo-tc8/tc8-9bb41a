@@ -233,7 +233,7 @@ a.btn{text-decoration:none}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
 .evgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.evcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+.evcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .12s}
 .evcard:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
 .evcard:active{transform:scale(.995)}
@@ -241,7 +241,8 @@ a.btn{text-decoration:none}
 .evphoto img{width:100%;height:100%;object-fit:cover;display:block}
 .evcount{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
   font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:99px}
-.evbody{padding:12px 14px 13px}
+.evbody{padding:13px 15px 14px;display:flex;flex-direction:column;flex:1}
+.evbody .evmeta{margin-top:auto;padding-top:8px}
 .evtitle{font-weight:800;font-size:.98rem;line-height:1.45}
 .evdesc{font-size:.83rem;color:var(--muted);line-height:1.6;margin-top:5px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -345,7 +346,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:45</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:53</div>
 <nav class="nav" role="navigation">
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
@@ -777,22 +778,19 @@ function surveyCard(p){
 }
 
 function eventBlock(list, showAuthor){
-  const withPhoto = list.filter(p => (p.photos||[]).length);
-  const plain     = list.filter(p => !(p.photos||[]).length);
-  let h = "";
-  if(withPhoto.length) h += `<div class="evgrid">${withPhoto.map(p=>eventCard(p, showAuthor)).join("")}</div>`;
-  if(plain.length)     h += `<div class="card"${withPhoto.length?' style="margin-top:10px"':""}>${plain.map(p=>linkRow(p, showAuthor)).join("")}</div>`;
-  return h;
+  // 一種卡片走天下：沒照片就少了圖片區，寬度完全一樣、自動並排
+  return `<div class="evgrid">${list.map(p=>eventCard(p, showAuthor)).join("")}</div>`;
 }
 
 function eventCard(p, showAuthor){
   const who = showAuthor ? esc(memberName(p.author_id)) : "";
   const n = (p.photos||[]).length;
   return `<article class="evcard" onclick="openPostDetail(${p.id})">
-    <div class="evphoto">
-      <img src="${esc(p.photos[0])}" alt="" loading="lazy">
+    ${n?`<div class="evphoto">
+      <img src="${esc(p.photos[0])}" alt="" loading="lazy"
+           onerror="this.closest('.evphoto').remove()">
       ${n>1?`<span class="evcount">＋${n-1}</span>`:""}
-    </div>
+    </div>`:""}
     <div class="evbody">
       <div class="evtitle">${esc(p.title)}</div>
       ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
