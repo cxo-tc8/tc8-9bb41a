@@ -475,6 +475,7 @@ function render(v){
       <div class="stat"><b>0</b><span>我的需求</span></div></div>
     <div class="actions" style="margin-top:12px">
       <button class="btn btn-primary" onclick="openForm()"><svg width="17" height="17"><use href="#i-plus"/></svg>寫一個案例</button></div>
+    ${myCasesBlock()}
     <div class="card menu" style="margin-top:12px">
       <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
@@ -492,6 +493,23 @@ const tagLabel = slug => (TAGS.find(t=>t.slug===slug)||{}).label || slug;
 const memberName = id => (MEMBERS.find(m=>m.id===id)||{}).name || "已退出的夥伴";
 const ago = iso => { const d=(Date.now()-new Date(iso))/864e5;
   return d<1?"今天":d<2?"昨天":d<8?`${Math.floor(d)} 天前`:d<31?`${Math.floor(d/7)} 週前`:`${Math.floor(d/30)} 個月前`; };
+
+// 「我的」頁專用：點一下直接進編輯（這裡是自己的工作區，不必先看再改）
+function myCasesBlock(){
+  const mine = CASES.filter(c => c.member_id === ME.id);
+  if(!mine.length) return "";
+  return `<div class="sec"><h2>我的案例</h2><span class="more">${mine.length}</span></div>
+    <div class="card">${mine.map(c => `
+      <button class="caserow" onclick="openForm(${c.id})">
+        <div style="flex:1;min-width:0">
+          <div class="t">${esc(c.title)}</div>
+          <div class="by">${esc(c.term)} 會期　・　${ago(c.created_at)}　・　點一下編輯</div>
+          <div class="tags">${(c.tags||[]).map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div>
+        </div>
+        <svg class="go" width="18" height="18"><use href="#i-go"/></svg>
+      </button>`).join("")}</div>
+    <div class="hint" style="margin-top:8px">想看別人眼中的樣子，點下面「我的公開頁面」</div>`;
+}
 
 function caseRow(c){
   return `<button class="caserow" onclick="openCase(${c.id})">
@@ -685,8 +703,12 @@ function openMember(id){
       ${blk("簡介", m.description)}
       ${m.web?`<div class="block"><div class="lbl">網站</div><p><a href="${esc(m.web)}" target="_blank" rel="noopener" style="color:var(--blue-500)">${esc(m.web)}</a></p></div>`:""}
     </article>
-    <div class="sec"><h2>他的 AI 案例</h2></div>
-    <div class="card"><div class="empty">還沒有案例</div></div>`;
+    ${(()=>{ const his=CASES.filter(c=>c.member_id===m.id);
+      const who = (ME && ME.id===m.id) ? "我的" : "他的";
+      return `<div class="sec"><h2>${who} AI 案例</h2>${his.length?`<span class="more">${his.length}</span>`:""}</div>
+        <div class="card">${his.length ? his.map(caseRow).join("")
+          : `<div class="empty">還沒有案例${ME&&ME.id===m.id?'<br><span style="font-size:.82rem">到「我的」寫下第一個</span>':""}</div>`}</div>`;
+    })()}`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-mdetail").classList.add("on"); window.scrollTo(0,0);
 }
