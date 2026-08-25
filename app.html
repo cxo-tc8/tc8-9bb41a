@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CXO TC8｜AI 案例與活動中心</title>
+<style>
+:root{
+  --blue-900:#15296B; --blue-700:#1E40A0; --blue-500:#2B57C4;
+  --orange:#E76318; --orange-dark:#cf5413;
+  --bg:#e8f0fa; --card:#ffffff; --text:#16181d; --muted:#5b6472;
+  --line:#e2e7ef; --line-soft:#eef1f7;
+  --chip:#eef2fb; --chip-text:#26418f;
+  --ok:#1a7f4b; --warn:#b4531a;
+  --r:14px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(16,24,40,.05), 0 4px 14px rgba(16,24,40,.06);
+  --nav-h:60px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'PingFang TC','Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  background:var(--bg); color:var(--text); font-size:16px; line-height:1.6;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit;text-decoration:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ── 頂欄 ───────────────────────────── */
+.top{
+  position:sticky;top:0;z-index:50;
+  background:linear-gradient(135deg,var(--blue-900) 0%,var(--blue-700) 58%,var(--blue-500) 100%);
+  color:#fff; padding:10px 16px; padding-top:calc(10px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:12px;
+}
+.top .logo{width:34px;height:34px;border-radius:9px;background:#fff2;display:grid;place-items:center;font-weight:800;font-size:.8rem;letter-spacing:.5px;flex:none}
+.top h1{font-size:1.02rem;font-weight:800;letter-spacing:.5px;line-height:1.2}
+.top .sub{font-size:.72rem;opacity:.82;font-weight:400;letter-spacing:0}
+.top .me{margin-left:auto;display:flex;align-items:center;gap:7px;background:#ffffff26;padding:6px 11px;border-radius:999px;font-size:.8rem;font-weight:600;min-height:36px}
+.top .me .dot{width:7px;height:7px;border-radius:50%;background:#5fe0a0}
+
+/* ── 版心 ───────────────────────────── */
+.wrap{max-width:760px;margin:0 auto;padding:16px 14px 26px}
+.view{display:none} .view.on{display:block}
+
+/* ── 區塊標題 ───────────────────────── */
+.sec{display:flex;align-items:baseline;gap:9px;margin:22px 2px 10px}
+.sec:first-child{margin-top:4px}
+.sec h2{font-size:1.02rem;font-weight:800;letter-spacing:.3px}
+.sec .more{margin-left:auto;font-size:.82rem;color:var(--blue-500);font-weight:600;min-height:44px;display:flex;align-items:center}
+
+
+/* ── 卡片 ───────────────────────────── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.card + .card{margin-top:10px}
+
+/* 月例會大卡 */
+.hero{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.hero .band{background:linear-gradient(135deg,var(--blue-900),var(--blue-500));color:#fff;padding:14px 16px}
+.hero .band .kicker{font-size:.72rem;opacity:.85;letter-spacing:1.5px;font-weight:700}
+.hero .band .t{font-size:1.18rem;font-weight:800;margin-top:3px;line-height:1.4}
+.hero .body{padding:14px 16px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.86rem;color:var(--muted)}
+.meta b{color:var(--text);font-weight:600}
+.speaker{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.ava{width:38px;height:38px;border-radius:50%;background:var(--chip);color:var(--chip-text);display:grid;place-items:center;font-weight:800;font-size:.9rem;flex:none}
+.speaker .n{font-weight:700;font-size:.94rem}
+.speaker .r{font-size:.78rem;color:var(--muted)}
+.actions{display:flex;gap:8px;margin-top:13px}
+.btn{flex:1;min-height:46px;border:none;border-radius:var(--r-sm);font-weight:700;font-size:.92rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .18s,transform .12s}
+.btn:active{transform:scale(.985)}
+.btn-primary{background:var(--orange);color:#fff}
+.btn-primary:hover{background:var(--orange-dark)}
+.btn-ghost{background:transparent;color:var(--blue-500);border:1.5px solid var(--line)}
+
+.btn-sm{min-height:44px;font-size:.86rem;padding:0 15px;flex:none}
+
+/* 公告 */
+.notice{display:flex;gap:11px;padding:13px 15px;align-items:flex-start}
+.notice .ic{width:30px;height:30px;border-radius:9px;background:var(--chip);color:var(--chip-text);display:grid;place-items:center;flex:none}
+.notice .t{font-weight:700;font-size:.93rem;line-height:1.45}
+.notice .d{font-size:.79rem;color:var(--muted);margin-top:2px}
+
+/* 小活動：連結列 */
+.linkrow{display:flex;align-items:center;gap:11px;padding:13px 15px;min-height:56px;border-bottom:1px solid var(--line-soft)}
+.linkrow:last-child{border-bottom:none}
+.linkrow .t{font-weight:600;font-size:.92rem;flex:1;min-width:0}
+.linkrow .d{font-size:.78rem;color:var(--muted);margin-top:1px}
+.linkrow .go{color:var(--muted);flex:none}
+
+/* 問卷完成率 */
+.survey{padding:14px 15px}
+.survey .t{font-weight:700;font-size:.93rem}
+.survey .d{font-size:.79rem;color:var(--muted);margin-top:2px}
+.bar{height:9px;border-radius:99px;background:var(--line-soft);margin-top:11px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue-700),var(--blue-500))}
+.rate{display:flex;justify-content:space-between;font-size:.79rem;color:var(--muted);margin-top:6px}
+.rate b{color:var(--text);font-variant-numeric:tabular-nums}
+
+/* ── 案例列（第一層）─────────────────── */
+.caserow{display:flex;gap:12px;padding:14px 15px;border-bottom:1px solid var(--line-soft);cursor:pointer;min-height:64px;align-items:flex-start;width:100%;text-align:left;background:none;border-left:none;border-right:none;border-top:none}
+.caserow:last-child{border-bottom:none}
+.caserow:active{background:var(--line-soft)}
+.caserow .t{font-weight:700;font-size:.97rem;line-height:1.45}
+.caserow .by{font-size:.79rem;color:var(--muted);margin-top:3px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tag{background:var(--chip);color:var(--chip-text);font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.tag.free{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.caserow .go{color:var(--muted);flex:none;align-self:center}
+
+/* ── 搜尋與篩選 ─────────────────────── */
+.tools{position:sticky;top:calc(54px + env(safe-area-inset-top));z-index:40;background:var(--bg);padding:10px 0 8px;margin:-4px 0 6px}
+.search{display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--line);border-radius:var(--r-sm);padding:0 12px;min-height:46px}
+.search input{flex:1;border:none;outline:none;background:none;font-size:16px;min-width:0;min-height:44px}
+.search .ic{color:var(--muted);flex:none}
+.chips{display:flex;gap:7px;overflow-x:auto;padding:9px 2px 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;background:var(--card);border:1.5px solid var(--line);color:var(--muted);font-size:.82rem;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.chip.on{background:var(--blue-700);border-color:var(--blue-700);color:#fff}
+.hint{font-size:.79rem;color:var(--muted);padding:2px 3px 0}
+
+/* ── 案例詳情（第二層）──────────────── */
+.back{display:flex;align-items:center;gap:7px;min-height:44px;font-weight:700;font-size:.9rem;color:var(--blue-500);margin:-2px 0 8px;background:none;border:none;cursor:pointer}
+
+.detail{padding:17px 16px}
+.detail h2{font-size:1.28rem;font-weight:800;line-height:1.4}
+.author{display:flex;align-items:center;gap:10px;margin:13px 0 0;padding:12px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+.block{margin-top:17px}
+.block .lbl{font-size:.76rem;font-weight:800;color:var(--muted);letter-spacing:1.2px;margin-bottom:5px}
+.block p{font-size:.96rem;line-height:1.75}
+.shot{margin-top:17px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);aspect-ratio:4/3;background:var(--line-soft);display:grid;place-items:center;color:var(--muted);font-size:.82rem}
+.share{margin-top:17px;background:var(--chip);border-radius:var(--r-sm);padding:13px 14px;display:flex;align-items:center;gap:11px}
+.share .t{font-size:.88rem;font-weight:700;color:var(--chip-text)}
+.share .d{font-size:.78rem;color:var(--muted);margin-top:1px}
+
+/* ── 需求 ───────────────────────────── */
+.needrow{padding:14px 15px;border-bottom:1px solid var(--line-soft)}
+.needrow:last-child{border-bottom:none}
+.needrow .t{font-weight:700;font-size:.96rem;line-height:1.45}
+.needrow .by{font-size:.79rem;color:var(--muted);margin-top:3px}
+.urg{font-size:.72rem;font-weight:800;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.urg.hot{background:#fdebe0;color:var(--warn)}
+.urg.mid{background:var(--chip);color:var(--chip-text)}
+
+.matchbox{margin-top:9px;background:var(--line-soft);border-radius:var(--r-sm);padding:10px 12px;font-size:.83rem;color:var(--muted);display:flex;gap:9px;align-items:flex-start}
+.matchbox b{color:var(--text)}
+
+/* ── 夥伴 ───────────────────────────── */
+.mrow{display:flex;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line-soft);align-items:center}
+.mrow:last-child{border-bottom:none}
+.mrow .n{font-weight:700;font-size:.95rem}
+.mrow .c{font-size:.79rem;color:var(--muted);margin-top:2px}
+.badge{background:var(--orange);color:#fff;font-size:.68rem;font-weight:800;padding:2px 7px;border-radius:5px;margin-left:6px;vertical-align:2px}
+.cnt{font-size:.78rem;color:var(--muted);flex:none;text-align:right;font-variant-numeric:tabular-nums}
+.cnt b{display:block;font-size:1.05rem;color:var(--blue-500);font-weight:800}
+
+
+/* ── 我的 ───────────────────────────── */
+.mecard{padding:16px;display:flex;align-items:center;gap:13px}
+.mecard .ava{width:52px;height:52px;font-size:1.1rem}
+.mecard .n{font-weight:800;font-size:1.06rem}
+.mecard .c{font-size:.82rem;color:var(--muted);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 15px;box-shadow:var(--shadow)}
+.stat b{display:block;font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:.79rem;color:var(--muted)}
+.menu{margin-top:12px}
+.menurow{display:flex;align-items:center;gap:12px;padding:15px;border-bottom:1px solid var(--line-soft);min-height:56px;cursor:pointer}
+.menurow:last-child{border-bottom:none}
+.menurow .t{flex:1;font-weight:600;font-size:.94rem}
+.menurow .ic{color:var(--muted);flex:none}
+.officer-only{background:linear-gradient(135deg,#fff6ef,#fdeee3);border-color:#f6d5bd}
+
+
+/* ── 底部導覽 ───────────────────────── */
+.nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--card);border-top:1px solid var(--line);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);
+}
+.nav button{
+  flex:1;background:none;border:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-height:var(--nav-h);color:var(--muted);font-size:.68rem;font-weight:700;
+}
+.nav button.on{color:var(--blue-500)}
+
+.nav button.on .ic{transform:translateY(-1px)}
+.nav .ic{transition:transform .18s}
+
+/* ── 桌面：改側欄 ───────────────────── */
+@media (min-width:1024px){
+  body{padding-bottom:0;padding-left:212px}
+  .nav{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:none;border-right:1px solid var(--line);padding-top:78px;gap:2px}
+  .nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 20px;min-height:48px;font-size:.9rem}
+  .nav button.on{background:var(--chip)}
+  .top{padding-left:20px}
+  .wrap{padding-top:22px}
+  .tools{top:calc(54px)}
+}
+.proto{max-width:760px;margin:0 auto;padding:0 14px 18px}
+.proto .b{background:#fff8e6;border:1px solid #f0dda8;color:#6b5518;border-radius:var(--r-sm);padding:10px 13px;font-size:.8rem;line-height:1.6}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── 登入 / 認領 ───────────────────────────── */
+.center{max-width:420px;margin:0 auto;padding:30px 16px}
+.linebtn{display:flex;align-items:center;justify-content:center;gap:9px;background:#06C755;color:#fff;
+  border:none;border-radius:var(--r-sm);min-height:52px;width:100%;font-size:1rem;font-weight:800;cursor:pointer}
+.linebtn:active{opacity:.88}
+.pick{max-height:56vh;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card)}
+.pick button{display:flex;width:100%;gap:11px;align-items:center;text-align:left;background:none;border:none;
+  border-bottom:1px solid var(--line-soft);padding:13px 14px;min-height:56px;cursor:pointer}
+.pick button:last-child{border-bottom:none}
+.pick button:active{background:var(--line-soft)}
+.pick .n{font-weight:700;font-size:.95rem}
+.pick .c{font-size:.78rem;color:var(--muted);margin-top:2px}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.9rem;line-height:1.8}
+.err{background:#fdecea;border:1px solid #f5c2bc;color:#8f2c1e;border-radius:var(--r-sm);padding:11px 13px;font-size:.86rem;margin-top:12px}
+.busy{text-align:center;color:var(--muted);padding:30px;font-size:.9rem}
+</style>
+</head>
+<body>
+<svg style="display:none">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="i-case" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><path d="M3 12h18"/></symbol>
+  <symbol id="i-need" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5.2A3.2 3.2 0 0 1 16 14"/><path d="M17.5 20c0-2.4-.9-4.2-2.3-5.2"/></symbol>
+  <symbol id="i-me" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5h-15S6 13 6 9Z"/><path d="M10 18a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.3"/><path d="M14 10.5a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.3-1.3"/></symbol>
+  <symbol id="i-form" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3Z"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4Z"/></symbol>
+</svg>
+<header class="top">
+  <div class="logo">TC8</div>
+  <div><h1>CXO TC8</h1><div class="sub">AI 案例與活動中心</div></div>
+  <button class="me" id="meBtn" onclick="onMe()" style="border:none;cursor:pointer"><span class="dot" id="meDot" style="background:#9aa4b2"></span><span id="meName">登入</span></button>
+</header>
+
+<main class="wrap view on" id="v-home"></main>
+<main class="wrap view" id="v-members"></main>
+<main class="wrap view" id="v-mdetail"></main>
+<main class="wrap view" id="v-cases"></main>
+<main class="wrap view" id="v-needs"></main>
+<main class="wrap view" id="v-me"></main>
+<main class="wrap view" id="v-claim"></main>
+
+<nav class="nav" role="navigation">
+  <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
+  <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
+  <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
+  <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
+  <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
+</nav>
+
+<script>
+const SB   = "https://fehubnmhohnkftjbozls.supabase.co";
+const KEY  = "sb_publishable_2jEktDbnpORi6Tl0qE6Bvw_55_marVz";  // 公開金鑰，設計上就是要放前端
+const LINE_CHANNEL_ID = "2011250229";
+const REDIRECT = location.origin + location.pathname;
+const FN = SB + "/functions/v1/auth";
+// ⚠️ 不能用 select=* —— members 有刻意不授權的欄位（line_user_id），用 * 會整個查詢被拒
+const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
+
+let ME = null, MEMBERS = [];
+window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
+// 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
+const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
+const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const el  = id => document.getElementById(id);
+const token = () => localStorage.getItem("tc8_token");
+
+async function rest(path){
+  const r = await fetch(SB+"/rest/v1/"+path, {headers:{apikey:KEY, Authorization:"Bearer "+KEY}});
+  if(!r.ok) throw new Error("讀取失敗 "+r.status);
+  return r.json();
+}
+async function fn(action, body){
+  const h = {"Content-Type":"application/json"};
+  const t = token(); if(t) h.Authorization = "Bearer "+t;
+  const r = await fetch(FN, {method:"POST", headers:h, body:JSON.stringify({action, ...body})});
+  return r.json();
+}
+
+/* ── 分頁切換 ───────────────────────────── */
+function go(v, btn){
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-"+v).classList.add("on");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
+  if(btn===undefined) window.scrollTo(0,0);
+  render(v);
+}
+document.querySelectorAll(".nav button").forEach(b=> b.onclick = ()=> go(b.dataset.v));
+
+/* ── 登入 ───────────────────────────────── */
+function lineLogin(){
+  const state = Math.random().toString(36).slice(2);
+  sessionStorage.setItem("tc8_state", state);
+  location.href = "https://access.line.me/oauth2/v2.1/authorize?response_type=code"
+    + "&client_id=" + LINE_CHANNEL_ID
+    + "&redirect_uri=" + encodeURIComponent(REDIRECT)
+    + "&state=" + state + "&scope=" + encodeURIComponent("openid profile");
+}
+function onMe(){ ME ? go("me") : lineLogin(); }
+
+async function handleCallback(){
+  const p = new URLSearchParams(location.search);
+  const code = p.get("code"), state = p.get("state");
+  if(!code) return false;
+  if(state !== sessionStorage.getItem("tc8_state")){
+    alert("登入驗證失敗，請再試一次"); history.replaceState({},"",REDIRECT); return false;
+  }
+  el("v-home").innerHTML = '<div class="busy">登入中…</div>';
+  const r = await fn("callback", {code, redirect_uri: REDIRECT});
+  history.replaceState({},"",REDIRECT);
+  if(r.token) localStorage.setItem("tc8_token", r.token);
+  if(r.status === "unbound"){ go("claim"); return true; }
+  return false;
+}
+
+/* ── 畫面 ───────────────────────────────── */
+const avatar = n => `<div class="ava">${esc((n||"?").slice(0,1))}</div>`;
+
+function paintMe(){
+  el("meName").textContent = ME ? ME.name : "登入";
+  el("meDot").style.background = ME ? "#5fe0a0" : "#9aa4b2";
+}
+
+function render(v){
+  if(v==="home") el("v-home").innerHTML = `
+    <div class="sec"><h2>下一場月例會</h2></div>
+    <div class="card"><div class="empty">還沒有活動<br><span style="font-size:.82rem">幹部發布後會出現在這裡</span></div></div>
+    <div class="sec"><h2>公告</h2></div>
+    <div class="card"><div class="empty">還沒有公告</div></div>
+    <div class="sec"><h2>最新案例</h2></div>
+    <div class="card"><div class="empty">還沒有人分享 AI 案例<br><span style="font-size:.82rem">${ME?'到「我的」寫下第一個':'用 LINE 登入後就能寫'}</span></div></div>`;
+
+  if(v==="members"){
+    const rows = MEMBERS.map(m=>`
+      <div class="mrow" onclick="openMember(${m.id})" style="cursor:pointer">
+        ${avatar(m.name)}
+        <div style="flex:1"><div class="n">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</div>
+          <div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ ")) || "資料待補"}</div></div>
+        <svg class="go" width="18" height="18"><use href="#i-go"/></svg>
+      </div>`).join("");
+    el("v-members").innerHTML = `
+      <div class="tools"><div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
+        <input id="mq" placeholder="找人：姓名、公司、產業" oninput="filterMembers(this.value)"></div>
+        <div class="hint" id="mcount">${MEMBERS.length} 位現任夥伴</div></div>
+      <div class="card" id="mlist" style="margin-top:10px">${rows}</div>`;
+  }
+
+  if(v==="cases") el("v-cases").innerHTML = `
+    <div class="sec"><h2>AI 案例</h2></div>
+    <div class="card"><div class="empty">還沒有案例<br><span style="font-size:.82rem">搜尋將以「你想解決的問題」為主，不是工具名稱</span></div></div>`;
+
+  if(v==="needs") el("v-needs").innerHTML = `
+    <div class="sec"><h2>大家想解的問題</h2></div>
+    <div class="card"><div class="empty">還沒有人提出需求</div></div>`;
+
+  if(v==="me") el("v-me").innerHTML = ME ? `
+    <section class="card mecard">${avatar(ME.name)}
+      <div style="flex:1"><div class="n">${esc(ME.name)}</div>
+      <div class="c">已用 LINE 綁定${ME.role==="officer"?" ・ 幹部":""}</div></div></section>
+    <div class="grid2">
+      <div class="stat"><b>0</b><span>我的案例</span></div>
+      <div class="stat"><b>0</b><span>我的需求</span></div></div>
+    <div class="actions" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="alert('下一張票就做這個')"><svg width="17" height="17"><use href="#i-plus"/></svg>寫一個案例</button></div>
+    <div class="card menu" style="margin-top:12px">
+      <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
+    </div>` : `
+    <div class="center">
+      <div class="card" style="padding:24px 18px;text-align:center">
+        <div style="font-weight:800;font-size:1.05rem">用 LINE 登入</div>
+        <div style="color:var(--muted);font-size:.86rem;margin:8px 0 18px;line-height:1.7">
+          不用記密碼、不用記網址。<br>第一次登入時選出自己，之後就認得你了。</div>
+        <button class="linebtn" onclick="lineLogin()">用 LINE 登入</button>
+      </div></div>`;
+}
+
+function filterMembers(q){
+  q=(q||"").trim().toLowerCase();
+  const hit = MEMBERS.filter(m=> !q || [m.name,m.company,m.tag,m.title,m.description].some(x=>(x||"").toLowerCase().includes(q)));
+  el("mlist").innerHTML = hit.map(m=>`
+    <div class="mrow" onclick="openMember(${m.id})" style="cursor:pointer">${avatar(m.name)}
+      <div style="flex:1"><div class="n">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</div>
+        <div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ ")) || "資料待補"}</div></div>
+      <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>`).join("") || '<div class="empty">找不到符合的夥伴</div>';
+  el("mcount").textContent = `${hit.length} 位`;
+}
+
+function openMember(id){
+  const m = MEMBERS.find(x=>x.id===id); if(!m) return;
+  const blk = (l,v)=> v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
+  el("v-mdetail").innerHTML = `
+    <button class="back" onclick="go('members')"><svg width="17" height="17"><use href="#i-back"/></svg>夥伴</button>
+    <article class="card detail">
+      <div style="display:flex;gap:13px;align-items:center">
+        <div class="ava" style="width:58px;height:58px;font-size:1.2rem">${esc(m.name.slice(0,1))}</div>
+        <div style="flex:1"><h2 style="font-size:1.2rem">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</h2>
+        <div style="font-size:.85rem;color:var(--muted);margin-top:3px">${esc([m.tag,m.company,m.title].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
+      </div>
+      ${blk("一句話自介", m.intro)}
+      ${blk("我可以提供的資源", m.resource)}
+      ${blk("我想在 TC8 獲得", m.wish)}
+      ${blk("關注主題", m.topic)}
+      ${blk("簡介", m.description)}
+      ${m.web?`<div class="block"><div class="lbl">網站</div><p><a href="${esc(m.web)}" target="_blank" rel="noopener" style="color:var(--blue-500)">${esc(m.web)}</a></p></div>`:""}
+    </article>
+    <div class="sec"><h2>他的 AI 案例</h2></div>
+    <div class="card"><div class="empty">還沒有案例</div></div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-mdetail").classList.add("on"); window.scrollTo(0,0);
+}
+
+/* ── 認領身分 ───────────────────────────── */
+async function renderClaim(){
+  el("v-claim").innerHTML = '<div class="busy">載入名單…</div>';
+  const r = await fn("claimable");
+  if(r.error){ el("v-claim").innerHTML = `<div class="center"><div class="err">${esc(r.error)}</div></div>`; return; }
+  el("v-claim").innerHTML = `
+    <div class="center">
+      <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">你是哪一位？</div>
+      <div style="color:var(--muted);font-size:.86rem;margin-bottom:14px;line-height:1.7">
+        選出自己，之後這個 LINE 就代表你，不用再選。<br>
+        找不到自己、或不小心選錯了，找幹部處理。</div>
+      <input class="search" style="width:100%;margin-bottom:10px;padding:0 12px" placeholder="輸入名字快速找" oninput="filterClaim(this.value)">
+      <div class="pick" id="picklist"></div>
+      <div id="claimErr"></div>
+    </div>`;
+  window.__claimable = r.members;
+  filterClaim("");
+}
+function filterClaim(q){
+  q=(q||"").trim().toLowerCase();
+  const list=(window.__claimable||[]).filter(m=>!q||(m.name||"").toLowerCase().includes(q));
+  el("picklist").innerHTML = list.map(m=>`<button onclick="doClaim(${m.id},'${esc(m.name).replace(/'/g,"")}')">
+    <div class="ava">${esc((m.name||"?").slice(0,1))}</div>
+    <div style="flex:1"><div class="n">${esc(m.name)}</div><div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
+    </button>`).join("") || '<div class="empty">沒有可選的名字，請找幹部</div>';
+}
+async function doClaim(id, name){
+  if(!confirm(`確定你是「${name}」嗎？\n綁定後要改需要請幹部解除。`)) return;
+  const r = await fn("claim", {member_id:id});
+  if(r.error){ el("claimErr").innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
+  await loadMe(); go("me");
+}
+
+function logout(){ localStorage.removeItem("tc8_token"); ME=null; paintMe(); go("home"); }
+
+/* ── 啟動 ───────────────────────────────── */
+async function loadMe(){
+  const r = await fn("me");
+  ME = r.status==="bound" ? r.member : null;
+  paintMe();
+  return r.status;
+}
+(async function init(){
+  try{ MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"); }
+  catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
+  const jumped = await handleCallback();
+  const st = await loadMe();
+  if(!jumped && st==="unbound"){ go("claim"); return; }
+  if(el("v-claim").classList.contains("on")) return renderClaim();
+  go("home");
+})();
+const _go = go;
+go = function(v, b){ _go(v,b); if(v==="claim") renderClaim(); };
+</script>
+</body>
+</html>
