@@ -320,9 +320,10 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
-let ME = null, MEMBERS = [], TAGS = [], CASES = [];
+let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [];
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -344,6 +345,11 @@ const token = () => localStorage.getItem("tc8_token");
 async function rest(path){
   const r = await fetch(SB+"/rest/v1/"+path, {headers:{apikey:KEY, Authorization:"Bearer "+KEY}});
   if(!r.ok) throw new Error("讀取失敗 "+r.status);
+  return r.json();
+}
+async function postApi(action, body){
+  const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
+  const r=await fetch(SB+"/functions/v1/posts",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
   return r.json();
 }
 async function api(action, body){
@@ -415,14 +421,7 @@ function paintMe(){
 }
 
 function render(v){
-  if(v==="home") el("v-home").innerHTML = `
-    <div class="sec"><h2>下一場月例會</h2></div>
-    <div class="card"><div class="empty">還沒有活動<br><span style="font-size:.82rem">幹部發布後會出現在這裡</span></div></div>
-    <div class="sec"><h2>公告</h2></div>
-    <div class="card"><div class="empty">還沒有公告</div></div>
-    <div class="sec"><h2>最新案例</h2>${CASES.length?`<span class="more" onclick="go('cases')">全部 ${CASES.length}</span>`:""}</div>
-    <div class="card">${CASES.length ? CASES.slice(0,3).map(caseRow).join("")
-      : `<div class="empty">還沒有人分享 AI 案例<br><span style="font-size:.82rem">${ME?'到「我的」寫下第一個':'用 LINE 登入後就能寫'}</span></div>`}</div>`;
+  if(v==="home") el("v-home").innerHTML = homeHTML();
 
   if(v==="members"){
     el("v-members").innerHTML = `
@@ -474,7 +473,10 @@ function render(v){
       <div class="stat"><b>${CASES.filter(c=>c.member_id===ME.id).length}</b><span>我的案例</span></div>
       <div class="stat"><b>0</b><span>我的需求</span></div></div>
     <div class="actions" style="margin-top:12px">
-      <button class="btn btn-primary" onclick="openForm()"><svg width="17" height="17"><use href="#i-plus"/></svg>寫一個案例</button></div>
+      <button class="btn btn-primary" onclick="openForm()"><svg width="17" height="17"><use href="#i-plus"/></svg>寫一個案例</button>
+      <button class="btn btn-ghost" onclick="openPost('member_event')"><svg width="17" height="17"><use href="#i-plus"/></svg>張貼近期活動</button></div>
+    ${myPostsBlock()}
+    ${officerBlock()}
     ${myCasesBlock()}
     <div class="card menu" style="margin-top:12px">
       <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
@@ -495,6 +497,25 @@ const ago = iso => { const d=(Date.now()-new Date(iso))/864e5;
   return d<1?"今天":d<2?"昨天":d<8?`${Math.floor(d)} 天前`:d<31?`${Math.floor(d/7)} 週前`:`${Math.floor(d/30)} 個月前`; };
 
 // 「我的」頁專用：點一下直接進編輯（這裡是自己的工作區，不必先看再改）
+function myPostsBlock(){
+  const mine = POSTS.filter(p => p.author_id===ME.id && p.kind==="member_event");
+  if(!mine.length) return "";
+  return `<div class="sec"><h2>我張貼的活動</h2><span class="more">${mine.length}</span></div>
+    <div class="card">${mine.map(p=>linkRow(p)).join("")}</div>`;
+}
+
+function officerBlock(){
+  if(!isOfficer()) return "";
+  return `<div class="sec"><h2>幹部專區</h2></div>
+    <div class="card officer-only">
+      ${[["monthly","發布月例會"],["notice","發布公告"],["survey","放一份問卷"],["event","發布小活動"]]
+        .map(([k,l])=>`<div class="menurow" onclick="openPost('${k}')">
+          <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-plus"/></svg>
+          <div class="t">${l}</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>`).join("")}
+    </div>
+    <div class="hint" style="margin-top:8px">首頁每個區塊右上角也有「＋ 發布」，已發布的內容右邊有「編輯」</div>`;
+}
+
 function myCasesBlock(){
   const mine = CASES.filter(c => c.member_id === ME.id);
   if(!mine.length) return "";
@@ -510,6 +531,208 @@ function myCasesBlock(){
       </button>`).join("")}</div>
     <div class="hint" style="margin-top:8px">想看別人眼中的樣子，點下面「我的公開頁面」</div>`;
 }
+
+const KIND_LABEL = {monthly:"月例會", event:"小活動", notice:"公告", survey:"問卷",
+  member_event:"夥伴的近期活動", wish:"想聽的主題", issue:"跟幹部說一件事"};
+const isOfficer = () => ME && ME.role === "officer";
+// 依日期排：活動看「什麼時候」，公告看「什麼時候發的」
+const byKind = k => {
+  const list = POSTS.filter(p => p.kind === k);
+  if(k === "monthly"){
+    // 未來的場次優先、由近而遠；都過去了就拿最近辦過的那場
+    const now = Date.now();
+    const future = list.filter(p => p.event_at && new Date(p.event_at) >= now)
+                       .sort((a,b) => new Date(a.event_at) - new Date(b.event_at));
+    if(future.length) return future;
+    return list.sort((a,b) => new Date(b.event_at||b.created_at) - new Date(a.event_at||a.created_at));
+  }
+  if(k === "event" || k === "member_event" || k === "survey"){
+    // 快到期的排前面；沒填日期的排最後
+    return list.sort((a,b) => {
+      if(!a.deadline && !b.deadline) return new Date(b.created_at) - new Date(a.created_at);
+      if(!a.deadline) return 1;
+      if(!b.deadline) return -1;
+      return a.deadline < b.deadline ? -1 : a.deadline > b.deadline ? 1 : 0;
+    });
+  }
+  return list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+};
+const fmtDate = iso => { if(!iso) return ""; const d=new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()}（${"日一二三四五六"[d.getDay()]}）${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+
+function homeHTML(){
+  const monthly = byKind("monthly")[0];
+  const notices = byKind("notice");
+  const surveys = byKind("survey");
+  const events  = byKind("event");
+  const mEvents = byKind("member_event");
+  const edit = (p) => isOfficer() ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>` : "";
+
+  let h = "";
+
+  // 月例會
+  h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
+  h += monthly ? `<section class="hero">
+      <div class="band">
+        <div class="kicker">${monthly.event_at && new Date(monthly.event_at) < Date.now() ? "已結束　・　" : ""}${esc(fmtDate(monthly.event_at)) || "時間待定"}</div>
+        <div class="t">${esc(monthly.title)}</div>
+      </div>
+      <div class="body">
+        <div class="meta">${monthly.place?`<span>📍 <b>${esc(monthly.place)}</b></span>`:""}
+          ${monthly.capacity?`<span>名額 <b>${monthly.capacity}</b></span>`:""}</div>
+        ${monthly.speaker?`<div class="speaker">${avatar(monthly.speaker)}
+          <div><div class="n">${esc(monthly.speaker)}</div><div class="r">主講</div></div></div>`:""}
+        ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
+        ${isOfficer()?`<div class="actions"><button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button></div>`:""}
+      </div></section>`
+    : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
+
+  // 公告
+  if(notices.length || isOfficer()){
+    h += `<div class="sec"><h2>公告</h2>${isOfficer()?`<span class="more" onclick="openPost('notice')">＋ 發布</span>`:""}</div>`;
+    h += notices.length ? notices.map(p=>`<div class="card"><div class="notice">
+        <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
+        <div style="flex:1"><div class="t">${esc(p.title)}</div>
+          ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6">${esc(p.body)}</div>`:""}
+          <div class="d">${ago(p.created_at)}</div></div>${edit(p)}</div></div>`).join("")
+      : `<div class="card"><div class="empty">還沒有公告</div></div>`;
+  }
+
+  // 問卷
+  if(surveys.length || isOfficer()){
+    h += `<div class="sec"><h2>問卷</h2>${isOfficer()?`<span class="more" onclick="openPost('survey')">＋ 發布</span>`:""}</div>`;
+    h += surveys.length ? surveys.map(p=>{
+      const rate = p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
+      return `<div class="card"><div class="survey">
+        <div style="display:flex;gap:8px"><div style="flex:1"><div class="t">${esc(p.title)}</div>
+          <div class="d">${p.deadline?`截止 ${esc(p.deadline)}　・　`:""}點進去填</div></div>${edit(p)}</div>
+        ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
+          <div class="rate"><span>完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
+        ${p.link?`<div class="actions"><a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a></div>`:""}
+      </div></div>`;}).join("")
+      : `<div class="card"><div class="empty">目前沒有進行中的問卷</div></div>`;
+  }
+
+  // 小活動（幹部發）
+  if(events.length || isOfficer()){
+    h += `<div class="sec"><h2>小活動</h2>${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
+    h += events.length ? `<div class="card">${events.map(p=>linkRow(p)).join("")}</div>`
+      : `<div class="card"><div class="empty">還沒有小活動</div></div>`;
+  }
+
+  // 夥伴的近期活動
+  h += `<div class="sec"><h2>夥伴的近期活動</h2>${ME?`<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>`:""}</div>`;
+  h += mEvents.length ? `<div class="card">${mEvents.map(p=>linkRow(p,true)).join("")}</div>`
+    : `<div class="card"><div class="empty">還沒有夥伴張貼活動${ME?'<br><span style="font-size:.82rem">你的活動、開課、展覽都可以貼上來</span>':""}</div></div>`;
+
+  // 最新案例
+  h += `<div class="sec"><h2>最新案例</h2>${CASES.length?`<span class="more" onclick="go('cases')">全部 ${CASES.length}</span>`:""}</div>`;
+  h += `<div class="card">${CASES.length ? CASES.slice(0,3).map(caseRow).join("")
+    : `<div class="empty">還沒有人分享 AI 案例<br><span style="font-size:.82rem">${ME?"到「我的」寫下第一個":"用 LINE 登入後就能寫"}</span></div>`}</div>`;
+  return h;
+}
+
+// 距離到期還有幾天——快到的講「剩 N 天」，遠的講日期
+function dueLabel(d){
+  // 比「日期」不是比「時刻」——用小時差進位會把今天算成剩 1 天
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(d + "T00:00:00");
+  const days = Math.round((due - today)/864e5);
+  if(days < 0)  return "已結束";
+  if(days === 0) return "今天最後一天";
+  if(days <= 7)  return `剩 ${days} 天`;
+  return `到 ${d.slice(5).replace("-","/")}`;
+}
+
+function linkRow(p, showAuthor){
+  const mine = ME && p.author_id===ME.id;
+  const who = showAuthor ? esc(memberName(p.author_id)) : "";
+  const go = p.link ? `onclick="window.open('${esc(p.link)}','_blank')"` : "";
+  return `<div class="linkrow" ${go} style="${p.link?"cursor:pointer":""}">
+    <svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-link"/></svg>
+    <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
+      ${p.body?`<div class="d">${esc(p.body)}</div>`:""}
+      <div class="d">${[who, p.deadline?dueLabel(p.deadline):"", p.link?"外部連結":""].filter(Boolean).join("　・　")}</div></div>
+    ${(mine||isOfficer())?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>`:
+      (p.link?`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`:"")}</div>`;
+}
+
+// ── 發布 / 編輯貼文 ─────────────────────────────
+function openPost(kind, id){
+  if(!ME){ go("me"); return; }
+  const p = id ? POSTS.find(x=>x.id===id) : null;
+  const F = {
+    monthly:      ["body","speaker","place","event_at","capacity"],
+    event:        ["body","link","deadline"],
+    notice:       ["body"],
+    survey:       ["link","deadline","done_count"],
+    member_event: ["body","link","deadline"],
+  }[kind] || ["body"];
+  const has = f => F.includes(f);
+  const val = f => p && p[f]!=null ? esc(p[f]) : "";
+  const dtLocal = iso => iso ? new Date(iso).toISOString().slice(0,16) : "";
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${p?"編輯":"發布"}${KIND_LABEL[kind]}</div>
+      ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
+        你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>`:""}
+      ${kind==="survey"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
+        問卷本身用 Google 表單做，這裡只放連結和完成率。<b>系統不記錄誰填了誰沒填。</b></div>`:""}
+
+      <div class="field"><label>標題<span class="req">*</span></label>
+        <input type="text" id="p_title" maxlength="80" value="${val("title")}"></div>
+
+      ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
+      ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
+      ${has("event_at")?`<div class="field"><label>時間</label><input type="datetime-local" id="p_event_at" value="${dtLocal(p&&p.event_at)}" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;font-size:16px;min-height:48px;background:var(--card)"></div>`:""}
+      ${has("capacity")?`<div class="field"><label>名額</label><input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：50"></div>`:""}
+      ${has("body")?`<div class="field"><label>內容</label>
+        <div class="help">${kind==="notice"?"公告內容，寫清楚一點":"簡單說明就好"}</div>
+        <textarea id="p_body" maxlength="3000">${val("body")}</textarea></div>`:""}
+      ${has("link")?`<div class="field"><label>${kind==="survey"?"Google 表單連結":"外部連結"}</label>
+        <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
+      ${has("deadline")?`<div class="field"><label>${kind==="survey"?"截止日":"顯示到哪一天"}</label>
+        <div class="help">${kind==="survey"?"":"過了這天就自動從首頁收起來，不必記得回來刪"}</div>
+        <input type="date" id="p_deadline" value="${val("deadline")}" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;font-size:16px;min-height:48px;background:var(--card)"></div>`:""}
+      ${has("done_count")&&isOfficer()?`<div class="field"><label>已完成人數</label>
+        <div class="help">從 Google 表單後台看到的回應數，填進來就會算出完成率</div>
+        <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>`:""}
+      ${isOfficer()&&kind==="survey"?`<div class="field"><label>表單後台連結</label>
+        <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
+        <input type="text" id="p_admin_link" value="" placeholder="https://docs.google.com/…/edit"></div>`:""}
+
+      <div id="p_err"></div>
+      <div class="formbar">
+        <button class="btn btn-ghost" onclick="go('home')">取消</button>
+        <button class="btn btn-primary" id="p_save" onclick="savePost('${kind}',${p?p.id:"null"})">${p?"儲存":"發布"}</button>
+      </div>
+      ${p?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delPost(${p.id})">刪除</button></div>`:""}
+    </div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-form").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function savePost(kind, id){
+  const b=el("p_save"); b.disabled=true; b.textContent="送出中…";
+  const g = f => el("p_"+f) ? el("p_"+f).value : undefined;
+  const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
+    speaker:g("speaker"), deadline:g("deadline")||null, capacity:g("capacity"),
+    done_count:g("done_count"), admin_link:g("admin_link"),
+    event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
+  const r = await postApi(id?"update":"create", body);
+  if(r.error){ el("p_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
+    b.disabled=false; b.textContent=id?"儲存":"發布"; return; }
+  await reloadPosts(); go("home");
+}
+async function delPost(id){
+  if(!confirm("確定刪除嗎？")) return;
+  const r = await postApi("delete",{id});
+  if(r.error) return alert(r.error);
+  await reloadPosts(); go("home");
+}
+async function reloadPosts(){ POSTS = await rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"); }
 
 function caseRow(c){
   return `<button class="caserow" onclick="openCase(${c.id})">
@@ -763,7 +986,8 @@ async function loadMe(){
       rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
-    ]);
+      rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
+    ]).then(r => { POSTS = r[3]; return r; });
   }
   catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
   const jumped = await handleCallback();
