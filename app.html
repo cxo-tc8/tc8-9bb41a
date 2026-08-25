@@ -230,6 +230,12 @@ a{color:inherit;text-decoration:none}
 .filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
+/* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
+.reqbadge{display:inline-block;background:var(--orange);color:#fff;font-size:.7rem;font-weight:800;
+  padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px;letter-spacing:.5px}
+.optbadge{display:inline-block;background:var(--line-soft);color:var(--muted);font-size:.7rem;font-weight:700;
+  padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px}
+
 /* ── 案例表單 ─────────────────────────────── */
 .dateinput{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:var(--r-sm);
   padding:11px 12px;font-size:16px;min-height:48px;background:var(--card);font-family:inherit}
@@ -323,7 +329,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,start_date,deadline,capacity,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,required,start_date,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [];
@@ -608,14 +614,18 @@ function homeHTML(){
   // 問卷
   if(surveys.length || isOfficer()){
     h += `<div class="sec"><h2>問卷</h2>${isOfficer()?`<span class="more" onclick="openPost('survey')">＋ 發布</span>`:""}</div>`;
-    h += surveys.length ? surveys.map(p=>{
-      const rate = p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
+    h += surveys.length ? surveys
+      .slice().sort((a,b)=> (b.required?1:0)-(a.required?1:0))   // 必填排最前面
+      .map(p=>{
+      const rate = p.required && p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
       return `<div class="card"><div class="survey">
-        <div style="display:flex;gap:8px"><div style="flex:1"><div class="t">${esc(p.title)}</div>
-          <div class="d">${p.deadline?`截止 ${esc(p.deadline)}　・　`:""}點進去填</div></div>${edit(p)}</div>
+        <div style="display:flex;gap:8px"><div style="flex:1">
+          <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">選填</span>`}${esc(p.title)}</div>
+          <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
+          </div>${edit(p)}</div>
         ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
-          <div class="rate"><span>完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
-        ${p.link?`<div class="actions"><a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a></div>`:""}
+          <div class="rate"><span>全會完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
+        ${p.link?`<div class="actions"><a class="btn ${p.required?"btn-primary":"btn-ghost"}" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a></div>`:""}
       </div></div>`;}).join("")
       : `<div class="card"><div class="empty">目前沒有進行中的問卷</div></div>`;
   }
@@ -702,7 +712,13 @@ function openPost(kind, id){
       ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
         你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>`:""}
       ${kind==="survey"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
-        問卷本身用 Google 表單做，這裡只放連結和完成率。<b>系統不記錄誰填了誰沒填。</b></div>`:""}
+        問卷本身用 Google 表單做，這裡只放連結和完成率。<b>系統不記錄誰填了誰沒填。</b></div>
+        <div class="field"><label>要不要一定填<span class="req">*</span></label>
+          <div class="help">必填的會排在最前面、標橘色，而且顯示完成率——大家一看就知道這份不填不行</div>
+          <div class="pills" id="p_required">
+            <button type="button" class="pill${p&&p.required?" on":""}" data-r="1">必填</button>
+            <button type="button" class="pill${!p||!p.required?" on":""}" data-r="0">選填</button>
+          </div></div>`:""}
 
       <div class="field"><label>標題<span class="req">*</span></label>
         <input type="text" id="p_title" maxlength="80" value="${val("title")}"></div>
@@ -746,6 +762,10 @@ function openPost(kind, id){
       </div>
       ${p?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delPost(${p.id})">刪除</button></div>`:""}
     </div>`;
+  if(el("p_required")){
+    el("p_required").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+      el("p_required").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  }
   if(el("p_start_date")){
     const sync = () => {
       const a=el("p_start_date").value, b=el("p_deadline").value;
@@ -769,6 +789,7 @@ async function savePost(kind, id){
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
     speaker:g("speaker"), speaker2:g("speaker2"), start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     done_count:g("done_count"), admin_link:g("admin_link"),
+    required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
     event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
   if(body.start_date && body.deadline && body.deadline < body.start_date){
     el("p_err").innerHTML = '<div class="err">結束日比開始日還早，請檢查一下</div>';
