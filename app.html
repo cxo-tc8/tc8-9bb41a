@@ -268,6 +268,8 @@ a.btn{text-decoration:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
 
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
+.draft{display:inline-block;background:#6b7280;color:#fff;font-size:.68rem;font-weight:800;
+  padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px;letter-spacing:.5px}
 .reqbadge{display:inline-block;background:var(--orange);color:#fff;font-size:.7rem;font-weight:800;
   padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px;letter-spacing:.5px}
 .optbadge{display:inline-block;background:var(--line-soft);color:var(--muted);font-size:.7rem;font-weight:700;
@@ -346,7 +348,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:06</div>
 <nav class="nav" role="navigation">
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
@@ -675,7 +677,7 @@ function homeHTML(){
   h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
   h += monthly ? `<section class="hero">
       <div class="band">
-        <div class="kicker">${monthly.event_at && new Date(monthly.event_at) < Date.now() ? "已結束　・　" : ""}${esc(fmtDate(monthly.event_at)) || "時間待定"}</div>
+        <div class="kicker">${monthly.visibility==="officer"?"未公開　・　":""}${monthly.event_at && new Date(monthly.event_at) < Date.now() ? "已結束　・　" : ""}${esc(fmtDate(monthly.event_at)) || "時間待定"}</div>
         <div class="t">${esc(monthly.title)}</div>
       </div>
       <div class="body">
@@ -752,7 +754,7 @@ function dueLabel(d){
 function noticeCard(p){
   return `<div class="card"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
     <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
-    <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
+    <div style="flex:1;min-width:0"><div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
       <div class="d">${ago(p.created_at)}</div></div>
     ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('notice',${p.id})">編輯</button>`
@@ -764,7 +766,7 @@ function surveyCard(p){
   return `<div class="card"><div class="survey">
     <div style="display:flex;gap:9px;align-items:flex-start">
       <div style="flex:1;min-width:0">
-        <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">問卷</span>`}${esc(p.title)}</div>
+        <div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">問卷</span>`}${esc(p.title)}</div>
         <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;align-items:center">
@@ -821,7 +823,7 @@ function openPostDetail(id){
   el("v-pdetail").innerHTML = `
     <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>${back}</button>
     <article class="card detail">
-      <div style="font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:1.2px">${KIND_LABEL[p.kind]||""}</div>
+      <div style="font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:1.2px">${KIND_LABEL[p.kind]||""}${p.visibility==="officer"?`　<span class="draft">未公開・只有幹部看得到</span>`:""}</div>
       <h2 style="margin-top:4px">${esc(p.title)}</h2>
       <div class="author">
         ${avatar(memberName(p.author_id))}
@@ -1040,6 +1042,12 @@ function openPost(kind, id){
       <div style="font-weight:800;font-size:1.15rem">${p?"編輯":"發布"}${KIND_LABEL[kind]}</div>
       ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
         你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>`:""}
+      ${isOfficer()?`<div class="field" style="margin-top:14px"><label>要不要現在公開</label>
+        <div class="help">先存成隱藏，幹部之間討論改好了再公開。隱藏時只有四位幹部看得到</div>
+        <div class="pills" id="p_vis">
+          <button type="button" class="pill${p&&p.visibility==="officer"?"":" on"}" data-v="public">公開</button>
+          <button type="button" class="pill${p&&p.visibility==="officer"?" on":""}" data-v="officer">隱藏</button>
+        </div></div>`:""}
       ${has("msgtype")?`<div class="field" style="margin-top:14px"><label>這是什麼</label>
         <div class="pills" id="p_msgtype">
           <button type="button" class="pill${kind!=="survey"?" on":""}" data-k="notice" onclick="switchMsgType('notice')">公告</button>
@@ -1117,6 +1125,8 @@ function openPost(kind, id){
       </div>
       ${p?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delPost(${p.id})">刪除</button></div>`:""}
     </div>`;
+  if(el("p_vis")) el("p_vis").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_vis").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_msgtype")) MSGKIND = kind==="survey" ? "survey" : "notice";
   if(el("p_album")) renderAlbum();
   if(el("p_required")){
@@ -1149,6 +1159,7 @@ async function savePost(kind, id){
     speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
     photos: el("p_photos") ? JSON.parse(el("p_photos").value||"[]") : undefined, start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     done_count:g("done_count"), admin_link:g("admin_link"),
+    visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
     event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
   if(body.start_date && body.deadline && body.deadline < body.start_date){
@@ -1411,6 +1422,11 @@ async function loadMe(){
   DBG("me 回傳", r);
   ME = r.status==="bound" ? r.member : null;
   paintMe();
+  // 幹部看得到未公開的草稿（一般夥伴的公開查詢根本讀不到）
+  if(ME && ME.role==="officer"){
+    const all = await postApi("manage");
+    if(all.posts) POSTS = all.posts;
+  }
   return r.status;
 }
 (async function init(){
