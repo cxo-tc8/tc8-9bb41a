@@ -278,6 +278,22 @@ a.btn{text-decoration:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
 
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
+.cmt{display:flex;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line-soft);align-items:flex-start}
+.cmt:last-child{border-bottom:none}
+.cmt .ava{width:34px;height:34px;font-size:.85rem}
+.cmthead{display:flex;align-items:baseline;gap:8px}
+.cmtname{font-weight:700;font-size:.88rem}
+.cmttime{font-size:.75rem;color:var(--muted)}
+.cmtbody{font-size:.9rem;line-height:1.7;margin-top:3px;white-space:pre-wrap;word-break:break-word}
+.cmtdel{border:none;background:none;color:var(--muted);font-size:17px;cursor:pointer;
+  width:30px;height:30px;border-radius:50%;flex:none}
+.cmtdel:hover{background:var(--line-soft);color:#b4261a}
+.cmtbox{margin-top:10px}
+.cmtbox textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);
+  padding:11px 12px;font-size:16px;font-family:inherit;line-height:1.6;background:var(--card);resize:vertical;min-height:64px}
+.cmtbox textarea:focus{outline:none;border-color:var(--blue-500)}
+.cmtcount{font-size:.78rem;color:var(--muted);flex:none;margin-left:auto}
+
 .draft{display:inline-block;background:#6b7280;color:#fff;font-size:.68rem;font-weight:800;
   padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px;letter-spacing:.5px}
 .reqbadge{display:inline-block;background:var(--orange);color:#fff;font-size:.7rem;font-weight:800;
@@ -359,7 +375,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:27</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:32</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -388,7 +404,7 @@ const industryNames = {
 const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
-let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [];
+let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [];
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -879,17 +895,113 @@ function needRow(n){
     <div style="display:flex;gap:9px;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div class="t">${done?`<span class="optbadge">已找到</span>`:""}${esc(n.title)}</div>
-        <div class="by">${esc(memberName(n.member_id))}${n.tried?`　・　試過：${esc(n.tried)}`:""}</div>
+        <div class="by">${esc(memberName(n.member_id))}${
+          done && (n.helpers||[]).length ? `　・　感謝 ${n.helpers.map(id=>esc(memberName(id))).join("、")}` :
+          (n.tried?`　・　試過：${esc(n.tried)}`:"")}</div>
       </div>
       ${done?"":`<span class="urg ${uc}">${ul}</span>`}
       <svg class="go" width="18" height="18" style="flex:none;align-self:center"><use href="#i-go"/></svg>
     </div>
     <div class="mdesc" style="margin-top:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(n.problem)}</div>
-    ${(n.tags||[]).length?`<div class="tags">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div>`:""}
+    <div style="display:flex;align-items:center;gap:8px;margin-top:7px">
+      ${(n.tags||[]).length?`<div class="tags" style="margin:0">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div>`:"<span></span>"}
+      ${(()=>{const c=COMMENTS.filter(x=>x.kind==="need"&&x.target_id===n.id).length;
+        return c?`<span class="cmtcount">💬 ${c}</span>`:"";})()}
+    </div>
   </div>`;
 }
 
 // 需求詳情（第二層）—— 資料庫的 detail 欄位從一開始就留著，現在接出來
+let HELPERS = [];
+function askHelpers(needId){
+  HELPERS = [];
+  const opts = MEMBERS.filter(m => !ME || m.id!==ME.id)
+    .map(m=>`<option value="${m.id}">${esc(m.name)}${m.company?`（${esc(m.company)}）`:""}</option>`).join("");
+  el("helperbox").innerHTML = `
+    <div class="card" style="margin-top:12px;padding:15px">
+      <div style="font-weight:700;font-size:.95rem">是誰幫上忙的？</div>
+      <div class="help" style="margin:5px 0 10px">選了會顯示在這則需求上，讓大家看得到會裡實際發生過的互助。
+        沒有特定的人也可以直接跳過。</div>
+      <select id="helpersel" class="dateinput" style="width:100%" onchange="addHelper()">
+        <option value="">＋ 選一位夥伴…</option>${opts}
+      </select>
+      <div id="helperchips" class="pills" style="margin-top:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-primary btn-sm" onclick="confirmClose(${needId})">確認已解決</button>
+        <button class="btn btn-ghost btn-sm" onclick="el('helperbox').innerHTML=''">取消</button>
+      </div>
+    </div>`;
+}
+function addHelper(){
+  const sel = el("helpersel"); const id = Number(sel.value);
+  sel.value = "";
+  if(!id || HELPERS.includes(id) || HELPERS.length>=5) return;
+  HELPERS.push(id); renderHelpers();
+}
+function removeHelper(id){ HELPERS = HELPERS.filter(x=>x!==id); renderHelpers(); }
+function renderHelpers(){
+  el("helperchips").innerHTML = HELPERS.map(id=>
+    `<button type="button" class="pill on" onclick="removeHelper(${id})">${esc(memberName(id))} ×</button>`).join("")
+    || `<span class="hint">還沒選（可以不選，直接按確認）</span>`;
+}
+async function confirmClose(needId){
+  const r = await api("need_close", {id: needId, helpers: HELPERS});
+  if(r.error) return alert(r.error);
+  await reloadNeeds(); openNeedDetail(needId);
+}
+
+function commentBlock(kind, targetId){
+  const list = COMMENTS.filter(c => c.kind===kind && c.target_id===targetId);
+  const rows = list.map(c => {
+    const canDel = ME && (c.member_id===ME.id || ME.role==="officer");
+    return `<div class="cmt">
+      ${avatar(memberName(c.member_id))}
+      <div style="flex:1;min-width:0">
+        <div class="cmthead"><span class="cmtname">${esc(memberName(c.member_id))}</span>
+          <span class="cmttime">${ago(c.created_at)}</span></div>
+        <div class="cmtbody">${esc(c.body)}</div>
+      </div>
+      ${canDel?`<button class="cmtdel" onclick="delComment(${c.id},'${kind}',${targetId})" aria-label="刪除">×</button>`:""}
+    </div>`;
+  }).join("");
+
+  return `<div class="sec"><h2>討論</h2>${list.length?`<span class="more">${list.length}</span>`:""}</div>
+    <div class="card" id="cmtlist">
+      ${rows || `<div class="empty" style="padding:26px 20px">還沒有人留言${ME?"<br><span style=\"font-size:.82rem\">有想法、有人選、有做法，都可以寫在下面</span>":""}</div>`}
+    </div>
+    ${ME ? `<div class="cmtbox">
+      <textarea id="cmtinput" rows="2" placeholder="寫下你的想法或建議…" maxlength="1000"></textarea>
+      <div id="cmterr"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-primary btn-sm" id="cmtsend" onclick="sendComment('${kind}',${targetId})">送出留言</button>
+      </div></div>`
+      : `<div class="hint" style="text-align:center;margin-top:10px">用 LINE 登入後就可以留言</div>`}`;
+}
+
+async function sendComment(kind, targetId){
+  const inp = el("cmtinput"), btn = el("cmtsend");
+  const body = (inp.value||"").trim();
+  if(!body){ el("cmterr").innerHTML = '<div class="err">還沒寫東西</div>'; return; }
+  btn.disabled = true; btn.textContent = "送出中…";
+  const r = await api("comment_add", {kind, target_id: targetId, body});
+  if(r.error){ el("cmterr").innerHTML = `<div class="err">${esc(r.error)}</div>`;
+    btn.disabled=false; btn.textContent="送出留言"; return; }
+  await reloadComments();
+  if(kind==="need") openNeedDetail(targetId);
+}
+
+async function delComment(id, kind, targetId){
+  if(!confirm("確定刪除這則留言嗎？")) return;
+  const r = await api("comment_delete", {id});
+  if(r.error) return alert(r.error);
+  await reloadComments();
+  if(kind==="need") openNeedDetail(targetId);
+}
+
+async function reloadComments(){
+  COMMENTS = await rest("comments?select=id,kind,target_id,member_id,body,created_at&order=created_at.asc");
+}
+
 function openNeedDetail(id){
   const n = NEEDS.find(x=>x.id===id); if(!n) return;
   const mine = ME && (n.member_id===ME.id || ME.role==="officer");
@@ -915,16 +1027,23 @@ function openNeedDetail(id){
       ${(n.tags||[]).length?`<div class="block"><div class="lbl">分類</div>
         <div class="tags">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div></div>`:""}
       ${done?`<div class="share" style="margin-top:18px"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
-        <div style="flex:1"><div class="t">這件事他已經解決了</div>
-        <div class="d">留著是為了讓人知道誰解過這個問題</div></div></div>`
+        <div style="flex:1">
+          <div class="t">${(n.helpers||[]).length
+            ? "感謝 " + n.helpers.map(id=>esc(memberName(id))).join("、") + " 幫上忙"
+            : "這件事已經解決了"}</div>
+          <div class="d">留著是為了讓人知道誰解過這個問題</div></div></div>`
         : (mine?"":`<div class="share" style="margin-top:18px"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
         <div style="flex:1"><div class="t">幫得上忙嗎？</div>
         <div class="d">直接找 ${esc(memberName(n.member_id))} 聊聊，或看看他的個人頁面</div></div>
         <button class="btn btn-ghost btn-sm" onclick="openMember(${n.member_id})">看他</button></div>`)}
-      ${mine?`<div style="display:flex;gap:8px;margin-top:18px">
-        <button class="btn btn-ghost btn-sm" onclick="toggleNeed(${n.id},${done})">${done?"還在找":"已經找到了"}</button>
+      ${mine?`<div style="margin-top:18px">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="${done?`toggleNeed(${n.id},true)`:`askHelpers(${n.id})`}">${done?"還在找":"已經找到了"}</button>
+        </div>
+        <div id="helperbox"></div>
       </div>`:""}
     </article>
+    ${commentBlock("need", n.id)}
     <div class="hint" style="text-align:center;margin-top:12px">這一頁可以直接轉給幫得上忙的人</div>`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-ndetail").classList.add("on"); window.scrollTo(0,0);
@@ -1015,7 +1134,7 @@ async function delNeed(id){
   await reloadNeeds(); go("needs");
 }
 async function reloadNeeds(){
-  NEEDS = await rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,created_at&order=created_at.desc");
+  NEEDS = await rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,helpers,created_at&order=created_at.desc");
 }
 
 const MAX_PHOTOS = 3;
@@ -1494,8 +1613,9 @@ async function loadMe(){
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
-      rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,created_at&order=created_at.desc"),
-    ]).then(r => { POSTS = r[3]; NEEDS = r[4]; return r; });
+      rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,helpers,created_at&order=created_at.desc"),
+      rest("comments?select=id,kind,target_id,member_id,body,created_at&order=created_at.asc"),
+    ]).then(r => { POSTS = r[3]; NEEDS = r[4]; COMMENTS = r[5]; return r; });
   }
   catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
   const jumped = await handleCallback();
