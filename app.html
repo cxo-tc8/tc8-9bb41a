@@ -357,8 +357,9 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-form"></main>
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
+<main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:15</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:27</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -830,8 +831,7 @@ function linkRow(p, showAuthor){
 // 活動／公告的完整內容（跟案例一樣的第二層，有自己的網址可以轉給人）
 function openPostDetail(id){
   const p = POSTS.find(x=>x.id===id); if(!p) return;
-  const mine = ME && p.author_id===ME.id;
-  const canEdit = mine || (isOfficer() && ["monthly","event","notice","survey"].includes(p.kind));
+  const canEdit = ME && (p.author_id===ME.id || isOfficer());
   const back = { member_event:"首頁", event:"首頁", notice:"首頁", monthly:"首頁" }[p.kind] || "首頁";
   const row = (l,v) => v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
   el("v-pdetail").innerHTML = `
@@ -873,24 +873,61 @@ function openPostDetail(id){
 const URG = {hot:["很急","hot"], mid:["看機會","mid"], low:["不急","mid"]};
 
 function needRow(n){
-  const mine = ME && n.member_id===ME.id;
   const done = !!n.closed_at;
   const [ul,uc] = URG[n.urgency||"mid"];
-  return `<div class="needrow"${done?' style="opacity:.6"':""}>
+  return `<div class="needrow"${done?' style="opacity:.6"':""} onclick="openNeedDetail(${n.id})" style="cursor:pointer${done?';opacity:.6':''}">
     <div style="display:flex;gap:9px;align-items:flex-start">
       <div style="flex:1;min-width:0">
         <div class="t">${done?`<span class="optbadge">已找到</span>`:""}${esc(n.title)}</div>
         <div class="by">${esc(memberName(n.member_id))}${n.tried?`　・　試過：${esc(n.tried)}`:""}</div>
       </div>
       ${done?"":`<span class="urg ${uc}">${ul}</span>`}
+      <svg class="go" width="18" height="18" style="flex:none;align-self:center"><use href="#i-go"/></svg>
     </div>
-    <div class="mdesc" style="margin-top:7px">${esc(n.problem)}</div>
+    <div class="mdesc" style="margin-top:7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(n.problem)}</div>
     ${(n.tags||[]).length?`<div class="tags">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div>`:""}
-    ${mine?`<div style="display:flex;gap:7px;margin-top:10px">
-      <button class="btn btn-ghost btn-sm" onclick="openNeed(${n.id})">編輯</button>
-      <button class="btn btn-ghost btn-sm" onclick="toggleNeed(${n.id},${done})">${done?"還在找":"已經找到了"}</button>
-    </div>`:""}
   </div>`;
+}
+
+// 需求詳情（第二層）—— 資料庫的 detail 欄位從一開始就留著，現在接出來
+function openNeedDetail(id){
+  const n = NEEDS.find(x=>x.id===id); if(!n) return;
+  const mine = ME && (n.member_id===ME.id || ME.role==="officer");
+  const done = !!n.closed_at;
+  const [ul,uc] = URG[n.urgency||"mid"];
+  const m = MEMBERS.find(x=>x.id===n.member_id);
+  el("v-ndetail").innerHTML = `
+    <button class="back" onclick="go('needs')"><svg width="17" height="17"><use href="#i-back"/></svg>需求</button>
+    <article class="card detail">
+      <div style="display:flex;gap:9px;align-items:flex-start">
+        <h2 style="flex:1">${done?`<span class="optbadge">已找到</span>`:""}${esc(n.title)}</h2>
+        ${done?"":`<span class="urg ${uc}" style="flex:none;margin-top:6px">${ul}</span>`}
+      </div>
+      <div class="author">
+        ${avatar(memberName(n.member_id))}
+        <div style="flex:1"><div style="font-weight:700">${esc(memberName(n.member_id))}</div>
+          <div style="font-size:.79rem;color:var(--muted)">${esc([m&&m.tag,m&&m.company].filter(Boolean).join(" ・ "))||"　"}　・　${ago(n.created_at)}</div></div>
+        ${mine?`<button class="btn btn-ghost btn-sm" onclick="openNeed(${n.id})">編輯</button>`:""}
+      </div>
+      <div class="block"><div class="lbl">想解什麼問題</div><p style="white-space:pre-wrap">${esc(n.problem)}</p></div>
+      ${n.tried?`<div class="block"><div class="lbl">試過什麼</div><p style="white-space:pre-wrap">${esc(n.tried)}</p></div>`:""}
+      ${n.detail?`<div class="block"><div class="lbl">補充細節</div><p style="white-space:pre-wrap">${esc(n.detail)}</p></div>`:""}
+      ${(n.tags||[]).length?`<div class="block"><div class="lbl">分類</div>
+        <div class="tags">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div></div>`:""}
+      ${done?`<div class="share" style="margin-top:18px"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
+        <div style="flex:1"><div class="t">這件事他已經解決了</div>
+        <div class="d">留著是為了讓人知道誰解過這個問題</div></div></div>`
+        : (mine?"":`<div class="share" style="margin-top:18px"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
+        <div style="flex:1"><div class="t">幫得上忙嗎？</div>
+        <div class="d">直接找 ${esc(memberName(n.member_id))} 聊聊，或看看他的個人頁面</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="openMember(${n.member_id})">看他</button></div>`)}
+      ${mine?`<div style="display:flex;gap:8px;margin-top:18px">
+        <button class="btn btn-ghost btn-sm" onclick="toggleNeed(${n.id},${done})">${done?"還在找":"已經找到了"}</button>
+      </div>`:""}
+    </article>
+    <div class="hint" style="text-align:center;margin-top:12px">這一頁可以直接轉給幫得上忙的人</div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-ndetail").classList.add("on"); window.scrollTo(0,0);
 }
 
 function filterNeeds(){
@@ -925,6 +962,10 @@ function openNeed(id){
         <div class="help">寫出來可以省掉別人重複建議同一招</div>
         <input type="text" id="n_tried" maxlength="500" value="${n?esc(n.tried||""):""}" placeholder="例：丟給 ChatGPT 但檔案太大"></div>
 
+      <div class="field"><label>補充細節</label>
+        <div class="help">背景、限制、已經試過但不行的原因——這段常常是別人判斷幫不幫得上的關鍵</div>
+        <textarea id="n_detail" maxlength="2000" placeholder="選填">${n?esc(n.detail||""):""}</textarea></div>
+
       <div class="field"><label>急不急</label>
         <div class="pills" id="n_urg">
           ${[["hot","很急"],["mid","看機會"],["low","不急"]].map(([v,l])=>
@@ -954,16 +995,18 @@ async function saveNeed(id){
   const b=el("n_save"); b.disabled=true; b.textContent="送出中…";
   const r = await api(id?"need_update":"need_create", {
     id, title:el("n_title").value, problem:el("n_problem").value, tried:el("n_tried").value,
+    detail:el("n_detail").value,
     urgency: el("n_urg").querySelector(".pill.on")?.dataset.u || "mid",
     tags: [...el("n_tags").querySelectorAll(".pill.on")].map(x=>x.dataset.t)});
   if(r.error){ el("n_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent=id?"儲存":"送出"; return; }
-  await reloadNeeds(); go("needs");
+  await reloadNeeds(); openNeedDetail(r.need.id);
 }
 async function toggleNeed(id, done){
   const r = await api(done?"need_reopen":"need_close", {id});
   if(r.error) return alert(r.error);
-  await reloadNeeds(); filterNeeds();
+  await reloadNeeds();
+  if(el("v-ndetail").classList.contains("on")) openNeedDetail(id); else filterNeeds();
 }
 async function delNeed(id){
   if(!confirm("確定要刪除嗎？如果只是已經解決了，用「已經找到了」比較好——別人還看得到你解過什麼。")) return;
@@ -1218,7 +1261,7 @@ function filterCases(){
 
 function openCase(id){
   const c=CASES.find(x=>x.id===id); if(!c) return;
-  const mine = ME && c.member_id===ME.id;
+  const mine = ME && (c.member_id===ME.id || ME.role==="officer");
   const share={dm:"可以私訊我",stage:"願意上台分享",none:"暫時不方便"}[c.share_level];
   el("v-cdetail").innerHTML = `
     <button class="back" onclick="go('cases')"><svg width="17" height="17"><use href="#i-back"/></svg>案例</button>
@@ -1227,7 +1270,7 @@ function openCase(id){
       <div class="author">${avatar(memberName(c.member_id))}
         <div style="flex:1"><div style="font-weight:700">${esc(memberName(c.member_id))}</div>
           <div style="font-size:.79rem;color:var(--muted)">${esc(c.term)} 會期　・　${ago(c.created_at)}</div></div>
-        ${mine?`<button class="btn btn-ghost btn-sm" onclick="openForm(${c.id})">修改</button>`:""}
+        ${mine?`<button class="btn btn-ghost btn-sm" onclick="openForm(${c.id})">${c.member_id===ME.id?"修改":"幹部修改"}</button>`:""}
       </div>
       <div class="block"><div class="lbl">解決什麼問題</div><p>${esc(c.problem)}</p></div>
       ${(c.tools||[]).length?`<div class="block"><div class="lbl">用什麼工具</div><div class="tags">${c.tools.map(t=>`<span class="tag free">${esc(t)}</span>`).join("")}</div></div>`:""}
