@@ -37,7 +37,8 @@ a{color:inherit;text-decoration:none}
   color:#fff; padding:10px 16px; padding-top:calc(10px + env(safe-area-inset-top));
   display:flex;align-items:center;gap:12px;
 }
-.top .logo{width:34px;height:34px;border-radius:9px;background:#fff2;display:grid;place-items:center;font-weight:800;font-size:.8rem;letter-spacing:.5px;flex:none}
+.top .logo{width:36px;height:36px;border-radius:9px;flex:none;object-fit:cover;
+  box-shadow:0 1px 4px rgba(0,0,0,.28)}
 .top h1{font-size:1.02rem;font-weight:800;letter-spacing:.5px;line-height:1.2}
 .top .sub{font-size:.72rem;opacity:.82;font-weight:400;letter-spacing:0}
 .top .me{margin-left:auto;display:flex;align-items:center;gap:7px;background:#ffffff26;padding:6px 11px;border-radius:999px;font-size:.8rem;font-weight:600;min-height:36px}
@@ -183,6 +184,15 @@ a.btn{text-decoration:none}
   background:var(--card);border-top:1px solid var(--line);
   display:flex;padding-bottom:env(safe-area-inset-bottom);
 }
+/* 側欄品牌區（只在桌面出現；手機的 logo 在頂欄）*/
+.brand{display:none}
+@media (min-width:1024px){
+  .brand{display:flex;flex-direction:column;align-items:center;gap:9px;
+    padding:6px 16px 18px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .brand img{width:72px;height:72px;border-radius:16px;object-fit:cover;
+    box-shadow:0 2px 10px rgba(21,41,107,.22)}
+  .brandname{font-size:.92rem;font-weight:800;letter-spacing:2px;color:var(--blue-900)}
+}
 .nav button{
   flex:1;background:none;border:none;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
@@ -196,7 +206,7 @@ a.btn{text-decoration:none}
 /* ── 桌面：改側欄 ───────────────────── */
 @media (min-width:1024px){
   body{padding-bottom:0;padding-left:212px}
-  .nav{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:none;border-right:1px solid var(--line);padding-top:78px;gap:2px}
+  .nav{top:0;bottom:0;right:auto;width:212px;flex-direction:column;border-top:none;border-right:1px solid var(--line);padding-top:20px;gap:2px;overflow-y:auto}
   .nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 20px;min-height:48px;font-size:.9rem}
   .nav button.on{background:var(--chip)}
   .top{padding-left:20px}
@@ -332,7 +342,7 @@ a.btn{text-decoration:none}
   <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4Z"/></symbol>
 </svg>
 <header class="top">
-  <div class="logo">TC8</div>
+  <img class="logo" src="logo.png" alt="CXO TC8" width="34" height="34">
   <div><h1>CXO TC8</h1><div class="sub">AI 案例與活動中心</div></div>
   <button class="me" id="meBtn" onclick="onMe()" style="border:none;cursor:pointer"><span class="dot" id="meDot" style="background:#9aa4b2"></span><span id="meName">登入</span></button>
 </header>
@@ -348,8 +358,12 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:06</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:15</div>
 <nav class="nav" role="navigation">
+  <div class="brand">
+    <img src="logo.png" alt="CXO TC8" width="72" height="72">
+    <div class="brandname">斯巴達分會</div>
+  </div>
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
