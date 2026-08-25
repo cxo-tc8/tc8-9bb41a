@@ -282,8 +282,9 @@ a.btn{text-decoration:none}
 .spcell{display:flex;flex-direction:column;gap:8px}
 .spcell .ph{width:100%;aspect-ratio:1/1;object-fit:contain;background:var(--chip);border:1px solid var(--line);border-radius:var(--r-sm);display:block}
 .spcell .noph{width:100%;aspect-ratio:1/1;display:grid;place-items:center;background:var(--chip);color:var(--chip-text);border:1px solid var(--line);border-radius:var(--r-sm);font-weight:800;font-size:1.7rem}
-.spcell .n{font-weight:700;font-size:.94rem}
-.spcell .r{font-size:.78rem;color:var(--muted)}
+.spcell .nm{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.spcell .n{font-weight:800;font-size:1.24rem;line-height:1.25}
+.spcell .r{font-size:.78rem;color:var(--muted);flex:none}
 
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
 .cmt{display:flex;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line-soft);align-items:flex-start}
@@ -383,7 +384,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:12</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:24</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -731,7 +732,7 @@ function homeHTML(){
           return sps.length?`<div class="spgrid">`+sps.map(([sp,ph])=>`
             <div class="spcell">
               ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
-              <div><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
+              <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         <div class="actions">
           ${monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:""}
