@@ -1,0 +1,40 @@
+# Supabase 保活
+#
+# 免費專案「連續 7 天沒有活動」就會被暫停，暫停後網站整個打不開。
+# 這是當初 v1 選 Google 試算表而不是 Supabase 的唯一理由，換過來就得自己扛。
+#
+# 為什麼放在 GitHub Actions 而不是本機排程：
+#   保活要在「沒人用」的時候跑，而本機 Mac 閒置後網路請求會卡住幾十分鐘（踩過）。
+#   雲端排程不睡覺，而且失敗會寄信通知。
+#
+# 用的是公開金鑰（publishable），本來就寫在 app.html 裡給瀏覽器用，沒有機密。
+
+name: keepalive
+
+on:
+  schedule:
+    - cron: "17 2 * * *"     # 每天 UTC 02:17（台灣早上 10:17）；避開整點降低被延遲的機會
+  workflow_dispatch:          # 也可以手動按一下測試
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 打一次資料庫，證明它還活著
+        run: |
+          URL="https://fehubnmhohnkftjbozls.supabase.co/rest/v1/tag_vocab?select=slug&limit=1"
+          KEY="sb_publishable_2jEktDbnpORi6Tl0qE6Bvw_55_marVz"
+          CODE=$(curl -s -o /tmp/out -w "%{http_code}" "$URL" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "HTTP $CODE"
+          cat /tmp/out
+          # 不是 200 就讓這次 workflow 失敗 —— 失敗會寄信，才有機會發現專案被暫停了
+          if [ "$CODE" != "200" ]; then
+            echo "::error::資料庫沒有正常回應（HTTP $CODE），專案可能已被暫停或金鑰失效"
+            exit 1
+          fi
+          # 回空陣列也算異常：tag_vocab 至少有 13 筆，空的代表權限或資料出事
+          if [ "$(cat /tmp/out)" = "[]" ]; then
+            echo "::error::查得到但沒資料，權限或資料可能出問題"
+            exit 1
+          fi
+          echo "✅ 資料庫正常"
