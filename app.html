@@ -375,7 +375,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:32</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:57</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -578,7 +578,8 @@ function render(v){
     ${officerBlock()}
     ${myCasesBlock()}
     <div class="card menu" style="margin-top:12px">
-      <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="openProfile()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">改我的基本資料</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-people"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
     </div>` : `
     <div class="center">
@@ -913,6 +914,87 @@ function needRow(n){
 
 // 需求詳情（第二層）—— 資料庫的 detail 欄位從一開始就留著，現在接出來
 let HELPERS = [];
+function openProfile(){
+  if(!ME){ go("me"); return; }
+  const m = MEMBERS.find(x=>x.id===ME.id) || ME;
+  const v = k => m[k]!=null ? esc(m[k]) : "";
+  const industryOpts = Object.entries(industryNames)
+    .map(([k,label])=>`<option value="${k}"${m.industry===k?" selected":""}>${esc(label)}</option>`).join("");
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">改我的基本資料</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
+        這些會顯示在「夥伴」那一頁，是別人認識你的第一印象。
+        <b>改完立刻生效，不用等人審核</b>——LINE 已經認出你是誰了。</div>
+
+      <div class="field"><label>姓名<span class="req">*</span></label>
+        <div class="help">可以帶小名，例如「郭俊村（馬怪）」</div>
+        <input type="text" id="pf_name" maxlength="40" value="${v("name")}"></div>
+
+      <div class="field"><label>公司</label>
+        <input type="text" id="pf_company" maxlength="60" value="${v("company")}"></div>
+
+      <div class="field"><label>職稱</label>
+        <input type="text" id="pf_title" maxlength="40" value="${v("title")}"></div>
+
+      <div class="field"><label>產業分類</label>
+        <div class="help">用來篩選，選最接近的就好</div>
+        <select id="pf_industry" class="dateinput" style="width:100%">${industryOpts}</select></div>
+
+      <div class="field"><label>產業標籤</label>
+        <div class="help">卡片上那顆藍色小標，可以比分類更精確。例：科技農業</div>
+        <input type="text" id="pf_tag" maxlength="20" value="${v("tag")}"></div>
+
+      <div class="field"><label>一句話自介</label>
+        <div class="help">會用引號顯示在卡片上，寫得有記憶點一點</div>
+        <input type="text" id="pf_intro" maxlength="100" value="${v("intro")}" placeholder="例：生菜王子，重新定義台灣的農業"></div>
+
+      <div class="field"><label>簡介</label>
+        <div class="help">你在做什麼、幫誰解決什麼問題</div>
+        <textarea id="pf_description" maxlength="800">${v("description")}</textarea></div>
+
+      <div class="field"><label>我可以提供的資源</label>
+        <div class="help">⭐ 這欄和下面兩欄是媒合的關鍵——別人是靠這些找到你的</div>
+        <textarea id="pf_resource" maxlength="500">${v("resource")}</textarea></div>
+
+      <div class="field"><label>我想在 TC8 獲得</label>
+        <textarea id="pf_wish" maxlength="500">${v("wish")}</textarea></div>
+
+      <div class="field"><label>關注主題</label>
+        <div class="help">用頓號分開</div>
+        <input type="text" id="pf_topic" maxlength="300" value="${v("topic")}"></div>
+
+      <div class="field"><label>網站</label>
+        <input type="text" id="pf_web" maxlength="200" value="${v("web")}" placeholder="https://…"></div>
+
+      <div id="pf_err"></div>
+      <div class="formbar">
+        <button class="btn btn-ghost" onclick="go('me')">取消</button>
+        <button class="btn btn-primary" id="pf_save" onclick="saveProfile()">儲存</button>
+      </div>
+      <div class="hint" style="margin-top:14px;text-align:center">
+        頭銜、權限、是否在會，這些只有幹部改得了</div>
+    </div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-form").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function saveProfile(){
+  const b = el("pf_save"); b.disabled = true; b.textContent = "儲存中…";
+  const g = k => el("pf_"+k).value;
+  const r = await fn("update_profile", {
+    name:g("name"), company:g("company"), title:g("title"), industry:g("industry"),
+    tag:g("tag"), description:g("description"), web:g("web"), intro:g("intro"),
+    resource:g("resource"), wish:g("wish"), topic:g("topic"),
+  });
+  if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
+    b.disabled=false; b.textContent="儲存"; return; }
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  await loadMe();
+  openMember(ME.id);
+}
+
 function askHelpers(needId){
   HELPERS = [];
   const opts = MEMBERS.filter(m => !ME || m.id!==ME.id)
