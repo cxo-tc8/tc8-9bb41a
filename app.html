@@ -307,6 +307,7 @@ a{color:inherit;text-decoration:none}
 <main class="wrap view" id="v-claim"></main>
 <main class="wrap view" id="v-form"></main>
 <main class="wrap view" id="v-cdetail"></main>
+<main class="wrap view" id="v-pdetail"></main>
 
 <nav class="nav" role="navigation">
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
@@ -603,11 +604,12 @@ function homeHTML(){
   // 公告
   if(notices.length || isOfficer()){
     h += `<div class="sec"><h2>公告</h2>${isOfficer()?`<span class="more" onclick="openPost('notice')">＋ 發布</span>`:""}</div>`;
-    h += notices.length ? notices.map(p=>`<div class="card"><div class="notice">
+    h += notices.length ? notices.map(p=>`<div class="card"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
         <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
         <div style="flex:1"><div class="t">${esc(p.title)}</div>
-          ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6">${esc(p.body)}</div>`:""}
-          <div class="d">${ago(p.created_at)}</div></div>${edit(p)}</div></div>`).join("")
+          ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
+          <div class="d">${ago(p.created_at)}</div></div>
+        ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>`:`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`}</div></div>`).join("")
       : `<div class="card"><div class="empty">還沒有公告</div></div>`;
   }
 
@@ -678,16 +680,46 @@ function dueLabel(d){
 }
 
 function linkRow(p, showAuthor){
-  const mine = ME && p.author_id===ME.id;
   const who = showAuthor ? esc(memberName(p.author_id)) : "";
-  const go = p.link ? `onclick="window.open('${esc(p.link)}','_blank')"` : "";
-  return `<div class="linkrow" ${go} style="${p.link?"cursor:pointer":""}">
-    <svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-link"/></svg>
+  return `<div class="linkrow" onclick="openPostDetail(${p.id})" style="cursor:pointer">
+    <svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-${p.link?"link":"case"}"/></svg>
     <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
-      ${p.body?`<div class="d">${esc(p.body)}</div>`:""}
-      <div class="d">${[who, whenLabel(p), p.link?"外部連結":""].filter(Boolean).join("　・　")}</div></div>
-    ${(mine||isOfficer())?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>`:
-      (p.link?`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`:"")}</div>`;
+      ${p.body?`<div class="d" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.body)}</div>`:""}
+      <div class="d">${[who, whenLabel(p), p.link?"有連結":""].filter(Boolean).join("　・　")}</div></div>
+    <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>`;
+}
+
+// 活動／公告的完整內容（跟案例一樣的第二層，有自己的網址可以轉給人）
+function openPostDetail(id){
+  const p = POSTS.find(x=>x.id===id); if(!p) return;
+  const mine = ME && p.author_id===ME.id;
+  const canEdit = mine || (isOfficer() && ["monthly","event","notice","survey"].includes(p.kind));
+  const back = { member_event:"首頁", event:"首頁", notice:"首頁", monthly:"首頁" }[p.kind] || "首頁";
+  const row = (l,v) => v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
+  el("v-pdetail").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>${back}</button>
+    <article class="card detail">
+      <div style="font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:1.2px">${KIND_LABEL[p.kind]||""}</div>
+      <h2 style="margin-top:4px">${esc(p.title)}</h2>
+      <div class="author">
+        ${avatar(memberName(p.author_id))}
+        <div style="flex:1"><div style="font-weight:700">${esc(memberName(p.author_id))}</div>
+          <div style="font-size:.79rem;color:var(--muted)">${ago(p.created_at)} 發布</div></div>
+        ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="openPost('${p.kind}',${p.id})">編輯</button>`:""}
+      </div>
+      ${whenLabel(p)?`<div class="block"><div class="lbl">日期</div><p>${esc(whenLabel(p))}${
+        p.start_date&&p.deadline&&p.start_date!==p.deadline?`　（${esc(p.start_date)} 到 ${esc(p.deadline)}）`:
+        (p.start_date||p.deadline)?`　（${esc(p.start_date||p.deadline)}）`:""}</p></div>`:""}
+      ${row("地點", p.place)}
+      ${row("主講", [p.speaker,p.speaker2].filter(Boolean).join("、"))}
+      ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
+      ${p.link?`<div class="actions" style="margin-top:18px">
+        <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
+        <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(p.link)}</div>`:""}
+    </article>
+    <div class="hint" style="text-align:center;margin-top:12px">這一頁有自己的網址，可以直接轉給人看</div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-pdetail").classList.add("on"); window.scrollTo(0,0);
 }
 
 // ── 發布 / 編輯貼文 ─────────────────────────────
