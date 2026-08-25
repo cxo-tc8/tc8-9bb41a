@@ -78,6 +78,8 @@ a{color:inherit;text-decoration:none}
 .btn-primary:hover{background:var(--orange-dark)}
 .btn-ghost{background:transparent;color:var(--blue-500);border:1.5px solid var(--line)}
 .btn-done{background:var(--chip);color:var(--muted);cursor:default}
+.btn-checkin{background:#1f7a4d;color:#fff}
+.btn-checkin:hover{background:#186040}
 .seatline{margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:.88rem;color:var(--muted)}
 .seatline b{color:var(--orange);font-weight:800;font-size:1.05rem}
 .seatline.full{color:var(--orange-dark);font-weight:700}
@@ -388,7 +390,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 07:52</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 07:58</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -480,6 +482,24 @@ function signupBlock(p){
   if(left === null) return `<div class="seatline">開放報名中</div>`;
   return `<div class="seatline${left===0?" full":""}">${left===0 ? "名額已滿" : `還剩 <b>${left}</b> 個位子`}</div>`;
 }
+// 今天是不是這場活動的日子
+// ⚠️ 一定要指定 Asia/Taipei：瀏覽器可能在別的時區，而「今天」對夥伴永遠是台灣的今天。
+//    （後端也踩過同一個坑：資料庫的 current_date 走 UTC，台灣早上 8 點前會差一天）
+const twDate = d => new Date(d).toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});
+function isEventDay(p){
+  if(!p.event_at) return false;
+  return twDate(p.event_at) === twDate(new Date());
+}
+// 現場報到：只在例會當天出現，平常完全不佔版面
+function checkinButton(p){
+  if(!isEventDay(p)) return "";
+  if(!ME) return `<button class="btn btn-checkin" onclick="go('me')">登入後報到</button>`;
+  return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 現場報到</button>`;
+}
+async function doCheckin(postId){
+  alert("報到系統還在做（#19）。做好之後，這裡會請你掃會場的 QR。");
+}
+
 // 報名按鈕：沒登入不給按、已報名顯示狀態、額滿停用
 function signupButton(p){
   if(!ME) return `<a class="btn btn-ghost" onclick="go('me')">登入後報名</a>`;
@@ -801,6 +821,7 @@ function homeHTML(){
           ${monthly.signup_open
               ? signupButton(monthly)
               : (monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:"")}
+          ${checkinButton(monthly)}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
         </div>
       </div></section>`
