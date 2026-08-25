@@ -232,6 +232,21 @@ a.btn{text-decoration:none}
 .filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
+.album{display:flex;flex-wrap:wrap;gap:9px}
+.thumb{position:relative;width:88px;height:88px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);flex:none}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumbx{position:absolute;top:3px;right:3px;width:24px;height:24px;border:none;border-radius:50%;
+  background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+.coverbadge{position:absolute;left:0;bottom:0;background:var(--blue-700);color:#fff;font-size:.65rem;font-weight:700;padding:2px 6px}
+.addphoto{width:88px;height:88px;border:1.5px dashed var(--line);border-radius:var(--r-sm);background:var(--card);
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:1.1rem;color:var(--muted);flex:none}
+.addphoto span{font-size:.72rem;font-weight:700}
+.addphoto small{font-size:.65rem;opacity:.75}
+.cover{width:52px;height:52px;border-radius:var(--r-sm);object-fit:cover;flex:none;border:1px solid var(--line)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:9px;margin-top:4px}
+.gallery img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--line);cursor:pointer}
+
 .photobox{display:flex;align-items:center;gap:11px;min-height:56px}
 .photobox img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
@@ -315,7 +330,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:35</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:37</div>
 <nav class="nav" role="navigation">
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
@@ -337,7 +352,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,required,start_date,deadline,capacity,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [];
@@ -527,23 +542,23 @@ function render(v){
 }
 
 // 上傳前在瀏覽器就壓縮：手機拍的照片動輒 3–5MB，直接傳會塞爆也會慢到沒人看
-function pickPhoto(folder, onDone){
+function pickPhoto(folder, onDone, maxSize){
   const inp=document.createElement("input");
   inp.type="file"; inp.accept="image/*";
   inp.onchange=async()=>{
     const file=inp.files[0]; if(!file) return;
     onDone({loading:true});
     try{
-      const url=await compressAndUpload(file, folder);
+      const url=await compressAndUpload(file, folder, maxSize);
       onDone({url});
     }catch(e){ onDone({error:String(e.message||e)}); }
   };
   inp.click();
 }
-async function compressAndUpload(file, folder){
+async function compressAndUpload(file, folder, maxSize){
   const img=await new Promise((res,rej)=>{ const i=new Image();
     i.onload=()=>res(i); i.onerror=()=>rej(new Error("讀不到這張圖")); i.src=URL.createObjectURL(file); });
-  const MAX=800;                       // 講者照顯示只有幾十 px，800 綽綽有餘
+  const MAX = maxSize || 800;          // 頭像 800 就夠；活動照要看得清楚，用 1200
   const r=Math.min(1, MAX/Math.max(img.width,img.height));
   const c=document.createElement("canvas");
   c.width=Math.round(img.width*r); c.height=Math.round(img.height*r);
@@ -748,8 +763,10 @@ function dueLabel(d){
 
 function linkRow(p, showAuthor){
   const who = showAuthor ? esc(memberName(p.author_id)) : "";
+  const cover = (p.photos||[])[0];
   return `<div class="linkrow" onclick="openPostDetail(${p.id})" style="cursor:pointer">
-    <svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-${p.link?"link":"case"}"/></svg>
+    ${cover ? `<img class="cover" src="${esc(cover)}" alt="" loading="lazy">`
+      : `<svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-${p.link?"link":"case"}"/></svg>`}
     <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
       ${p.body?`<div class="d" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.body)}</div>`:""}
       <div class="d">${[who, whenLabel(p), p.link?"有連結":""].filter(Boolean).join("　・　")}</div></div>
@@ -785,6 +802,8 @@ function openPostDetail(id){
               ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
               <div><div class="n">${esc(sp)}</div></div></div>`).join("")}</div>`:""}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
+      ${(p.photos||[]).length?`<div class="block"><div class="lbl">照片</div>
+        <div class="gallery">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" onclick="window.open('${esc(u)}','_blank')">`).join("")}</div></div>`:""}
       ${p.link?`<div class="actions" style="margin-top:18px">
         <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
         <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(p.link)}</div>`:""}
@@ -900,6 +919,35 @@ async function reloadNeeds(){
   NEEDS = await rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,created_at&order=created_at.desc");
 }
 
+const MAX_PHOTOS = 3;
+function albumList(){ try{ return JSON.parse(el("p_photos").value||"[]"); }catch{ return []; } }
+function renderAlbum(){
+  const list = albumList();
+  el("p_album").innerHTML =
+    list.map((u,i)=>`<div class="thumb">
+        <img src="${esc(u)}" alt="">
+        ${i===0?`<span class="coverbadge">封面</span>`:""}
+        <button type="button" class="thumbx" onclick="removePhoto(${i})" aria-label="移除">×</button>
+      </div>`).join("") +
+    (list.length < MAX_PHOTOS
+      ? `<button type="button" class="addphoto" onclick="addPhoto()">＋<span>加照片</span><small>${list.length}/${MAX_PHOTOS}</small></button>`
+      : `<div class="addphoto" style="opacity:.5;cursor:default"><small>已達 ${MAX_PHOTOS} 張上限</small></div>`);
+}
+function addPhoto(){
+  pickPhoto("event", st=>{
+    if(st.loading){ el("p_album").insertAdjacentHTML("beforeend",'<div class="thumb" id="uploading" style="display:grid;place-items:center;font-size:.75rem;color:var(--muted)">上傳中…</div>'); return; }
+    const tmp=el("uploading"); if(tmp) tmp.remove();
+    if(st.error){ alert(st.error); return; }
+    const list=albumList(); list.push(st.url);
+    el("p_photos").value=JSON.stringify(list.slice(0,MAX_PHOTOS));
+    renderAlbum();
+  }, 1200);
+}
+function removePhoto(i){
+  const list=albumList(); list.splice(i,1);
+  el("p_photos").value=JSON.stringify(list); renderAlbum();
+}
+
 function photoField(id, label, current){
   return `<div class="field"><label>${label}</label>
     <div class="help">選一張就好，會自動縮小再上傳</div>
@@ -929,10 +977,10 @@ function openPost(kind, id){
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
     monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup_link"],
-    event:        ["body","link","dates"],
+    event:        ["body","link","dates","album"],
     notice:       ["body"],
     survey:       ["link","deadline","done_count"],
-    member_event: ["body","link","dates"],
+    member_event: ["body","link","dates","album"],
   }[kind] || ["body"];
   const has = f => F.includes(f);
   const val = f => p && p[f]!=null ? esc(p[f]) : "";
@@ -975,6 +1023,10 @@ function openPost(kind, id){
         <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
       ${has("deadline")?`<div class="field"><label>截止日</label>
         <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput"></div>`:""}
+      ${has("album")?`<div class="field"><label>活動照片</label>
+        <div class="help">最多 3 張，第一張會當封面顯示在首頁。手機拍的會自動縮小再上傳</div>
+        <div class="album" id="p_album"></div>
+        <input type="hidden" id="p_photos" value="${p&&p.photos?esc(JSON.stringify(p.photos)):"[]"}"></div>`:""}
       ${has("dates")?`<div class="field"><label>活動日期</label>
         <div class="help">只辦一天就填左邊那格。活動結束隔天會自動從首頁收起來，不必記得回來刪。</div>
         <div style="display:flex;gap:9px;align-items:center">
@@ -997,6 +1049,7 @@ function openPost(kind, id){
       </div>
       ${p?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delPost(${p.id})">刪除</button></div>`:""}
     </div>`;
+  if(el("p_album")) renderAlbum();
   if(el("p_required")){
     el("p_required").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
       el("p_required").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
@@ -1023,7 +1076,8 @@ async function savePost(kind, id){
   const g = f => el("p_"+f) ? el("p_"+f).value : undefined;
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
     speaker:g("speaker"), speaker2:g("speaker2"),
-    speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"), start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
+    speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
+    photos: el("p_photos") ? JSON.parse(el("p_photos").value||"[]") : undefined, start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     done_count:g("done_count"), admin_link:g("admin_link"),
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
     event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
