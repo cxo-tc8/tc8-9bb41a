@@ -77,6 +77,10 @@ a{color:inherit;text-decoration:none}
 .btn-primary{background:var(--orange);color:#fff}
 .btn-primary:hover{background:var(--orange-dark)}
 .btn-ghost{background:transparent;color:var(--blue-500);border:1.5px solid var(--line)}
+.btn-done{background:var(--chip);color:var(--muted);cursor:default}
+.seatline{margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:.88rem;color:var(--muted)}
+.seatline b{color:var(--orange);font-weight:800;font-size:1.05rem}
+.seatline.full{color:var(--orange-dark);font-weight:700}
 
 a.btn{text-decoration:none}
 .btn-sm{min-height:44px;font-size:.86rem;padding:0 15px;flex:none}
@@ -384,7 +388,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:26</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 07:52</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -410,10 +414,12 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
+let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
+let MY_SIGNUPS = new Set();  // 我報名了哪幾場
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -442,6 +448,62 @@ async function postApi(action, body){
   const r=await fetch(SB+"/functions/v1/posts",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
   return r.json();
 }
+async function signupApi(action, body){
+  const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
+  const r=await fetch(SB+"/functions/v1/signup",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
+  return r.json();
+}
+// 席次是公開數字（v_post_seats 只吐數量、不吐任何一個人）；我報名了哪幾場要驗身分才拿得到
+async function reloadSeats(){
+  try{
+    const rows = await rest("v_post_seats?select=post_id,capacity,reserved_seats,taken");
+    SEATS = Object.fromEntries(rows.map(r => [r.post_id, r]));
+  }catch(e){ console.error("席次讀取失敗", e); }
+  MY_SIGNUPS = new Set();
+  if(token()){
+    try{
+      const r = await signupApi("mine", {});
+      if(r && r.ok) MY_SIGNUPS = new Set((r.signups||[]).map(x => x.post_id));
+    }catch(e){ console.error("報名狀態讀取失敗", e); }
+  }
+}
+// 剩幾位；capacity 沒填 = 不限名額，回 null
+function seatsLeft(postId){
+  const s = SEATS[postId];
+  if(!s || s.capacity == null) return null;
+  return Math.max(0, s.capacity - (s.reserved_seats||0) - (s.taken||0));
+}
+// 剩餘席次那一行；沒開放報名或不限名額就不顯示
+function signupBlock(p){
+  if(!p.signup_open) return "";
+  const left = seatsLeft(p.id);
+  if(left === null) return `<div class="seatline">開放報名中</div>`;
+  return `<div class="seatline${left===0?" full":""}">${left===0 ? "名額已滿" : `還剩 <b>${left}</b> 個位子`}</div>`;
+}
+// 報名按鈕：沒登入不給按、已報名顯示狀態、額滿停用
+function signupButton(p){
+  if(!ME) return `<a class="btn btn-ghost" onclick="go('me')">登入後報名</a>`;
+  if(MY_SIGNUPS.has(p.id)) return `<button class="btn btn-done" disabled>✓ 已報名</button>`;
+  const left = seatsLeft(p.id);
+  if(left === 0) return `<button class="btn btn-done" disabled>名額已滿</button>`;
+  return `<button class="btn btn-primary" onclick="doSignup(${p.id}, this)">我要報名</button>`;
+}
+
+async function doSignup(postId, btn){
+  if(btn){ btn.disabled = true; btn.textContent = "報名中…"; }
+  const r = await signupApi("register", {post_id: postId});
+  if(r && r.ok){
+    await reloadSeats();
+    renderHome();
+    alert(r.already ? "你已經報名過這一場了" : "報名完成！");
+  }else{
+    // 席次是搶的，失敗要讓畫面立刻反映真實數字，不能停在舊的「剩 1 位」
+    await reloadSeats();
+    renderHome();
+    alert((r && r.message) || "報名失敗，請再試一次");
+  }
+}
+
 async function api(action, body){
   const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
   const r=await fetch(SB+"/functions/v1/cases",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
@@ -734,8 +796,11 @@ function homeHTML(){
               ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
               <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
+        ${signupBlock(monthly)}
         <div class="actions">
-          ${monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:""}
+          ${monthly.signup_open
+              ? signupButton(monthly)
+              : (monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:"")}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
         </div>
       </div></section>`
@@ -1808,6 +1873,7 @@ async function loadMe(){
   catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
   const jumped = await handleCallback();
   const st = await loadMe();
+  await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
   if(!jumped && st==="unbound"){ go("claim"); return; }
   if(el("v-claim").classList.contains("on")) return renderClaim();
   go("home");
