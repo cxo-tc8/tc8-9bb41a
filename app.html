@@ -76,6 +76,7 @@ a{color:inherit;text-decoration:none}
 .btn-primary:hover{background:var(--orange-dark)}
 .btn-ghost{background:transparent;color:var(--blue-500);border:1.5px solid var(--line)}
 
+a.btn{text-decoration:none}
 .btn-sm{min-height:44px;font-size:.86rem;padding:0 15px;flex:none}
 
 /* 公告 */
@@ -230,6 +231,10 @@ a{color:inherit;text-decoration:none}
 .filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
+.photobox{display:flex;align-items:center;gap:11px;min-height:56px}
+.photobox img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none}
+.spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
 .reqbadge{display:inline-block;background:var(--orange);color:#fff;font-size:.7rem;font-weight:800;
   padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:2px;letter-spacing:.5px}
@@ -330,10 +335,10 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,required,start_date,deadline,capacity,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,required,start_date,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
-let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [];
+let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [];
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -471,9 +476,24 @@ function render(v){
     filterCases();
   }
 
-  if(v==="needs") el("v-needs").innerHTML = `
-    <div class="sec"><h2>大家想解的問題</h2></div>
-    <div class="card"><div class="empty">還沒有人提出需求</div></div>`;
+  if(v==="needs"){
+    el("v-needs").innerHTML = `
+      <div class="tools">
+        <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
+          <input id="nq" placeholder="搜尋大家想解的問題" oninput="filterNeeds()"></div>
+        <div class="chips" id="nfilter">
+          <button class="chip on" data-f="open">還在找</button>
+          <button class="chip" data-f="closed">已經找到</button>
+          <button class="chip" data-f="all">全部</button>
+        </div>
+      </div>
+      ${ME?`<div class="actions" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="openNeed()"><svg width="17" height="17"><use href="#i-plus"/></svg>提出我的需求</button></div>`:""}
+      <div class="card" id="nlist" style="margin-top:10px"></div>`;
+    el("nfilter").onclick = e => { const c=e.target.closest(".chip"); if(!c) return;
+      el("nfilter").querySelectorAll(".chip").forEach(x=>x.classList.remove("on")); c.classList.add("on"); filterNeeds(); };
+    filterNeeds();
+  }
 
   if(v==="me") el("v-me").innerHTML = ME ? `
     <section class="card mecard">${avatar(ME.name)}
@@ -481,10 +501,13 @@ function render(v){
       <div class="c">已用 LINE 綁定${ME.role==="officer"?" ・ 幹部":""}</div></div></section>
     <div class="grid2">
       <div class="stat"><b>${CASES.filter(c=>c.member_id===ME.id).length}</b><span>我的案例</span></div>
-      <div class="stat"><b>0</b><span>我的需求</span></div></div>
+      <div class="stat"><b>${NEEDS.filter(n=>n.member_id===ME.id&&!n.closed_at).length}</b><span>還在找</span></div></div>
     <div class="actions" style="margin-top:12px">
       <button class="btn btn-primary" onclick="openForm()"><svg width="17" height="17"><use href="#i-plus"/></svg>寫一個案例</button>
+      <button class="btn btn-ghost" onclick="openNeed()"><svg width="17" height="17"><use href="#i-plus"/></svg>提出需求</button></div>
+    <div class="actions" style="margin-top:9px">
       <button class="btn btn-ghost" onclick="openPost('member_event')"><svg width="17" height="17"><use href="#i-plus"/></svg>張貼近期活動</button></div>
+    ${myNeedsBlock()}
     ${myPostsBlock()}
     ${officerBlock()}
     ${myCasesBlock()}
@@ -501,12 +524,47 @@ function render(v){
       </div></div>`;
 }
 
+// 上傳前在瀏覽器就壓縮：手機拍的照片動輒 3–5MB，直接傳會塞爆也會慢到沒人看
+function pickPhoto(folder, onDone){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept="image/*";
+  inp.onchange=async()=>{
+    const file=inp.files[0]; if(!file) return;
+    onDone({loading:true});
+    try{
+      const url=await compressAndUpload(file, folder);
+      onDone({url});
+    }catch(e){ onDone({error:String(e.message||e)}); }
+  };
+  inp.click();
+}
+async function compressAndUpload(file, folder){
+  const img=await new Promise((res,rej)=>{ const i=new Image();
+    i.onload=()=>res(i); i.onerror=()=>rej(new Error("讀不到這張圖")); i.src=URL.createObjectURL(file); });
+  const MAX=800;                       // 講者照顯示只有幾十 px，800 綽綽有餘
+  const r=Math.min(1, MAX/Math.max(img.width,img.height));
+  const c=document.createElement("canvas");
+  c.width=Math.round(img.width*r); c.height=Math.round(img.height*r);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  const dataUrl=c.toDataURL("image/jpeg",0.82);
+  const res=await postApi("upload",{data:dataUrl, folder});
+  if(res.error) throw new Error(res.error);
+  return res.url;
+}
+
 const tagLabel = slug => (TAGS.find(t=>t.slug===slug)||{}).label || slug;
 const memberName = id => (MEMBERS.find(m=>m.id===id)||{}).name || "已退出的夥伴";
 const ago = iso => { const d=(Date.now()-new Date(iso))/864e5;
   return d<1?"今天":d<2?"昨天":d<8?`${Math.floor(d)} 天前`:d<31?`${Math.floor(d/7)} 週前`:`${Math.floor(d/30)} 個月前`; };
 
 // 「我的」頁專用：點一下直接進編輯（這裡是自己的工作區，不必先看再改）
+function myNeedsBlock(){
+  const mine = NEEDS.filter(n => n.member_id===ME.id);
+  if(!mine.length) return "";
+  return `<div class="sec"><h2>我的需求</h2><span class="more">${mine.length}</span></div>
+    <div class="card">${mine.map(needRow).join("")}</div>`;
+}
+
 function myPostsBlock(){
   const mine = POSTS.filter(p => p.author_id===ME.id && p.kind==="member_event");
   if(!mine.length) return "";
@@ -590,8 +648,10 @@ function homeHTML(){
       <div class="body">
         <div class="meta">${monthly.place?`<span>📍 <b>${esc(monthly.place)}</b></span>`:""}
           ${monthly.capacity?`<span>名額 <b>${monthly.capacity}</b></span>`:""}</div>
-        ${[monthly.speaker, monthly.speaker2].filter(Boolean).map((sp,i)=>`
-          <div class="speaker"${i?' style="border-top:none;padding-top:0;margin-top:8px"':""}>${avatar(sp)}
+        ${[[monthly.speaker,monthly.speaker_photo],[monthly.speaker2,monthly.speaker2_photo]]
+          .filter(x=>x[0]).map(([sp,ph],i)=>`
+          <div class="speaker"${i?' style="border-top:none;padding-top:0;margin-top:10px"':""}>
+            ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
             <div><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         <div class="actions">
@@ -621,13 +681,18 @@ function homeHTML(){
       .map(p=>{
       const rate = p.required && p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
       return `<div class="card"><div class="survey">
-        <div style="display:flex;gap:8px"><div style="flex:1">
-          <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">選填</span>`}${esc(p.title)}</div>
-          <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
-          </div>${edit(p)}</div>
+        <div style="display:flex;gap:9px;align-items:flex-start">
+          <div style="flex:1;min-width:0">
+            <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">選填</span>`}${esc(p.title)}</div>
+            <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
+          </div>
+          <div style="display:flex;gap:7px;flex:none;align-items:center">
+            ${p.link?`<a class="btn btn-primary btn-sm" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a>`:""}
+            ${edit(p)}
+          </div>
+        </div>
         ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
           <div class="rate"><span>全會完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
-        ${p.link?`<div class="actions"><a class="btn ${p.required?"btn-primary":"btn-ghost"}" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a></div>`:""}
       </div></div>`;}).join("")
       : `<div class="card"><div class="empty">目前沒有進行中的問卷</div></div>`;
   }
@@ -711,7 +776,12 @@ function openPostDetail(id){
         p.start_date&&p.deadline&&p.start_date!==p.deadline?`　（${esc(p.start_date)} 到 ${esc(p.deadline)}）`:
         (p.start_date||p.deadline)?`　（${esc(p.start_date||p.deadline)}）`:""}</p></div>`:""}
       ${row("地點", p.place)}
-      ${row("主講", [p.speaker,p.speaker2].filter(Boolean).join("、"))}
+      ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).length?
+        `<div class="block"><div class="lbl">主講</div>
+          ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).map(([sp,ph])=>`
+            <div class="speaker" style="border:none;padding:6px 0;margin:0">
+              ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
+              <div><div class="n">${esc(sp)}</div></div></div>`).join("")}</div>`:""}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
       ${p.link?`<div class="actions" style="margin-top:18px">
         <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
@@ -723,11 +793,140 @@ function openPostDetail(id){
 }
 
 // ── 發布 / 編輯貼文 ─────────────────────────────
+const URG = {hot:["很急","hot"], mid:["看機會","mid"], low:["不急","mid"]};
+
+function needRow(n){
+  const mine = ME && n.member_id===ME.id;
+  const done = !!n.closed_at;
+  const [ul,uc] = URG[n.urgency||"mid"];
+  return `<div class="needrow"${done?' style="opacity:.6"':""}>
+    <div style="display:flex;gap:9px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="t">${done?`<span class="optbadge">已找到</span>`:""}${esc(n.title)}</div>
+        <div class="by">${esc(memberName(n.member_id))}${n.tried?`　・　試過：${esc(n.tried)}`:""}</div>
+      </div>
+      ${done?"":`<span class="urg ${uc}">${ul}</span>`}
+    </div>
+    <div class="mdesc" style="margin-top:7px">${esc(n.problem)}</div>
+    ${(n.tags||[]).length?`<div class="tags">${n.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div>`:""}
+    ${mine?`<div style="display:flex;gap:7px;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="openNeed(${n.id})">編輯</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleNeed(${n.id},${done})">${done?"還在找":"已經找到了"}</button>
+    </div>`:""}
+  </div>`;
+}
+
+function filterNeeds(){
+  const q=(el("nq")?.value||"").trim().toLowerCase();
+  const f=el("nfilter")?.querySelector(".chip.on")?.dataset.f || "open";
+  let list = NEEDS.filter(n => f==="all" ? true : f==="closed" ? !!n.closed_at : !n.closed_at);
+  if(q) list = list.filter(n => [n.title,n.problem,n.tried,memberName(n.member_id)].some(x=>(x||"").toLowerCase().includes(q)));
+  el("nlist").innerHTML = list.map(needRow).join("") ||
+    `<div class="empty">${NEEDS.length?"這個條件下沒有需求":"還沒有人提出需求"+(ME?'<br><span style="font-size:.82rem">按上面「提出我的需求」，會自動掛你的名字</span>':"")}</div>`;
+}
+
+function openNeed(id){
+  if(!ME){ go("me"); return; }
+  const n = id ? NEEDS.find(x=>x.id===id) : null;
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('needs')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${n?"修改需求":"提出我的需求"}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
+        講一件你想用 AI 解、但還沒解掉的事。<b>會自動掛上你的名字（${esc(ME.name)}）</b>，
+        會裡有辦法的人看到就能找你。</div>
+
+      <div class="field"><label>標題<span class="req">*</span></label>
+        <div class="help">一句話講完你卡在哪</div>
+        <input type="text" id="n_title" maxlength="60" value="${n?esc(n.title):""}" placeholder="例：想把十年的報價紀錄變成可以問的資料庫"></div>
+
+      <div class="field"><label>想解什麼問題<span class="req">*</span></label>
+        <div class="help">寫具體一點，別人才知道幫不幫得上</div>
+        <textarea id="n_problem" maxlength="500" placeholder="例：報價資料散在幾百個 Excel，每次要找舊價格都翻很久">${n?esc(n.problem):""}</textarea></div>
+
+      <div class="field"><label>試過什麼</label>
+        <div class="help">寫出來可以省掉別人重複建議同一招</div>
+        <input type="text" id="n_tried" maxlength="500" value="${n?esc(n.tried||""):""}" placeholder="例：丟給 ChatGPT 但檔案太大"></div>
+
+      <div class="field"><label>急不急</label>
+        <div class="pills" id="n_urg">
+          ${[["hot","很急"],["mid","看機會"],["low","不急"]].map(([v,l])=>
+            `<button type="button" class="pill${(n?n.urgency:"mid")===v?" on":""}" data-u="${v}">${l}</button>`).join("")}</div></div>
+
+      <div class="field"><label>分類</label>
+        <div class="help">最多 3 個，之後配對靠這個</div>
+        <div class="pills" id="n_tags">${TAGS.map(t=>`<button type="button" class="pill${n&&(n.tags||[]).includes(t.slug)?" on":""}" data-t="${t.slug}">${esc(t.label)}</button>`).join("")}</div></div>
+
+      <div id="n_err"></div>
+      <div class="formbar">
+        <button class="btn btn-ghost" onclick="go('needs')">取消</button>
+        <button class="btn btn-primary" id="n_save" onclick="saveNeed(${n?n.id:"null"})">${n?"儲存":"送出"}</button>
+      </div>
+      ${n?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delNeed(${n.id})">刪除這則需求</button></div>`:""}
+    </div>`;
+  el("n_tags").onclick = e => { const p=e.target.closest(".pill"); if(!p) return;
+    if(!p.classList.contains("on") && el("n_tags").querySelectorAll(".pill.on").length>=3) return;
+    p.classList.toggle("on"); };
+  el("n_urg").onclick = e => { const p=e.target.closest(".pill"); if(!p) return;
+    el("n_urg").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); p.classList.add("on"); };
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-form").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function saveNeed(id){
+  const b=el("n_save"); b.disabled=true; b.textContent="送出中…";
+  const r = await api(id?"need_update":"need_create", {
+    id, title:el("n_title").value, problem:el("n_problem").value, tried:el("n_tried").value,
+    urgency: el("n_urg").querySelector(".pill.on")?.dataset.u || "mid",
+    tags: [...el("n_tags").querySelectorAll(".pill.on")].map(x=>x.dataset.t)});
+  if(r.error){ el("n_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
+    b.disabled=false; b.textContent=id?"儲存":"送出"; return; }
+  await reloadNeeds(); go("needs");
+}
+async function toggleNeed(id, done){
+  const r = await api(done?"need_reopen":"need_close", {id});
+  if(r.error) return alert(r.error);
+  await reloadNeeds(); filterNeeds();
+}
+async function delNeed(id){
+  if(!confirm("確定要刪除嗎？如果只是已經解決了，用「已經找到了」比較好——別人還看得到你解過什麼。")) return;
+  const r = await api("need_delete", {id});
+  if(r.error) return alert(r.error);
+  await reloadNeeds(); go("needs");
+}
+async function reloadNeeds(){
+  NEEDS = await rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,created_at&order=created_at.desc");
+}
+
+function photoField(id, label, current){
+  return `<div class="field"><label>${label}</label>
+    <div class="help">選一張就好，會自動縮小再上傳</div>
+    <div class="photobox" id="${id}_box">
+      ${current?`<img src="${esc(current)}" alt=""><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhoto('${id}')">移除</button>`
+        :`<button type="button" class="btn btn-ghost btn-sm" onclick="choosePhoto('${id}')">選擇照片</button>`}
+    </div>
+    <input type="hidden" id="${id}" value="${current?esc(current):""}"></div>`;
+}
+function choosePhoto(id){
+  pickPhoto("speaker", st=>{
+    const box=el(id+"_box");
+    if(st.loading){ box.innerHTML='<span style="color:var(--muted);font-size:.85rem">上傳中…</span>'; return; }
+    if(st.error){ box.innerHTML=`<span style="color:#b4261a;font-size:.85rem">${esc(st.error)}</span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="choosePhoto('${id}')">重試</button>`; return; }
+    el(id).value=st.url;
+    box.innerHTML=`<img src="${esc(st.url)}" alt=""><button type="button" class="btn btn-ghost btn-sm" onclick="clearPhoto('${id}')">移除</button>`;
+  });
+}
+function clearPhoto(id){
+  el(id).value="";
+  el(id+"_box").innerHTML=`<button type="button" class="btn btn-ghost btn-sm" onclick="choosePhoto('${id}')">選擇照片</button>`;
+}
+
 function openPost(kind, id){
   if(!ME){ go("me"); return; }
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
-    monthly:      ["body","speaker","speaker2","place","event_at","capacity","signup_link"],
+    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup_link"],
     event:        ["body","link","dates"],
     notice:       ["body"],
     survey:       ["link","deadline","done_count"],
@@ -756,9 +955,11 @@ function openPost(kind, id){
         <input type="text" id="p_title" maxlength="80" value="${val("title")}"></div>
 
       ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
+      ${has("photo1")?photoField("p_speaker_photo","第一位主講者照片", p&&p.speaker_photo):""}
       ${has("speaker2")?`<div class="field"><label>第二位主講者</label>
         <div class="help">只有一位就留空</div>
         <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>`:""}
+      ${has("photo2")?photoField("p_speaker2_photo","第二位主講者照片", p&&p.speaker2_photo):""}
       ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
       ${has("event_at")?`<div class="field"><label>時間</label><input type="datetime-local" id="p_event_at" value="${dtLocal(p&&p.event_at)}" class="dateinput" style="width:100%"></div>`:""}
       ${has("capacity")?`<div class="field"><label>名額</label><input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：50"></div>`:""}
@@ -819,7 +1020,8 @@ async function savePost(kind, id){
   const b=el("p_save"); b.disabled=true; b.textContent="送出中…";
   const g = f => el("p_"+f) ? el("p_"+f).value : undefined;
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
-    speaker:g("speaker"), speaker2:g("speaker2"), start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
+    speaker:g("speaker"), speaker2:g("speaker2"),
+    speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"), start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     done_count:g("done_count"), admin_link:g("admin_link"),
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
     event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
@@ -1093,7 +1295,8 @@ async function loadMe(){
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
-    ]).then(r => { POSTS = r[3]; return r; });
+      rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,created_at&order=created_at.desc"),
+    ]).then(r => { POSTS = r[3]; NEEDS = r[4]; return r; });
   }
   catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
   const jumped = await handleCallback();
