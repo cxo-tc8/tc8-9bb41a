@@ -305,6 +305,17 @@ let ME = null, MEMBERS = [];
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
+const DEBUG = new URLSearchParams(location.search).has("debug");
+const DBGLOG = [];
+function DBG(label, data){
+  DBGLOG.push(label + ": " + JSON.stringify(data));
+  if(!DEBUG) return;
+  let box = document.getElementById("dbgbox");
+  if(!box){ box = document.createElement("pre"); box.id="dbgbox";
+    box.style.cssText="position:fixed;left:0;right:0;bottom:0;max-height:40vh;overflow:auto;background:#111;color:#0f0;font-size:11px;padding:10px;z-index:9999;margin:0;white-space:pre-wrap";
+    document.body.appendChild(box); }
+  box.textContent = DBGLOG.join("\n");
+}
 const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const el  = id => document.getElementById(id);
 const token = () => localStorage.getItem("tc8_token");
@@ -334,7 +345,7 @@ document.querySelectorAll(".nav button").forEach(b=> b.onclick = ()=> go(b.datas
 /* ── 登入 ───────────────────────────────── */
 function lineLogin(){
   const state = Math.random().toString(36).slice(2);
-  sessionStorage.setItem("tc8_state", state);
+  localStorage.setItem("tc8_state", state);   // 用 localStorage：LINE 授權可能換分頁，sessionStorage 會遺失
   location.href = "https://access.line.me/oauth2/v2.1/authorize?response_type=code"
     + "&client_id=" + LINE_CHANNEL_ID
     + "&redirect_uri=" + encodeURIComponent(REDIRECT)
@@ -346,14 +357,26 @@ async function handleCallback(){
   const p = new URLSearchParams(location.search);
   const code = p.get("code"), state = p.get("state");
   if(!code) return false;
-  if(state !== sessionStorage.getItem("tc8_state")){
-    alert("登入驗證失敗，請再試一次"); history.replaceState({},"",REDIRECT); return false;
+  const saved = localStorage.getItem("tc8_state");
+  if(saved && state !== saved){
+    history.replaceState({},"",REDIRECT);
+    el("v-home").innerHTML = `<div class="center"><div class="err">
+      登入驗證沒對上，請再按一次登入。<br><span style="font-size:.8rem">（若一直如此，換用同一個瀏覽器分頁再試）</span></div>
+      <button class="linebtn" style="margin-top:12px" onclick="lineLogin()">再登入一次</button></div>`;
+    return true;
   }
   el("v-home").innerHTML = '<div class="busy">登入中…</div>';
   const r = await fn("callback", {code, redirect_uri: REDIRECT});
   history.replaceState({},"",REDIRECT);
+  DBG("callback 回傳", r);
+  if(r.error){
+    el("v-home").innerHTML = `<div class="center"><div class="err">登入失敗：${esc(r.error)}</div>
+      <button class="linebtn" style="margin-top:12px" onclick="lineLogin()">再試一次</button></div>`;
+    return true;
+  }
   if(r.token) localStorage.setItem("tc8_token", r.token);
   if(r.status === "unbound"){ go("claim"); return true; }
+  if(r.status === "bound"){ await loadMe(); go("me"); return true; }
   return false;
 }
 
@@ -522,11 +545,13 @@ function logout(){ localStorage.removeItem("tc8_token"); ME=null; paintMe(); go(
 /* ── 啟動 ───────────────────────────────── */
 async function loadMe(){
   const r = await fn("me");
+  DBG("me 回傳", r);
   ME = r.status==="bound" ? r.member : null;
   paintMe();
   return r.status;
 }
 (async function init(){
+  DBG("啟動", {網址:location.href, 有通行證:!!token(), 有授權碼:new URLSearchParams(location.search).has("code")});
   try{ MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"); }
   catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
   const jumped = await handleCallback();
