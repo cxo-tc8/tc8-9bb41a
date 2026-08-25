@@ -232,6 +232,21 @@ a.btn{text-decoration:none}
 .filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
+.evgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.evcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+  overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .12s}
+.evcard:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
+.evcard:active{transform:scale(.995)}
+.evphoto{position:relative;aspect-ratio:16/9;background:var(--line-soft)}
+.evphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.evcount{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
+  font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:99px}
+.evbody{padding:12px 14px 13px}
+.evtitle{font-weight:800;font-size:.98rem;line-height:1.45}
+.evdesc{font-size:.83rem;color:var(--muted);line-height:1.6;margin-top:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.evmeta{font-size:.78rem;color:var(--muted);margin-top:8px}
+
 .album{display:flex;flex-wrap:wrap;gap:9px}
 .thumb{position:relative;width:88px;height:88px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);flex:none}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
@@ -330,7 +345,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:37</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 22:45</div>
 <nav class="nav" role="navigation">
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
@@ -617,7 +632,7 @@ function myCasesBlock(){
     <div class="hint" style="margin-top:8px">想看別人眼中的樣子，點下面「我的公開頁面」</div>`;
 }
 
-const KIND_LABEL = {monthly:"月例會", event:"小活動", notice:"公告", survey:"問卷",
+const KIND_LABEL = {monthly:"月例會", event:"CXO & TC8 活動", notice:"公告", survey:"問卷",
   member_event:"夥伴的近期活動", wish:"想聽的主題", issue:"跟幹部說一件事"};
 const isOfficer = () => ME && ME.role === "officer";
 // 依日期排：活動看「什麼時候」，公告看「什麼時候發的」
@@ -678,52 +693,22 @@ function homeHTML(){
       </div></section>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
-  // 公告
-  if(notices.length || isOfficer()){
-    h += `<div class="sec"><h2>公告</h2>${isOfficer()?`<span class="more" onclick="openPost('notice')">＋ 發布</span>`:""}</div>`;
-    h += notices.length ? notices.map(p=>`<div class="card"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
-        <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
-        <div style="flex:1"><div class="t">${esc(p.title)}</div>
-          ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
-          <div class="d">${ago(p.created_at)}</div></div>
-        ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>`:`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`}</div></div>`).join("")
-      : `<div class="card"><div class="empty">還沒有公告</div></div>`;
-  }
+  // CXO & TC8 活動（緊接月例會）
+  h += `<div class="sec"><h2>CXO & TC8 活動</h2>${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
+  h += events.length ? eventBlock(events)
+    : `<div class="card"><div class="empty">還沒有活動</div></div>`;
 
-  // 問卷
-  if(surveys.length || isOfficer()){
-    h += `<div class="sec"><h2>問卷</h2>${isOfficer()?`<span class="more" onclick="openPost('survey')">＋ 發布</span>`:""}</div>`;
-    h += surveys.length ? surveys
-      .slice().sort((a,b)=> (b.required?1:0)-(a.required?1:0))   // 必填排最前面
-      .map(p=>{
-      const rate = p.required && p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
-      return `<div class="card"><div class="survey">
-        <div style="display:flex;gap:9px;align-items:flex-start">
-          <div style="flex:1;min-width:0">
-            <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">選填</span>`}${esc(p.title)}</div>
-            <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
-          </div>
-          <div style="display:flex;gap:7px;flex:none;align-items:center">
-            ${p.link?`<a class="btn btn-primary btn-sm" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a>`:""}
-            ${edit(p)}
-          </div>
-        </div>
-        ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
-          <div class="rate"><span>全會完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
-      </div></div>`;}).join("")
-      : `<div class="card"><div class="empty">目前沒有進行中的問卷</div></div>`;
-  }
-
-  // 小活動（幹部發）
-  if(events.length || isOfficer()){
-    h += `<div class="sec"><h2>小活動</h2>${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
-    h += events.length ? `<div class="card">${events.map(p=>linkRow(p)).join("")}</div>`
-      : `<div class="card"><div class="empty">還沒有小活動</div></div>`;
-  }
+  // 公告與問卷（同一區：對讀的人來說都是「幹部有話說」）
+  const msgs = [...notices, ...surveys].sort((a,b)=>
+    ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
+    || new Date(b.created_at) - new Date(a.created_at));
+  h += `<div class="sec"><h2>公告與問卷</h2>${isOfficer()?`<span class="more" onclick="openPost('notice')">＋ 發布</span>`:""}</div>`;
+  h += msgs.length ? msgs.map(p => p.kind==="survey" ? surveyCard(p) : noticeCard(p)).join("")
+    : `<div class="card"><div class="empty">還沒有公告或問卷</div></div>`;
 
   // 夥伴的近期活動
   h += `<div class="sec"><h2>夥伴的近期活動</h2>${ME?`<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>`:""}</div>`;
-  h += mEvents.length ? `<div class="card">${mEvents.map(p=>linkRow(p,true)).join("")}</div>`
+  h += mEvents.length ? eventBlock(mEvents, true)
     : `<div class="card"><div class="empty">還沒有夥伴張貼活動${ME?'<br><span style="font-size:.82rem">你的活動、開課、展覽都可以貼上來</span>':""}</div></div>`;
 
   // 最新案例
@@ -761,6 +746,61 @@ function dueLabel(d){
   return `到 ${d.slice(5).replace("-","/")}`;
 }
 
+// 有照片和沒照片是兩種版型：
+// 照片本身就是吸引點擊的東西，縮成 52px 等於白貼；沒照片就別留一塊空白
+function noticeCard(p){
+  return `<div class="card"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
+    <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
+    <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
+      ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
+      <div class="d">${ago(p.created_at)}</div></div>
+    ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('notice',${p.id})">編輯</button>`
+      :`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`}</div></div>`;
+}
+
+function surveyCard(p){
+  const rate = p.required && p.done_count!=null && MEMBERS.length ? Math.round(p.done_count/MEMBERS.length*100) : null;
+  return `<div class="card"><div class="survey">
+    <div style="display:flex;gap:9px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="t">${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">問卷</span>`}${esc(p.title)}</div>
+        <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
+      </div>
+      <div style="display:flex;gap:7px;flex:none;align-items:center">
+        ${p.link?`<a class="btn btn-primary btn-sm" href="${esc(p.link)}" target="_blank" rel="noopener">去填寫</a>`:""}
+        ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="openPost('survey',${p.id})">編輯</button>`:""}
+      </div>
+    </div>
+    ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
+      <div class="rate"><span>全會完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
+  </div></div>`;
+}
+
+function eventBlock(list, showAuthor){
+  const withPhoto = list.filter(p => (p.photos||[]).length);
+  const plain     = list.filter(p => !(p.photos||[]).length);
+  let h = "";
+  if(withPhoto.length) h += `<div class="evgrid">${withPhoto.map(p=>eventCard(p, showAuthor)).join("")}</div>`;
+  if(plain.length)     h += `<div class="card"${withPhoto.length?' style="margin-top:10px"':""}>${plain.map(p=>linkRow(p, showAuthor)).join("")}</div>`;
+  return h;
+}
+
+function eventCard(p, showAuthor){
+  const who = showAuthor ? esc(memberName(p.author_id)) : "";
+  const n = (p.photos||[]).length;
+  return `<article class="evcard" onclick="openPostDetail(${p.id})">
+    <div class="evphoto">
+      <img src="${esc(p.photos[0])}" alt="" loading="lazy">
+      ${n>1?`<span class="evcount">＋${n-1}</span>`:""}
+    </div>
+    <div class="evbody">
+      <div class="evtitle">${esc(p.title)}</div>
+      ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
+      <div class="evmeta">${[who, whenLabel(p), p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
+    </div>
+  </article>`;
+}
+
 function linkRow(p, showAuthor){
   const who = showAuthor ? esc(memberName(p.author_id)) : "";
   const cover = (p.photos||[])[0];
@@ -794,7 +834,9 @@ function openPostDetail(id){
       ${whenLabel(p)?`<div class="block"><div class="lbl">日期</div><p>${esc(whenLabel(p))}${
         p.start_date&&p.deadline&&p.start_date!==p.deadline?`　（${esc(p.start_date)} 到 ${esc(p.deadline)}）`:
         (p.start_date||p.deadline)?`　（${esc(p.start_date||p.deadline)}）`:""}</p></div>`:""}
+      ${row("時間", p.time_text)}
       ${row("地點", p.place)}
+      ${p.fee?`<div class="block"><div class="lbl">費用</div><p style="white-space:pre-wrap">${esc(p.fee)}</p></div>`:""}
       ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).length?
         `<div class="block"><div class="lbl">主講</div>
           ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).map(([sp,ph])=>`
@@ -948,6 +990,14 @@ function removePhoto(i){
   el("p_photos").value=JSON.stringify(list); renderAlbum();
 }
 
+let MSGKIND = "notice";
+function switchMsgType(k){
+  MSGKIND = k;
+  el("p_msgtype").querySelectorAll(".pill").forEach(b=>b.classList.toggle("on", b.dataset.k===k));
+  el("surveyfields").style.display = k==="survey" ? "block" : "none";
+  el("p_save").textContent = el("p_save").dataset.editing==="1" ? "儲存" : (k==="survey"?"發布問卷":"發布公告");
+}
+
 function photoField(id, label, current){
   return `<div class="field"><label>${label}</label>
     <div class="help">選一張就好，會自動縮小再上傳</div>
@@ -977,9 +1027,9 @@ function openPost(kind, id){
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
     monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup_link"],
-    event:        ["body","link","dates","album"],
-    notice:       ["body"],
-    survey:       ["link","deadline","done_count"],
+    event:        ["speaker_free","place","dates","time","fee","body","link","album"],
+    notice:       ["msgtype","body"],
+    survey:       ["msgtype","body"],
     member_event: ["body","link","dates","album"],
   }[kind] || ["body"];
   const has = f => F.includes(f);
@@ -992,20 +1042,46 @@ function openPost(kind, id){
       <div style="font-weight:800;font-size:1.15rem">${p?"編輯":"發布"}${KIND_LABEL[kind]}</div>
       ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
         你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>`:""}
-      ${kind==="survey"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
+      ${has("msgtype")?`<div class="field" style="margin-top:14px"><label>這是什麼</label>
+        <div class="pills" id="p_msgtype">
+          <button type="button" class="pill${kind!=="survey"?" on":""}" data-k="notice" onclick="switchMsgType('notice')">公告</button>
+          <button type="button" class="pill${kind==="survey"?" on":""}" data-k="survey" onclick="switchMsgType('survey')">問卷</button>
+        </div></div>`:""}
+      ${has("msgtype")?`<div id="surveyfields" style="display:${kind==="survey"?"block":"none"}">
+        <div style="color:var(--muted);font-size:.85rem;margin-top:12px;line-height:1.7">
         問卷本身用 Google 表單做，這裡只放連結和完成率。<b>系統不記錄誰填了誰沒填。</b></div>
         <div class="field"><label>要不要一定填<span class="req">*</span></label>
           <div class="help">必填的會排在最前面、標橘色，而且顯示完成率——大家一看就知道這份不填不行</div>
           <div class="pills" id="p_required">
             <button type="button" class="pill${p&&p.required?" on":""}" data-r="1">必填</button>
             <button type="button" class="pill${!p||!p.required?" on":""}" data-r="0">選填</button>
-          </div></div>`:""}
+          </div></div>
+        <div class="field"><label>Google 表單連結</label>
+          <input type="text" id="p_link" value="${val("link")}" placeholder="https://forms.gle/…"></div>
+        <div class="field"><label>截止日</label>
+          <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput"></div>
+        <div class="field"><label>已完成人數</label>
+          <div class="help">從表單後台看到的回應數，填進來就會算出完成率</div>
+          <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>
+        <div class="field"><label>表單後台連結</label>
+          <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
+          <input type="text" id="p_admin_link" value="" placeholder="https://docs.google.com/…/edit"></div>
+      </div>`:""}
 
       <div class="field"><label>標題<span class="req">*</span></label>
         <input type="text" id="p_title" maxlength="80" value="${val("title")}"></div>
 
       ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
       ${has("photo1")?photoField("p_speaker_photo","第一位主講者照片", p&&p.speaker_photo):""}
+      ${has("speaker_free")?`<div class="field"><label>講者</label>
+        <div class="help">幾位都可以，用頓號分開。例：郝旭烈、許景泰 Jerry、Kim 阿金</div>
+        <input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
+      ${has("time")?`<div class="field"><label>時間</label>
+        <div class="help">例：10:00–17:30、上午場、晚上 19:00 起</div>
+        <input type="text" id="p_time_text" value="${val("time_text")}" placeholder="10:00–17:30"></div>`:""}
+      ${has("fee")?`<div class="field"><label>費用</label>
+        <div class="help">有揪團或早鳥方案就一起寫，可以分行</div>
+        <textarea id="p_fee" maxlength="800" placeholder="1 人 NT$2,000\n帶 1 位朋友：2 人 NT$2,500\n帶 2 位朋友：3 人 NT$3,000">${val("fee")}</textarea></div>`:""}
       ${has("speaker2")?`<div class="field"><label>第二位主講者</label>
         <div class="help">只有一位就留空</div>
         <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>`:""}
@@ -1021,8 +1097,7 @@ function openPost(kind, id){
         <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
       ${has("link")?`<div class="field"><label>${kind==="survey"?"Google 表單連結":"外部連結"}</label>
         <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
-      ${has("deadline")?`<div class="field"><label>截止日</label>
-        <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput"></div>`:""}
+
       ${has("album")?`<div class="field"><label>活動照片</label>
         <div class="help">最多 3 張，第一張會當封面顯示在首頁。手機拍的會自動縮小再上傳</div>
         <div class="album" id="p_album"></div>
@@ -1035,20 +1110,16 @@ function openPost(kind, id){
           <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput">
         </div>
         <div class="cnt" id="p_daterange"></div></div>`:""}
-      ${has("done_count")&&isOfficer()?`<div class="field"><label>已完成人數</label>
-        <div class="help">從 Google 表單後台看到的回應數，填進來就會算出完成率</div>
-        <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>`:""}
-      ${isOfficer()&&kind==="survey"?`<div class="field"><label>表單後台連結</label>
-        <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
-        <input type="text" id="p_admin_link" value="" placeholder="https://docs.google.com/…/edit"></div>`:""}
+
 
       <div id="p_err"></div>
       <div class="formbar">
         <button class="btn btn-ghost" onclick="go('home')">取消</button>
-        <button class="btn btn-primary" id="p_save" onclick="savePost('${kind}',${p?p.id:"null"})">${p?"儲存":"發布"}</button>
+        <button class="btn btn-primary" id="p_save" data-editing="${p?1:0}" onclick="savePost('${kind}',${p?p.id:"null"})">${p?"儲存":"發布"}</button>
       </div>
       ${p?`<div style="margin-top:16px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delPost(${p.id})">刪除</button></div>`:""}
     </div>`;
+  if(el("p_msgtype")) MSGKIND = kind==="survey" ? "survey" : "notice";
   if(el("p_album")) renderAlbum();
   if(el("p_required")){
     el("p_required").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
@@ -1072,10 +1143,11 @@ function openPost(kind, id){
 }
 
 async function savePost(kind, id){
+  if(kind==="notice" || kind==="survey") kind = MSGKIND;   // 公告與問卷共用同一張表單
   const b=el("p_save"); b.disabled=true; b.textContent="送出中…";
   const g = f => el("p_"+f) ? el("p_"+f).value : undefined;
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
-    speaker:g("speaker"), speaker2:g("speaker2"),
+    speaker:g("speaker"), speaker2:g("speaker2"), time_text:g("time_text"), fee:g("fee"),
     speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
     photos: el("p_photos") ? JSON.parse(el("p_photos").value||"[]") : undefined, start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     done_count:g("done_count"), admin_link:g("admin_link"),
