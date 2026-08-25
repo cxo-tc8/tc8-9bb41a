@@ -276,6 +276,14 @@ a.btn{text-decoration:none}
 .photobox{display:flex;align-items:center;gap:11px;min-height:56px}
 .photobox img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+/* 月例會講者：桌機左右並排、手機上下堆疊 */
+.spgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+@media (max-width:640px){ .spgrid{grid-template-columns:1fr} }
+.spcell{display:flex;flex-direction:column;gap:8px}
+.spcell .ph{width:100%;aspect-ratio:1/1;object-fit:contain;background:var(--chip);border:1px solid var(--line);border-radius:var(--r-sm);display:block}
+.spcell .noph{width:100%;aspect-ratio:1/1;display:grid;place-items:center;background:var(--chip);color:var(--chip-text);border:1px solid var(--line);border-radius:var(--r-sm);font-weight:800;font-size:1.7rem}
+.spcell .n{font-weight:700;font-size:.94rem}
+.spcell .r{font-size:.78rem;color:var(--muted)}
 
 /* 問卷必填/選填標記 —— 必填用主色橘，一眼看得出來 */
 .cmt{display:flex;gap:11px;padding:13px 15px;border-bottom:1px solid var(--line-soft);align-items:flex-start}
@@ -375,7 +383,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:01</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:12</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -719,11 +727,11 @@ function homeHTML(){
       <div class="body">
         <div class="meta">${monthly.place?`<span>📍 <b>${esc(monthly.place)}</b></span>`:""}
           ${monthly.capacity?`<span>名額 <b>${monthly.capacity}</b></span>`:""}</div>
-        ${[[monthly.speaker,monthly.speaker_photo],[monthly.speaker2,monthly.speaker2_photo]]
-          .filter(x=>x[0]).map(([sp,ph],i)=>`
-          <div class="speaker"${i?' style="border-top:none;padding-top:0;margin-top:10px"':""}>
-            ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
-            <div><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")}
+        ${(()=>{const sps=[[monthly.speaker,monthly.speaker_photo],[monthly.speaker2,monthly.speaker2_photo]].filter(x=>x[0]);
+          return sps.length?`<div class="spgrid">`+sps.map(([sp,ph])=>`
+            <div class="spcell">
+              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
+              <div><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         <div class="actions">
           ${monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:""}
