@@ -375,7 +375,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-25 23:57</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 00:01</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -404,7 +404,7 @@ const industryNames = {
 const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
-let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [];
+let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -643,6 +643,10 @@ function officerBlock(){
   if(!isOfficer()) return "";
   return `<div class="sec"><h2>幹部專區</h2></div>
     <div class="card officer-only">
+      <div class="menurow" onclick="openReview()">
+        <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-people"/></svg>
+        <div class="t">新夥伴審核${PENDING?`<span class="reqbadge" style="margin-left:7px;margin-right:0">${PENDING}</span>`:""}</div>
+        <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       ${[["monthly","發布月例會"],["notice","發布公告"],["survey","放一份問卷"],["event","發布小活動"]]
         .map(([k,l])=>`<div class="menurow" onclick="openPost('${k}')">
           <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-plus"/></svg>
@@ -914,6 +918,93 @@ function needRow(n){
 
 // 需求詳情（第二層）—— 資料庫的 detail 欄位從一開始就留著，現在接出來
 let HELPERS = [];
+function openApply(){
+  const industryOpts = Object.entries(industryNames)
+    .map(([k,label])=>`<option value="${k}">${esc(label)}</option>`).join("");
+  el("v-claim").innerHTML = `
+    <div class="center">
+      <button class="back" onclick="renderClaim()"><svg width="17" height="17"><use href="#i-back"/></svg>回名單</button>
+      <div style="font-weight:800;font-size:1.1rem">新夥伴建檔</div>
+      <div style="color:var(--muted);font-size:.86rem;margin:6px 0 14px;line-height:1.7">
+        填好送出後，<b>四位幹部任何一位核可</b>就會出現在夥伴名冊上。
+        核可前你看得到網站內容，但別人還看不到你。</div>
+
+      <div class="field"><label>姓名<span class="req">*</span></label>
+        <input type="text" id="ap_name" maxlength="40" placeholder="可以帶小名"></div>
+      <div class="field"><label>公司</label><input type="text" id="ap_company" maxlength="60"></div>
+      <div class="field"><label>職稱</label><input type="text" id="ap_title" maxlength="40"></div>
+      <div class="field"><label>產業分類</label>
+        <select id="ap_industry" class="dateinput" style="width:100%">${industryOpts}</select></div>
+      <div class="field"><label>一句話自介</label>
+        <input type="text" id="ap_intro" maxlength="100" placeholder="讓大家記得你的一句話"></div>
+      <div class="field"><label>簡介</label>
+        <div class="help">你在做什麼、幫誰解決什麼問題</div>
+        <textarea id="ap_description" maxlength="800"></textarea></div>
+      <div id="ap_err"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" onclick="renderClaim()">取消</button>
+        <button class="btn btn-primary" id="ap_save" onclick="sendApply()">送出申請</button>
+      </div>
+    </div>`;
+}
+
+async function sendApply(){
+  const b=el("ap_save"); b.disabled=true; b.textContent="送出中…";
+  const g=k=>el("ap_"+k).value;
+  const r = await fn("apply", {name:g("name"), company:g("company"), title:g("title"),
+    industry:g("industry"), intro:g("intro"), description:g("description")});
+  if(r.error){ el("ap_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
+    b.disabled=false; b.textContent="送出申請"; return; }
+  el("v-claim").innerHTML = `<div class="center">
+    <div class="card" style="padding:26px 20px;text-align:center">
+      <div style="font-size:2rem">📮</div>
+      <div style="font-weight:800;font-size:1.05rem;margin-top:8px">申請送出了</div>
+      <div style="color:var(--muted);font-size:.88rem;margin-top:8px;line-height:1.8">
+        四位幹部任何一位核可後，你就會出現在夥伴名冊上。<br>
+        在那之前你已經可以瀏覽網站內容。</div>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="location.reload()">開始瀏覽</button>
+    </div></div>`;
+}
+
+// ── 幹部：審核新夥伴 ──
+async function openReview(){
+  el("v-form").innerHTML = '<div class="busy">載入待審名單…</div>';
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-form").classList.add("on"); window.scrollTo(0,0);
+  const r = await fn("pending_list");
+  if(r.error){ el("v-form").innerHTML = `<div class="center"><div class="err">${esc(r.error)}</div></div>`; return; }
+  const list = r.members || [];
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>我的</button>
+    <div class="sec"><h2>新夥伴審核</h2>${list.length?`<span class="more">${list.length}</span>`:""}</div>
+    <div class="card">${list.length ? list.map(m=>`
+      <div class="mrow" style="align-items:flex-start;flex-direction:column;gap:9px">
+        <div style="display:flex;gap:11px;width:100%;align-items:flex-start">
+          ${avatar(m.name)}
+          <div style="flex:1;min-width:0">
+            <div class="n">${esc(m.name)}</div>
+            <div class="c">${esc([m.title,m.company].filter(Boolean).join(" ・ "))||"沒填公司職稱"}</div>
+            ${m.intro?`<div class="c" style="color:var(--blue-700);font-style:italic;margin-top:4px">「${esc(m.intro)}」</div>`:""}
+            ${m.description?`<div class="mdesc" style="margin-top:6px">${esc(m.description)}</div>`:""}
+            <div class="c" style="margin-top:5px">${ago(m.bound_at)} 送出</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;width:100%">
+          <button class="btn btn-primary btn-sm" onclick="reviewMember(${m.id},'approve','${esc(m.name)}')">核可上線</button>
+          <button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="reviewMember(${m.id},'reject','${esc(m.name)}')">退回</button>
+        </div>
+      </div>`).join("") : `<div class="empty">目前沒有待審核的新夥伴</div>`}</div>
+    <div class="hint" style="margin-top:10px">四位幹部任何一位都可以核可，不必等會長</div>`;
+}
+
+async function reviewMember(id, act, name){
+  if(act==="reject" && !confirm(`確定退回「${name}」的申請嗎？資料會被刪除，他可以重新申請。`)) return;
+  const r = await fn(act, {id});
+  if(r.error) return alert(r.error);
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  openReview();
+}
+
 function openProfile(){
   if(!ME){ go("me"); return; }
   const m = MEMBERS.find(x=>x.id===ME.id) || ME;
@@ -1653,6 +1744,10 @@ async function renderClaim(){
       <input class="search" style="width:100%;margin-bottom:10px;padding:0 12px" placeholder="輸入名字快速找" oninput="filterClaim(this.value)">
       <div class="pick" id="picklist"></div>
       <div id="claimErr"></div>
+      <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="hint" style="margin-bottom:9px">名單裡沒有你？可能是剛入會還沒登記</div>
+        <button class="btn btn-ghost btn-sm" onclick="openApply()">我是新加入的，幫我建檔</button>
+      </div>
     </div>`;
   window.__claimable = r.members;
   filterClaim("");
@@ -1684,6 +1779,8 @@ async function loadMe(){
   if(ME && ME.role==="officer"){
     const all = await postApi("manage");
     if(all.posts) POSTS = all.posts;
+    const pend = await fn("pending_list");
+    PENDING = (pend.members||[]).length;
   }
   return r.status;
 }
