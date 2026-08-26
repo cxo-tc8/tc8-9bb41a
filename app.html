@@ -6,6 +6,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CXO TC8｜AI 案例與活動中心</title>
+<meta name="theme-color" content="#15296B">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="apple-mobile-web-app-title" content="CXO TC8">
 <style>
 :root{
   --blue-900:#15296B; --blue-700:#1E40A0; --blue-500:#2B57C4;
@@ -606,7 +609,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:42</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:43</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3450,7 +3453,9 @@ function openPost(kind, id){
         <div class="field"><label>截止日</label>
           <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput"></div>
         <div class="field"><label>已完成人數</label>
-          <div class="help">從表單後台看到的回應數，填進來就會算出完成率</div>
+          <div class="help">請填<b>去重後的實際填答人數</b>。<br>
+            ⚠️ Google 表單的「回應數」會把同一個人填兩次算成兩筆，直接抄會高估
+            （2026-08-25 那份：43 筆回覆，實際只有 37 人）</div>
           <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>
         <div class="field"><label>表單後台連結</label>
           <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
@@ -3658,7 +3663,9 @@ function filterCases(){
 function openCase(id){
   const c=CASES.find(x=>x.id===id); if(!c) return;
   const mine = ME && (c.member_id===ME.id || ME.role==="officer");
-  const share={dm:"可以私訊我",stage:"願意上台分享",none:"暫時不方便"}[c.share_level];
+  // ⛔ none 不能對到字串：字串是 truthy，下面的 ${share?...} 會照樣渲染成
+  //    「願意分享：暫時不方便／有同樣困擾的夥伴可以找他」，意思完全相反
+  const share={dm:"可以私訊我",stage:"願意上台分享"}[c.share_level];
   el("v-cdetail").innerHTML = `
     <button class="back" onclick="go('cases')"><svg width="17" height="17"><use href="#i-back"/></svg>案例</button>
     <article class="card detail">
@@ -3904,6 +3911,7 @@ async function loadMe(){
 }
 (async function init(){
   DBG("啟動", {網址:location.href, 有通行證:!!token(), 有授權碼:new URLSearchParams(location.search).has("code")});
+  el("v-home").innerHTML = '<div class="busy">載入中…</div>';
   try{
     [MEMBERS, TAGS, CASES] = await Promise.all([
       rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
@@ -3914,7 +3922,15 @@ async function loadMe(){
       rest("comments?select=id,kind,target_id,member_id,body,created_at&order=created_at.asc"),
     ]).then(r => { POSTS = r[3]; NEEDS = r[4]; COMMENTS = r[5]; return r; });
   }
-  catch(e){ MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e); }
+  catch(e){
+    MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e);
+    // ⛔ 不能只寫進 console：使用者看到的會是滿頁「還沒有活動」「還沒有公告」，
+    //    以為分會什麼都沒辦，而不是網路有問題
+    el("v-home").innerHTML = `<div class="center"><div class="err">
+      資料載入失敗，請下拉重新整理。<br>
+      <span style="font-size:.8rem">如果一直這樣，請跟幹部說一聲。</span></div></div>`;
+    return;
+  }
   const jumped = await handleCallback();
   const st = await loadMe();
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
