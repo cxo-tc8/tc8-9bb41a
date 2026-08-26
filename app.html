@@ -667,7 +667,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 18:07</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 18:45</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3229,6 +3229,12 @@ function homeHTML(){
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
+  // 公告與問卷：只放最新 3 則，其餘進「公告」分頁
+  // ⚠️ 首頁不能什麼都放——一年後會變成一條捲不完的長河
+  const msgs = [...notices, ...surveys].sort((a,b)=>
+    ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
+    || (b.important?1:0) - (a.important?1:0)                                        // 再來是重要公告
+    || new Date(b.created_at) - new Date(a.created_at));
   h += `<div class="sec"><h2>公告與問卷</h2>${
     msgs.length > 3 ? `<span class="more" onclick="go('notices')">全部 ${msgs.length}</span>`
     : isOfficer() ? `<span class="more" onclick="openPost('notice')">＋ 發布</span>` : ""}</div>`;
@@ -3240,12 +3246,6 @@ function homeHTML(){
   h += events.length ? eventBlock(events.slice(0,3))
     : `<div class="card"><div class="empty">還沒有活動</div></div>`;
 
-  // 公告與問卷：只放最新 3 則，其餘進「公告」分頁
-  // ⚠️ 首頁不能什麼都放——一年後會變成一條捲不完的長河
-  const msgs = [...notices, ...surveys].sort((a,b)=>
-    ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
-    || (b.important?1:0) - (a.important?1:0)                                        // 再來是重要公告
-    || new Date(b.created_at) - new Date(a.created_at));
   h += `<div class="sec"><h2>夥伴的近期活動</h2>${
     mEvents.length > 3 ? `<span class="more" onclick="ACT_TAB='member';go('acts')">全部 ${mEvents.length}</span>`
     : ME ? `<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>` : ""}</div>`;
