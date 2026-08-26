@@ -38,3 +38,17 @@ jobs:
             exit 1
           fi
           echo "✅ 資料庫正常"
+
+      - name: 清掉過期的團購（未達門檻的自動取消）
+        run: |
+          # ⛔ 這件事不能靠任何人記得回來做——BNI 平台上次死掉就是因為過期內容沒人清。
+          #    Edge Function 的 sweep 不需要身分（它只做「把過期的關掉」這一件事，沒有輸入）。
+          URL="https://fehubnmhohnkftjbozls.supabase.co/functions/v1/groupbuy"
+          CODE=$(curl -s -o /tmp/gb -w "%{http_code}" -X POST "$URL" \
+                 -H "Content-Type: application/json" -d '{"action":"sweep"}')
+          echo "HTTP $CODE"; cat /tmp/gb
+          if [ "$CODE" != "200" ]; then
+            echo "::error::團購過期清理失敗（HTTP $CODE）"
+            exit 1
+          fi
+          echo "✅ 團購過期清理完成"

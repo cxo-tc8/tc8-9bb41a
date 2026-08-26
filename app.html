@@ -91,6 +91,52 @@ a{color:inherit;text-decoration:none}
   padding:5px 10px;font-size:.8rem;color:var(--muted);cursor:pointer}
 .cancelbtn:hover{border-color:var(--orange);color:var(--orange)}
 .btn-wait{background:#e8a33d;color:#fff}
+.guestbox{margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-sm)}
+.guesthead{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem}
+.guesthead b{color:var(--blue-900)}
+.guestrow{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:.88rem}
+.guestrow .cancelbtn{margin-left:5px}
+.rolebadge{display:inline-block;margin-top:8px;padding:5px 11px;border-radius:999px;
+  background:var(--chip);color:var(--blue-900);font-size:.82rem;font-weight:700}
+.bstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-top:14px}
+.bstat>div{background:var(--chip);border-radius:var(--r-sm);padding:10px 6px;text-align:center}
+.bstat b{display:block;font-size:1.35rem;color:var(--blue-900)}
+.bstat span{font-size:.74rem;color:var(--muted)}
+.bstat .warn b{color:var(--orange-dark)}
+.ckrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line-soft)}
+.ckrow.done{background:#f0f9f3}
+.ckrow.nosign .ckinfo b{color:var(--orange-dark)}
+.ckinfo{flex:1;min-width:0;font-size:.92rem}
+.cksub{font-size:.78rem;color:var(--muted);margin-top:2px}
+.cksub b.far{color:#c0392b}
+.ckbtn{flex:none;min-height:42px;min-width:74px;border:1.5px solid var(--line);background:var(--card);
+  border-radius:var(--r-sm);font-weight:700;font-size:.88rem;cursor:pointer}
+.ckbtn.on{background:#1f7a4d;color:#fff;border-color:#1f7a4d}
+.tagx{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fde8e8;color:#c0392b;font-size:.72rem;font-weight:700}
+.tagw{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fff2dd;color:#a06010;font-size:.72rem;font-weight:700}
+.absel{margin-top:6px;width:100%;min-height:38px;padding:0 8px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:.84rem}
+.qrbox{margin-top:16px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:var(--r);text-align:center}
+.buycard{cursor:pointer;overflow:hidden}
+.buycard:hover{box-shadow:0 3px 14px rgba(21,41,107,.14)}
+.buyimg{width:100%;height:150px;object-fit:cover;display:block}
+.buybody{padding:12px 14px}
+.buytitle{font-weight:700;font-size:1rem}
+.buymeta{font-size:.8rem;color:var(--muted);margin-top:4px}
+.buymeta b{color:var(--blue-900);font-size:.95rem}
+.okmark{color:#1f7a4d;font-weight:700}
+.bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:9px 0 6px}
+.barfill{height:100%;background:var(--orange);border-radius:99px;transition:width .3s}
+.barfill.ok{background:#1f7a4d}
+.qtyin{min-height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:1rem;width:110px}
+.creditbig{margin-top:16px;padding:22px;background:var(--chip);border-radius:var(--r);text-align:center}
+.cnum{font-size:3.4rem;font-weight:800;color:var(--blue-900);line-height:1}
+.cmax{font-size:1rem;color:var(--muted);margin-left:6px}
+.clight{margin-top:8px;font-size:.95rem;font-weight:700}
+.crow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line-soft);font-size:.88rem}
+.qrhint{font-size:.86rem;color:var(--muted)}
+.qrhint2{margin-top:10px;font-size:.78rem;color:var(--muted)}
+.qrcode{margin-top:12px;font-family:ui-monospace,monospace;font-size:2.6rem;font-weight:800;letter-spacing:5px;color:var(--blue-900)}
 .dietnote{margin-top:4px;font-size:.82rem;color:var(--muted)}
 .mealopt{display:flex;flex-wrap:wrap;gap:8px}
 .mealopt .pill.sold{opacity:.45;text-decoration:line-through;cursor:not-allowed}
@@ -425,7 +471,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:19</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:44</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -451,13 +497,16 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,waitlist_open,done_count,author_id,created_at";
-const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,done_count,author_id,created_at";
+const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
 let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
 let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
+let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
+let MY_CHECKINS = new Set();         // 我報到過哪幾場
+let BUYS = [], BUY_PROG = {}, BUY_VARS = {}, MY_ORDERS = [];  // 團購
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -486,6 +535,37 @@ async function postApi(action, body){
   const r=await fetch(SB+"/functions/v1/posts",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
   return r.json();
 }
+async function buyApi(action, body){
+  const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
+  const r=await fetch(SB+"/functions/v1/groupbuy",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
+  return r.json();
+}
+async function reloadBuys(){
+  try{
+    // RLS 已經擋掉待審／退回的單，這裡讀到的都是可以公開看的
+    BUYS = await rest("group_buys?select=id,owner_id,title,body,photos,unit_price,min_qty,deadline,status&order=deadline.asc");
+    const pr = await rest("v_gb_progress?select=buy_id,min_qty,qty,buyers");
+    BUY_PROG = Object.fromEntries(pr.map(x => [x.buy_id, x]));
+    const vs = await rest("group_buy_variants?select=id,buy_id,grp,label,sort&order=sort.asc");
+    BUY_VARS = {};
+    vs.forEach(v => { (BUY_VARS[v.buy_id] ??= []).push(v); });
+  }catch(e){ BUYS = []; console.error("團購讀取失敗", e); }
+  MY_ORDERS = [];
+  if(token()){
+    try{ const r = await buyApi("mine", {}); if(r && r.ok) MY_ORDERS = r.orders || []; }
+    catch(e){ console.error("我的訂購讀取失敗", e); }
+  }
+}
+async function checkinApi(action, body){
+  const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
+  const r=await fetch(SB+"/functions/v1/checkin",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
+  return r.json();
+}
+async function guestApi(action, body){
+  const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
+  const r=await fetch(SB+"/functions/v1/guests",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
+  return r.json();
+}
 async function signupApi(action, body){
   const h={"Content-Type":"application/json"}; const t=token(); if(t) h.Authorization="Bearer "+t;
   const r=await fetch(SB+"/functions/v1/signup",{method:"POST",headers:h,body:JSON.stringify({action,...body})});
@@ -504,6 +584,17 @@ async function reloadSeats(){
     MEAL_TAKEN = Object.fromEntries(t.map(x => [x.option_id, x.taken]));
   }catch(e){ MEALS = []; MEAL_TAKEN = {}; console.error("餐點選項讀取失敗", e); }
 
+  MY_GUESTS = [];
+  if(token()){
+    try{
+      const g = await guestApi("mine", {});
+      if(g && g.ok) MY_GUESTS = g.guests || [];
+      const w = await guestApi("whoami", {});
+      if(w && w.ok) MY_ROLE = w.me;
+      const ck = await checkinApi("mine", {});
+      if(ck && ck.ok) MY_CHECKINS = new Set((ck.checkins||[]).map(x => x.post_id));
+    }catch(e){ console.error("來賓資料讀取失敗", e); }
+  }
   MY_SIGNUPS = new Map();
   if(token()){
     try{
@@ -551,10 +642,29 @@ function isEventDay(p){
 function checkinButton(p){
   if(!isEventDay(p)) return "";
   if(!ME) return `<button class="btn btn-checkin" onclick="go('me')">登入後報到</button>`;
+  if(MY_CHECKINS.has(p.id)) return `<button class="btn btn-done" disabled>✓ 已報到</button>`;
   return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 現場報到</button>`;
 }
+// 報到：先拿定位（拿不到也沒關係，GPS 只記錄不擋人），再送報到碼
 async function doCheckin(postId){
-  alert("報到系統還在做（#19）。做好之後，這裡會請你掃會場的 QR。");
+  if(MY_CHECKINS.has(postId)){ alert("你已經報到過了"); return; }
+  const code = prompt("請輸入會場 QR 上的報到碼\n（或是幹部口頭報的短碼）");
+  if(!code) return;
+  const pos = await new Promise(res => {
+    if(!navigator.geolocation) return res(null);
+    // ⚠️ 超時就放棄，不要讓人卡在報到台前面等定位
+    navigator.geolocation.getCurrentPosition(
+      p => res(p), () => res(null), {timeout: 6000, maximumAge: 60000});
+  });
+  const body = {post_id: postId, code: code.trim().toUpperCase(), method: "qr"};
+  if(pos){ body.lat = pos.coords.latitude; body.lng = pos.coords.longitude; body.accuracy = pos.coords.accuracy; }
+  const r = await checkinApi("checkin", body);
+  if(r && r.ok){
+    MY_CHECKINS.add(postId); renderHome();
+    alert(r.already ? "你已經報到過了" : `報到完成，${r.name}！`);
+  }else{
+    alert((r && r.message) || "報到失敗");
+  }
 }
 
 // 報名按鈕：沒登入不給按、已報名顯示狀態、額滿停用
@@ -607,6 +717,544 @@ async function doCancel(postId){
   }else{
     alert((r && r.message) || "取消失敗，請再試一次");
   }
+}
+
+// ── 團購（S9 #22 / S10 #23）──────────────────────────
+// 獨立於月例會：有商品規格與金額，跟「席次」是不同的東西。
+function buyBlock(){
+  const live = BUYS.filter(b => b.status === "open");
+  const mine = MY_ORDERS;
+  let h = `<div class="sec"><h2>夥伴團購</h2>${
+    ME ? `<span class="more" onclick="openBuyForm()">＋ 我要開團</span>` : ""}</div>`;
+  if(isOfficer()) h += `<div class="card" style="padding:10px 14px"><span class="more" onclick="openBuyPending()">審核待上架的團購 →</span></div>`;
+  if(!live.length) return h + `<div class="card"><div class="empty">目前沒有進行中的團購${
+    ME ? '<br><span style="font-size:.82rem">按上面「＋ 我要開團」就能開始</span>' : ""}</div></div>`;
+  h += live.map(b => {
+    const pr = BUY_PROG[b.id] || {qty:0, min_qty:b.min_qty, buyers:0};
+    const pct = Math.min(100, Math.round(pr.qty / Math.max(1, b.min_qty) * 100));
+    const my = mine.filter(o => o.buy_id === b.id).reduce((a,o) => a + o.qty, 0);
+    const days = daysLeft(b.deadline);
+    return `<div class="card buycard" onclick="openBuy(${b.id})">
+      ${(b.photos||[]).length ? `<img class="buyimg" src="${esc(b.photos[0])}" alt="">` : ""}
+      <div class="buybody">
+        <div class="buytitle">${esc(b.title)}</div>
+        <div class="buymeta">${esc(memberName(b.owner_id))}${
+          b.unit_price ? `　｜　每件 $${b.unit_price}` : ""}　｜　${
+          days < 0 ? "已截止" : days === 0 ? "今天截止" : `剩 ${days} 天`}</div>
+        <div class="bar"><div class="barfill${pr.qty >= b.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
+        <div class="buymeta">已訂 <b>${pr.qty}</b> / 成團 ${b.min_qty} 件${
+          pr.qty >= b.min_qty ? `　<span class="okmark">✓ 已成團</span>` : ""}${
+          my ? `　｜　我訂了 <b>${my}</b> 件` : ""}</div>
+      </div></div>`;
+  }).join("");
+  return h;
+}
+const daysLeft = d => {
+  if(!d) return 0;
+  const tw = x => new Date(x).toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});
+  return Math.round((new Date(d + "T00:00:00+08:00") - new Date(tw(new Date()) + "T00:00:00+08:00")) / 86400000);
+};
+
+let BUY_QTY = {};
+async function openBuy(buyId){
+  const b = BUYS.find(x => x.id === buyId); if(!b) return;
+  const vars = BUY_VARS[buyId] || [];
+  BUY_QTY = {};
+  MY_ORDERS.filter(o => o.buy_id === buyId).forEach(o => { BUY_QTY[o.variant_id ?? "none"] = o.qty; });
+  const pr = BUY_PROG[buyId] || {qty:0, buyers:0};
+  const canOrder = ME && b.status === "open" && daysLeft(b.deadline) >= 0;
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      ${(b.photos||[]).length ? `<img src="${esc(b.photos[0])}" style="width:100%;border-radius:var(--r);margin-bottom:12px">` : ""}
+      <div style="font-weight:800;font-size:1.15rem">${esc(b.title)}</div>
+      <div class="buymeta" style="margin-top:6px">開團：${esc(memberName(b.owner_id))}${
+        b.unit_price ? `　｜　每件 $${b.unit_price}` : ""}　｜　截止 ${esc(b.deadline)}</div>
+      <div class="buymeta">已訂 <b>${pr.qty}</b> / 成團 ${b.min_qty} 件　${pr.buyers} 人參加</div>
+      ${b.body ? `<div class="mdesc" style="margin-top:12px;white-space:pre-wrap">${esc(b.body)}</div>` : ""}
+      ${!ME ? `<div class="mnote" style="margin-top:16px">登入之後才能訂購</div>` : ""}
+      ${canOrder ? (vars.length ? vars.map(v => `
+        <div class="field" style="margin-top:14px">
+          <label>${esc(v.grp)}：${esc(v.label)}</label>
+          <input type="number" min="0" id="q_${v.id}" value="${BUY_QTY[v.id] || 0}" class="qtyin">
+        </div>`).join("") : `
+        <div class="field" style="margin-top:14px"><label>訂購數量</label>
+          <input type="number" min="0" id="q_none" value="${BUY_QTY.none || 0}" class="qtyin"></div>`) : ""}
+      ${canOrder ? `<div class="field"><label>備註</label>
+        <input type="text" id="q_note" maxlength="200" placeholder="有什麼要告訴開團的人"></div>` : ""}
+      ${canOrder ? `<div class="formbar">
+        <button class="btn btn-primary" onclick="submitOrder(${buyId}, this)">送出訂購</button>
+        <span class="mnote" style="align-self:center">數量填 0 就是取消</span>
+      </div>` : ""}
+      ${ME && (b.owner_id === ME.id || isOfficer()) ? `<div class="field" style="margin-top:20px">
+        <button class="mbtn add" onclick="openBuyDetail(${buyId})">📋 看訂購名單與統計</button>
+        <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購</button></div>` : ""}
+    </div>`;
+  go("form");
+}
+async function submitOrder(buyId, btn){
+  const vars = BUY_VARS[buyId] || [];
+  btn.disabled = true; btn.textContent = "送出中…";
+  const note = el("q_note") ? el("q_note").value : "";
+  let okAll = true, msg = "";
+  if(vars.length){
+    for(const v of vars){
+      const qty = Number(el("q_" + v.id).value) || 0;
+      const had = BUY_QTY[v.id] || 0;
+      if(qty === had) continue;   // 沒改的就不送，免得白打一趟
+      const r = await buyApi("order", {buy_id: buyId, variant_id: v.id, qty, note});
+      if(!r || !r.ok){ okAll = false; msg = (r && r.message) || "訂購失敗"; }
+    }
+  }else{
+    const qty = Number(el("q_none").value) || 0;
+    const r = await buyApi("order", {buy_id: buyId, qty, note});
+    if(!r || !r.ok){ okAll = false; msg = (r && r.message) || "訂購失敗"; }
+  }
+  await reloadBuys();
+  btn.disabled = false; btn.textContent = "送出訂購";
+  if(okAll){ go("home"); renderHome(); alert("已送出"); } else alert(msg);
+}
+
+function openBuyForm(buyId){
+  if(!ME){ go("me"); return; }
+  const b = buyId ? BUYS.find(x => x.id === buyId) : null;
+  const v = k => b && b[k] != null ? esc(b[k]) : "";
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${b ? "改我的團購" : "開一個團購"}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.8">
+        開好之後要幹部核可才會出現在首頁。<br>
+        <b>最小訂購量</b>＝要累積到幾件你才願意製作。截止時沒達到，系統會自動取消並通知大家。
+      </div>
+      <div class="field" style="margin-top:16px"><label>商品名稱 *</label>
+        <input type="text" id="gb_title" maxlength="80" value="${v("title")}"></div>
+      <div class="field"><label>說明</label>
+        <div class="help">材質、尺寸對照、交貨方式、怎麼付錢</div>
+        <textarea id="gb_body" maxlength="2000">${v("body")}</textarea></div>
+      <div class="field"><label>每件價格</label>
+        <input type="number" id="gb_price" min="0" value="${b ? b.unit_price : 0}"></div>
+      <div class="field"><label>最小訂購量（成團門檻）*</label>
+        <input type="number" id="gb_min" min="1" value="${b ? b.min_qty : 10}"></div>
+      <div class="field"><label>截止日 *</label>
+        <input type="date" id="gb_deadline" value="${v("deadline")}"></div>
+      ${b ? `<div class="field" style="margin-top:18px"><label>規格（尺寸、顏色…）</label>
+        <div class="help">沒有規格的商品就不用填，訂購的人直接填數量</div>
+        ${(BUY_VARS[b.id]||[]).map(x => `<div class="mrow" style="grid-template-columns:1fr 1fr auto">
+          <input value="${esc(x.grp)}" disabled><input value="${esc(x.label)}" disabled>
+          <button class="mbtn" onclick="delVariant(${x.id}, ${b.id})">停用</button></div>`).join("")}
+        <button class="mbtn add" onclick="addVariant(${b.id})">＋ 加一個規格</button></div>` : ""}
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="saveBuy(${buyId || "null"}, this)">${b ? "存起來" : "送出給幹部審核"}</button>
+      </div>
+    </div>`;
+  go("form");
+}
+async function saveBuy(buyId, btn){
+  const title = el("gb_title").value.trim(), deadline = el("gb_deadline").value;
+  if(!title){ alert("請填商品名稱"); return; }
+  if(!deadline){ alert("請填截止日"); return; }
+  btn.disabled = true; btn.textContent = "送出中…";
+  const r = await buyApi(buyId ? "update" : "create", {
+    id: buyId || undefined, title, body: el("gb_body").value,
+    unit_price: Number(el("gb_price").value) || 0,
+    min_qty: Number(el("gb_min").value) || 1, deadline,
+  });
+  btn.disabled = false; btn.textContent = buyId ? "存起來" : "送出給幹部審核";
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await reloadBuys();
+  if(buyId){ go("home"); renderHome(); alert("已更新"); }
+  else { alert("已送出，等幹部核可就會出現在首頁"); openBuyForm(r.id); }
+}
+async function addVariant(buyId){
+  const grp = prompt("規格類別（例如：尺寸、顏色）", "尺寸"); if(!grp) return;
+  const label = prompt(`「${grp}」的選項（例如：M）`); if(!label) return;
+  const r = await buyApi("variant_save", {buy_id: buyId, grp, label, sort: (BUY_VARS[buyId]||[]).length * 10 + 10});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await reloadBuys(); openBuyForm(buyId);
+}
+async function delVariant(id, buyId){
+  const r = await buyApi("variant_save", {id, buy_id: buyId, active: false,
+    grp: "規格", label: "已停用"});
+  if(!r || !r.ok){ alert("失敗"); return; }
+  await reloadBuys(); openBuyForm(buyId);
+}
+async function openBuyDetail(buyId){
+  const r = await buyApi("detail", {buy_id: buyId});
+  if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
+  el("v-form").innerHTML = `
+    <button class="back" onclick="openBuy(${buyId})"><svg width="17" height="17"><use href="#i-back"/></svg>回上一頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">訂購名單　${esc(r.buy.title)}</div>
+      <div class="bstat" style="grid-template-columns:repeat(3,1fr)">
+        <div><b>${r.total}</b><span>總件數</span></div>
+        <div><b>${r.buy.min_qty}</b><span>成團門檻</span></div>
+        <div><b>$${r.amount}</b><span>總金額</span></div>
+      </div>
+      <div class="mnote" style="margin-top:10px">${r.reached ? "✅ 已達成團門檻" : "⚠️ 還沒達到門檻，截止時會自動取消"}</div>
+      <div class="field" style="margin-top:18px"><label>各規格數量</label>
+        <div class="tally">${Object.entries(r.tally).map(([k,v]) =>
+          `<div class="tallyrow"><span>${esc(k)}</span><b>${v}</b></div>`).join("")}</div></div>
+      <div class="field" style="margin-top:18px"><label>完整名單</label>
+        <div class="rosterwrap"><table class="roster">
+          <thead><tr><th>#</th><th>姓名</th><th>規格</th><th>數量</th><th>備註</th></tr></thead>
+          <tbody>${r.list.map((x,i) => `<tr><td>${i+1}</td><td>${esc(x.name)}</td>
+            <td>${esc(x.variant||"—")}</td><td>${x.qty}</td><td>${esc(x.note)}</td></tr>`).join("")}</tbody>
+        </table></div></div>
+    </div>`;
+  go("form");
+}
+async function openBuyPending(){
+  if(!isOfficer()) return;
+  const r = await buyApi("pending", {});
+  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">待審的團購</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
+        核可之後才會出現在首頁。四位幹部任何一位核可都算數。
+      </div>
+      ${r.list.length ? r.list.map(b => `<div class="card" style="padding:14px;margin-top:12px">
+        <div style="font-weight:700">${esc(b.title)}</div>
+        <div class="buymeta">${esc((b.members&&b.members.name)||"")}　｜　每件 $${b.unit_price}　｜　
+          成團 ${b.min_qty} 件　｜　截止 ${esc(b.deadline)}</div>
+        ${b.body ? `<div class="mdesc" style="white-space:pre-wrap;margin-top:8px">${esc(b.body)}</div>` : ""}
+        <div class="actions" style="margin-top:12px">
+          <button class="btn btn-primary" onclick="approveBuy(${b.id}, false)">核可上架</button>
+          <button class="btn btn-ghost" onclick="approveBuy(${b.id}, true)">退回</button>
+        </div></div>`).join("")
+        : `<div class="mnote" style="margin-top:16px">目前沒有待審的團購</div>`}
+    </div>`;
+  go("form");
+}
+async function approveBuy(id, reject){
+  if(reject && !confirm("確定要退回這個團購嗎？")) return;
+  const r = await buyApi("approve", {id, reject});
+  if(!r || !r.ok){ alert("失敗"); return; }
+  await reloadBuys(); openBuyPending();
+}
+
+// ── 出席信用分數（S8 #21）────────────────────────────
+// ⭐ 分數不存在資料庫裡，每次查詢當場算——規則會變（12.5 可能改成 25、
+//    門檻可能挪），事實（誰在哪一場沒到、原因是什麼）不會變。
+const LIGHT = {ok:["⚪","正常"], warn:["🟡","幹部關心一下"], alert:["🔴","會長談話"]};
+async function openMyCredit(){
+  if(!ME){ go("me"); return; }
+  const r = await checkinApi("credit", {});
+  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  const c = r.credit || {}, L = LIGHT[c.light] || LIGHT.ok;
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>回上一頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">我的出席信用</div>
+      <div class="creditbig"><span class="cnum">${c.score}</span><span class="cmax">/ 100</span>
+        <div class="clight">${L[0]} ${L[1]}</div></div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:10px;line-height:1.8">
+        本會期（${esc(r.since)} 起）計算。<br>
+        <b>只有在活動開始前 4 小時之內臨時取消、或完全沒通知就沒出現</b>，才會扣 12.5 分。<br>
+        更早取消、生病意外都不扣分。生病意外一個會期最多免責 2 次。<br>
+        <span class="mnote">餐點是提前訂的，太晚說會造成浪費——這就是為什麼有這個分數。</span>
+      </div>
+      ${r.records.length ? `<div class="field" style="margin-top:20px"><label>我的紀錄</label>
+        ${r.records.map(x => `<div class="crow">
+          <span>${esc((x.posts && x.posts.title) || "")}</span>
+          <b>${esc(absLabel(x.absence_reason))}</b></div>`).join("")}</div>`
+        : `<div class="mnote" style="margin-top:18px">你沒有任何缺席紀錄 👍</div>`}
+    </div>`;
+  go("form");
+}
+const absLabel = k => (ABSENCE.find(a => a[0] === k) || [,"—"])[1];
+
+async function openCreditAll(){
+  if(!isOfficer()) return;
+  const r = await checkinApi("credit", {all: true});
+  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  const bad = r.list.filter(x => x.light !== "ok");
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">全體出席信用</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
+        本會期（${esc(r.since)} 起）。分數低的排前面。
+        <b style="color:var(--orange-dark)">${bad.length}</b> 位需要關心。
+        <br><span class="mnote">這份只有幹部看得到，夥伴看不到彼此的分數。</span>
+      </div>
+      <div class="rosterwrap" style="margin-top:14px"><table class="roster">
+        <thead><tr><th>姓名</th><th>分數</th><th>燈號</th><th>臨時取消</th><th>生病意外</th><th>餐點損失</th></tr></thead>
+        <tbody>${r.list.map(x => {
+          const L = LIGHT[x.light] || LIGHT.ok;
+          return `<tr><td>${esc(x.name)}</td><td><b>${x.score}</b></td><td>${L[0]} ${L[1]}</td>
+            <td>${x.late_count}</td><td>${x.excused_count}</td><td>${x.meal_loss}</td></tr>`;
+        }).join("")}</tbody>
+      </table></div>
+    </div>`;
+  go("form");
+}
+
+// ── 幹部：現場報到台（S7 #20）＋ 未報到原因與信用評分（S8 #21）────
+let BOARD = null, BOARD_POST = null;
+const ABSENCE = [
+  ["early",   "訂餐截止前就取消",        0],
+  ["mid",     "截止後～開始前 4 小時取消", 0],
+  ["late",    "開始前 4 小時內臨時取消",  12.5],
+  ["noshow",  "沒通知就沒出現",          12.5],
+  ["excused", "生病／意外／家人照護",     0],
+];
+async function openBoard(postId){
+  if(!isOfficer()) return;
+  BOARD_POST = postId;
+  const r = await checkinApi("board", {post_id: postId});
+  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  BOARD = r; renderBoard(); go("form");
+}
+function renderBoard(){
+  const r = BOARD, postId = BOARD_POST;
+  const p = POSTS.find(x => x.id === postId);
+  const gDone = r.guests.filter(g => g.checked).length;
+  const mSigned = r.members.filter(m => m.signed);
+  const mDone = r.members.filter(m => m.checked);
+  const walkin = mDone.filter(m => !m.signed);
+  const noShow = mSigned.filter(m => !m.checked);
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">現場報到　${esc(p ? p.title : "")}</div>
+      <div class="bstat">
+        <div><b>${r.guests.length}</b><span>來賓</span></div>
+        <div><b>${gDone}</b><span>來賓到了</span></div>
+        <div><b>${mSigned.length}</b><span>夥伴報名</span></div>
+        <div><b>${mDone.length}</b><span>夥伴到了</span></div>
+        <div class="warn"><b>${noShow.length}</b><span>報名沒到</span></div>
+        <div class="warn"><b>${walkin.length}</b><span>沒報名卻來</span></div>
+      </div>
+
+      <div class="field" style="margin-top:20px">
+        <label>今天的來賓（${gDone}/${r.guests.length}）</label>
+        <div class="help">來賓不必自己操作，點一下就完成報到</div>
+        ${r.guests.length ? r.guests.map(g => `
+          <div class="ckrow${g.checked ? " done" : ""}">
+            <div class="ckinfo">
+              <b>${esc(g.name)}</b>${g.company ? `　<span class="mnote">${esc(g.company)}</span>` : ""}
+              <div class="cksub">介紹人：${esc(memberName(g.host_id))}${
+                g.meals ? `　｜　${esc(g.meals)}` : "　｜　沒訂餐"}${
+                g.phone ? `　｜　${esc(g.phone)}` : ""}${
+                g.diet_note ? `　｜　⚠️ ${esc(g.diet_note)}` : ""}</div>
+            </div>
+            <button class="ckbtn${g.checked ? " on" : ""}" onclick="markCheck(null, ${g.id}, ${g.checked})">${
+              g.checked ? "✓ 到了" : "打勾"}</button>
+          </div>`).join("") : `<div class="mnote" style="padding:10px 0">還沒有人登記來賓</div>`}
+      </div>
+
+      <div class="field" style="margin-top:22px">
+        <label>夥伴（${mDone.length}/${mSigned.length} 已報名的人到了）</label>
+        <div class="help">沒報名卻出現的人也可以直接打勾，系統會記成現場加入</div>
+        ${r.members.map(m => `
+          <div class="ckrow${m.checked ? " done" : ""}${!m.signed ? " nosign" : ""}">
+            <div class="ckinfo">
+              <b>${esc(m.name)}</b>${m.tag ? `　<span class="mnote">${esc(m.tag)}</span>` : ""}
+              ${!m.signed ? `<span class="tagx">沒報名</span>` : ""}
+              ${m.status === "waitlist" ? `<span class="tagw">候補</span>` : ""}
+              <div class="cksub">${m.signed ? (m.meals || "沒訂餐") : "—"}${
+                m.diet_note ? `　｜　⚠️ ${esc(m.diet_note)}` : ""}${
+                m.checked && m.distance_m != null
+                  ? `　｜　報到時距離會場 <b class="${m.distance_m > 500 ? "far" : ""}">${m.distance_m} 公尺</b>${
+                      m.accuracy != null ? `（誤差 ±${Math.round(m.accuracy)} 公尺）` : ""}` : ""}</div>
+              ${m.signed && !m.checked ? `
+                <select class="absel" onchange="setAbsence(${m.id}, this.value)">
+                  <option value="">沒到的話，選一個原因…</option>
+                  ${ABSENCE.map(([k, label, d]) =>
+                    `<option value="${k}">${label}${d ? `（扣 ${d} 分）` : "（不扣分）"}</option>`).join("")}
+                </select>` : ""}
+            </div>
+            <button class="ckbtn${m.checked ? " on" : ""}" onclick="markCheck(${m.id}, null, ${m.checked})">${
+              m.checked ? "✓ 到了" : "打勾"}</button>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+async function markCheck(memberId, guestId, undo){
+  const r = await checkinApi("mark", {post_id: BOARD_POST, member_id: memberId, guest_id: guestId, undo: !!undo});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await openBoard(BOARD_POST);
+}
+async function setAbsence(memberId, reason){
+  if(!reason) return;
+  const r = await checkinApi("absence", {post_id: BOARD_POST, member_id: memberId, reason});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await openBoard(BOARD_POST);
+}
+
+// ── 幹部：開啟報到、拿 QR ─────────────────────────────
+async function openCheckinAdmin(postId){
+  if(!isOfficer()) return;
+  const p = POSTS.find(x => x.id === postId);
+  const r = await checkinApi("open", {post_id: postId});
+  if(!r || !r.ok){ alert((r && r.message) || "開啟失敗"); return; }
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">報到碼　${esc(p ? p.title : "")}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:8px;line-height:1.8">
+        <b>這組碼只有這一場能用</b>，下一場會換一組新的。<br>
+        碼本身就是「只有到現場才拿得到的東西」——沒來的人不知道今天是哪一組。<br>
+        ⚠️ 但它也可能被拍照傳到群組裡。所以請一併設下面的
+        <b>報到時間窗</b>與<b>會場座標</b>：時間窗擋事後補簽，座標讓遠端報到留下痕跡。
+      </div>
+      <div class="qrbox">
+        <div class="qrhint">請夥伴在首頁按「現場報到」，輸入這組碼</div>
+        <div class="qrcode">${esc(r.code)}</div>
+        <div class="qrhint2">投影在螢幕上，或寫在白板／報到台的牌子上</div>
+      </div>
+      <div class="field" style="margin-top:18px"><label>報到開始時間</label>
+        <div class="help">空白 = 不限制。設了之後，這個時間之前掃 QR 會被擋下來</div>
+        <input type="datetime-local" id="ck_open" value="${r.opens_at ? new Date(r.opens_at).toISOString().slice(0,16) : ""}"></div>
+      <div class="field"><label>報到結束時間</label>
+        <div class="help">擋掉事後補簽</div>
+        <input type="datetime-local" id="ck_close" value="${r.closes_at ? new Date(r.closes_at).toISOString().slice(0,16) : ""}"></div>
+      <div class="field"><label>會場座標（選填）</label>
+        <div class="help">填了之後，系統會記下每個人報到時離會場多遠。
+          <b>不會擋人</b>，但有人在家掃轉傳的 QR，你看得到</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="ck_lat" placeholder="緯度 24.16" value="${p&&p.venue_lat!=null?p.venue_lat:""}" style="flex:1;min-width:0">
+          <input type="text" id="ck_lng" placeholder="經度 120.64" value="${p&&p.venue_lng!=null?p.venue_lng:""}" style="flex:1;min-width:0">
+          <button class="mbtn" style="flex:none" onclick="useHere()">用現在位置</button>
+        </div></div>
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="saveCheckinCfg(${postId}, this)">存設定</button>
+        <button class="btn btn-ghost" onclick="closeCheckin(${postId})">關閉報到</button>
+      </div>
+    </div>`;
+  go("form");
+}
+function useHere(){
+  if(!navigator.geolocation){ alert("這個瀏覽器拿不到定位"); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    el("ck_lat").value = p.coords.latitude.toFixed(6);
+    el("ck_lng").value = p.coords.longitude.toFixed(6);
+  }, () => alert("拿不到定位，請手動填或留空"));
+}
+async function saveCheckinCfg(postId, btn){
+  btn.disabled = true; btn.textContent = "儲存中…";
+  const r = await checkinApi("open", {
+    post_id: postId,
+    opens_at:  el("ck_open").value  ? new Date(el("ck_open").value).toISOString()  : "",
+    closes_at: el("ck_close").value ? new Date(el("ck_close").value).toISOString() : "",
+    venue_lat: el("ck_lat").value.trim(), venue_lng: el("ck_lng").value.trim(),
+  });
+  btn.disabled = false; btn.textContent = "存設定";
+  alert(r && r.ok ? "已儲存" : "儲存失敗");
+  await reloadPosts();
+}
+async function closeCheckin(postId){
+  if(!confirm("關閉之後，現在貼出去的 QR 就失效了。確定嗎？")) return;
+  const r = await checkinApi("open", {post_id: postId, close: true});
+  alert(r && r.ok ? "已關閉報到" : "失敗");
+  go("home");
+}
+// ── 來賓：登記／修改／取消 ──────────────────────────
+// ⛔ 介紹人由後端從登入身分取，前端送什麼都不算數
+let GUEST_PICK = {};
+function guestsOf(postId){ return MY_GUESTS.filter(g => g.post_id === postId); }
+
+// 月例會卡片上的來賓區
+function guestBlock(p){
+  if(!p.signup_open) return "";
+  if(!ME) return "";
+  const mine = guestsOf(p.id);
+  const quota = p.guest_quota || 5;
+  return `<div class="guestbox">
+    <div class="guesthead">
+      <span>我帶的來賓　<b>${mine.length}</b> / ${quota}</span>
+      ${mine.length < quota
+        ? `<button class="cancelbtn" onclick="openGuest(${p.id})">＋ 登記來賓</button>`
+        : `<span class="mnote">已達上限</span>`}
+    </div>
+    ${mine.map(g => `<div class="guestrow">
+      <span>${esc(g.name)}${g.company ? `　<span class="mnote">${esc(g.company)}</span>` : ""}${
+        g.meal_choices && Object.keys(g.meal_choices).length
+          ? `　<span class="mnote">${Object.entries(g.meal_choices).map(([k,v]) => esc(mealLabel(v))).join("・")}</span>` : ""}</span>
+      <span>
+        <button class="cancelbtn" onclick="openGuest(${p.id}, ${g.id})">改</button>
+        <button class="cancelbtn" onclick="removeGuest(${g.id}, '${esc(g.name)}')">取消</button>
+      </span></div>`).join("")}
+  </div>`;
+}
+
+function openGuest(postId, guestId){
+  if(!ME){ go("me"); return; }
+  const p = POSTS.find(x => x.id === postId);
+  const g = guestId ? MY_GUESTS.find(x => x.id === guestId) : null;
+  GUEST_PICK = Object.assign({}, (g && g.meal_choices) || {});
+  const groups = mealGroups(postId);
+  const v = (f) => g && g[f] ? esc(g[f]) : "";
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${g ? "修改來賓資料" : "登記來賓"}　${esc(p ? p.title : "")}</div>
+      ${MY_ROLE && MY_ROLE.role !== "member"
+        ? `<div class="rolebadge">你目前的身分：${esc(MY_ROLE.label)}</div>` : ""}
+      <div style="color:var(--muted);font-size:.85rem;margin-top:8px;line-height:1.7">
+        來賓不必自己操作任何東西，當天由你或幹部在報到台幫他打勾就好。<br>
+        電話只有幹部看得到，其他夥伴看不到。
+      </div>
+      <div class="field" style="margin-top:16px"><label>姓名 *</label>
+        <input type="text" id="g_name" maxlength="40" value="${v("name")}"></div>
+      <div class="field"><label>公司</label>
+        <input type="text" id="g_company" maxlength="60" value="${v("company")}"></div>
+      <div class="field"><label>職稱</label>
+        <input type="text" id="g_title" maxlength="40" value="${v("title")}"></div>
+      <div class="field"><label>電話</label>
+        <div class="help">只有幹部看得到，用來當天聯絡</div>
+        <input type="tel" id="g_phone" maxlength="30" value="${v("phone")}"></div>
+      <div class="field"><label>產業</label>
+        <input type="text" id="g_industry" maxlength="40" value="${v("industry")}"></div>
+      ${groups.map((grp, gi) => `
+        <div class="field" style="margin-top:16px"><label>${esc(grp)}</label>
+          <div class="pills mealopt" id="gg${gi}">
+            ${mealsFor(postId).filter(m => m.grp === grp).map(m => {
+              const on = String(GUEST_PICK[grp]) === String(m.id), out = soldOut(m);
+              return `<button type="button" class="pill${on?" on":""}${out&&!on?" sold":""}" ${out&&!on?"disabled":""}
+                onclick="pickGuestMeal('${esc(grp)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
+                  m.price>0?`<span class="mealprice">$${m.price}</span>`:""}${out?"（已額滿）":""}</button>`;
+            }).join("")}
+          </div></div>`).join("")}
+      <div class="field"><label>飲食備註</label>
+        <input type="text" id="g_diet" maxlength="200" value="${v("diet_note")}"></div>
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="submitGuest(${postId}, ${guestId || "null"}, this)">${g ? "存起來" : "登記"}</button>
+      </div>
+    </div>`;
+  go("form");
+}
+function pickGuestMeal(grp, id, gi, btn){
+  GUEST_PICK[grp] = String(id);
+  document.querySelectorAll(`#gg${gi} .pill`).forEach(x => x.classList.remove("on"));
+  btn.classList.add("on");
+}
+async function submitGuest(postId, guestId, btn){
+  const name = (el("g_name").value || "").trim();
+  if(!name){ alert("請填來賓姓名"); return; }
+  btn.disabled = true; btn.textContent = "送出中…";
+  const body = {
+    post_id: postId, id: guestId || undefined, name,
+    company: el("g_company").value, title: el("g_title").value,
+    phone: el("g_phone").value, industry: el("g_industry").value,
+    diet_note: el("g_diet").value,
+    meal_choices: Object.keys(GUEST_PICK).length ? GUEST_PICK : undefined,
+  };
+  const r = await guestApi(guestId ? "update" : "add", body);
+  btn.disabled = false; btn.textContent = guestId ? "存起來" : "登記";
+  if(r && r.ok){ await reloadSeats(); go("home"); renderHome(); alert(guestId ? "已更新" : `已登記來賓：${name}`); }
+  else alert((r && r.message) || "登記失敗");
+}
+async function removeGuest(id, name){
+  if(!confirm(`確定要取消來賓「${name}」嗎？`)) return;
+  const r = await guestApi("remove", {id});
+  await reloadSeats(); renderHome();
+  alert(r && r.ok ? `已取消來賓：${r.removed}` : ((r && r.message) || "取消失敗"));
 }
 
 // ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
@@ -1001,6 +1649,8 @@ function render(v){
     ${officerBlock()}
     ${myCasesBlock()}
     <div class="card menu" style="margin-top:12px">
+      ${MY_ROLE && MY_ROLE.role !== "member" ? `<div class="rolebadge" style="margin:0 0 12px">你目前的身分：${esc(MY_ROLE.label)}</div>` : ""}
+      <div class="menurow" onclick="openMyCredit()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的出席信用</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openProfile()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">改我的基本資料</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-people"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
@@ -1150,6 +1800,7 @@ function homeHTML(){
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         ${signupBlock(monthly)}
         ${myOrderLine(monthly)}
+        ${guestBlock(monthly)}
         <div class="actions">
           ${monthly.signup_open
               ? signupButton(monthly)
@@ -1158,6 +1809,9 @@ function homeHTML(){
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openMeals(${monthly.id})">🍱 餐點選項</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openBoard(${monthly.id})">✅ 現場報到台</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openCreditAll()">📊 出席信用</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openCheckinAdmin(${monthly.id})">🔳 報到碼</button>`:""}
         </div>
       </div></section>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
@@ -1179,6 +1833,9 @@ function homeHTML(){
   h += `<div class="sec"><h2>夥伴的近期活動</h2>${ME?`<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>`:""}</div>`;
   h += mEvents.length ? eventBlock(mEvents, true)
     : `<div class="card"><div class="empty">還沒有夥伴張貼活動${ME?'<br><span style="font-size:.82rem">你的活動、開課、展覽都可以貼上來</span>':""}</div></div>`;
+
+  // 夥伴團購
+  h += buyBlock();
 
   // 最新案例
   h += `<div class="sec"><h2>最新案例</h2>${CASES.length?`<span class="more" onclick="go('cases')">全部 ${CASES.length}</span>`:""}</div>`;
@@ -1489,6 +2146,14 @@ function openProfile(){
       <div class="field"><label>網站</label>
         <input type="text" id="pf_web" maxlength="200" value="${v("web")}" placeholder="https://…"></div>
 
+      <div class="field" style="margin-top:24px"><label>為什麼來 TC8？</label>
+        <div class="help">以下三題都是選填，寫了幹部與夥伴才知道怎麼幫你</div>
+        <textarea id="pf_q_why_tc8" maxlength="800">${v("q_why_tc8")}</textarea></div>
+      <div class="field"><label>對於 AI 有什麼需求和想法？</label>
+        <textarea id="pf_q_ai_needs" maxlength="800">${v("q_ai_needs")}</textarea></div>
+      <div class="field"><label>針對 TC8 讀書會或 808 五金行，有沒有問題或想了解什麼？</label>
+        <textarea id="pf_q_book_club" maxlength="800">${v("q_book_club")}</textarea></div>
+
       <div id="pf_err"></div>
       <div class="formbar">
         <button class="btn btn-ghost" onclick="go('me')">取消</button>
@@ -1508,6 +2173,7 @@ async function saveProfile(){
     name:g("name"), company:g("company"), title:g("title"), industry:g("industry"),
     tag:g("tag"), description:g("description"), web:g("web"), intro:g("intro"),
     resource:g("resource"), wish:g("wish"), topic:g("topic"),
+    q_why_tc8:g("q_why_tc8"), q_ai_needs:g("q_ai_needs"), q_book_club:g("q_book_club"),
   });
   if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent="儲存"; return; }
@@ -2257,6 +2923,7 @@ async function loadMe(){
   const jumped = await handleCallback();
   const st = await loadMe();
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
+  await reloadBuys();
   if(!jumped && st==="unbound"){ go("claim"); return; }
   if(el("v-claim").classList.contains("on")) return renderClaim();
   go("home");
