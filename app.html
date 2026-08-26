@@ -105,6 +105,9 @@ a{color:inherit;text-decoration:none}
 .arow:hover{background:var(--chip)}
 .arow>span:first-child{flex:1}
 .ago{color:var(--muted);font-size:1.2rem}
+.backbar{display:flex;align-items:center;gap:4px}
+.back2{color:var(--muted)!important}
+.back2::before{content:"·";margin-right:4px;color:var(--line)}
 .abadge{background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;
   padding:2px 9px;border-radius:999px}
 .guestbox{margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-sm)}
@@ -488,7 +491,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:33</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:39</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -782,7 +785,7 @@ async function openBuy(buyId){
   const pr = BUY_PROG[buyId] || {qty:0, buyers:0};
   const canOrder = ME && b.status === "open" && daysLeft(b.deadline) >= 0;
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       ${(b.photos||[]).length ? `<img src="${esc(b.photos[0])}" style="width:100%;border-radius:var(--r);margin-bottom:12px">` : ""}
       <div style="font-weight:800;font-size:1.15rem">${esc(b.title)}</div>
@@ -838,7 +841,7 @@ function openBuyForm(buyId){
   const b = buyId ? BUYS.find(x => x.id === buyId) : null;
   const v = k => b && b[k] != null ? esc(b[k]) : "";
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${b ? "改我的團購" : "開一個團購"}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.8">
@@ -927,7 +930,7 @@ async function openBuyPending(){
   const r = await buyApi("pending", {});
   if(!r || !r.ok){ alert("讀取失敗"); return; }
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">待審的團購</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
@@ -1030,7 +1033,7 @@ async function openMyCredit(){
   if(!r || !r.ok){ alert("讀取失敗"); return; }
   const c = r.credit || {}, L = LIGHT[c.light] || LIGHT.ok;
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>回上一頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">我的出席信用</div>
       <div class="creditbig"><span class="cnum">${c.score}</span><span class="cmax">/ 100</span>
@@ -1057,7 +1060,7 @@ async function openCreditAll(){
   if(!r || !r.ok){ alert("讀取失敗"); return; }
   const bad = r.list.filter(x => x.light !== "ok");
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">全體出席信用</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
@@ -1103,7 +1106,7 @@ function renderBoard(){
   const noShow = mSigned.filter(m => !m.checked);
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">報到台　${esc(p ? p.title : "")}</div>
 
@@ -1290,7 +1293,7 @@ function openGuest(postId, guestId){
   const v = (f) => g && g[f] ? esc(g[f]) : "";
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${g ? "修改來賓資料" : "登記來賓"}　${esc(p ? p.title : "")}</div>
       ${MY_ROLE && MY_ROLE.role !== "member"
@@ -1374,7 +1377,7 @@ async function openRoster(postId){
   const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices || {})))];
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">報名名單　${esc(p ? p.title : "")}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
@@ -1473,7 +1476,7 @@ function renderMeals(postId){
     </div>`;
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">餐點選項　${esc(p ? p.title : "")}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
@@ -1554,7 +1557,7 @@ function openSignup(postId){
   const left = seatsLeft(postId);
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${mine ? "改我的餐點" : "報名"}　${esc(p.title)}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
@@ -1642,12 +1645,30 @@ async function fn(action, body){
 }
 
 /* ── 分頁切換 ───────────────────────────── */
+// 表單頁是共用的，所以要記住「是從哪一頁點進來的」，返回才不會一律掉回首頁
+let FORM_FROM = "home", PDETAIL_FROM = "home";
+const VIEW_NAME = {home:"首頁", members:"夥伴", cases:"案例", needs:"需求", me:"我的", admin:"分會管理"};
+// 兩顆返回鍵：左邊回剛才那一頁，右邊直接回首頁（在首頁進來的就只有一顆，不重複）
+function backBar(label){
+  const from = FORM_FROM;
+  const first = `<button class="back" onclick="go('${from}')"><svg width="17" height="17"><use href="#i-back"/></svg>${
+    label || ("回" + (VIEW_NAME[from] || "上一頁"))}</button>`;
+  const second = from === "home" ? ""
+    : `<button class="back back2" onclick="go('home')">回首頁</button>`;
+  return `<div class="backbar">${first}${second}</div>`;
+}
+
 // 幹部才看得到「分會管理」這個分頁入口
 function syncAdminNav(){
   const b = el("nav-admin"); if(!b) return;
   b.style.display = isOfficer() ? "" : "none";
 }
 function go(v, btn){
+  // 進表單之前先記下現在在哪
+  if(v === "form"){
+    const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+    if(cur && cur.id !== "v-form") FORM_FROM = cur.id.slice(2);
+  }
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-"+v).classList.add("on");
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
@@ -2075,10 +2096,15 @@ function linkRow(p, showAuthor){
 function openPostDetail(id){
   const p = POSTS.find(x=>x.id===id); if(!p) return;
   const canEdit = ME && (p.author_id===ME.id || isOfficer());
-  const back = { member_event:"首頁", event:"首頁", notice:"首頁", monthly:"首頁" }[p.kind] || "首頁";
+  // 這頁也是共用的，一樣要記住從哪裡點進來
+  const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+  if(cur && cur.id !== "v-pdetail") PDETAIL_FROM = cur.id.slice(2);
   const row = (l,v) => v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
   el("v-pdetail").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>${back}</button>
+    <div class="backbar">
+      <button class="back" onclick="go('${PDETAIL_FROM}')"><svg width="17" height="17"><use href="#i-back"/></svg>回${VIEW_NAME[PDETAIL_FROM] || "上一頁"}</button>
+      ${PDETAIL_FROM === "home" ? "" : `<button class="back back2" onclick="go('home')">回首頁</button>`}
+    </div>
     <article class="card detail">
       <div style="font-size:.75rem;font-weight:800;color:var(--muted);letter-spacing:1.2px">${KIND_LABEL[p.kind]||""}${p.visibility==="officer"?`　<span class="draft">未公開・只有幹部看得到</span>`:""}</div>
       <h2 style="margin-top:4px">${esc(p.title)}</h2>
@@ -2234,7 +2260,7 @@ function openProfile(){
   const industryOpts = Object.entries(industryNames)
     .map(([k,label])=>`<option value="${k}"${m.industry===k?" selected":""}>${esc(label)}</option>`).join("");
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">改我的基本資料</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
@@ -2617,7 +2643,7 @@ function openPost(kind, id){
   const dtLocal = iso => iso ? new Date(iso).toISOString().slice(0,16) : "";
 
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${p?"編輯":"發布"}${KIND_LABEL[kind]}</div>
       ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
@@ -2846,7 +2872,7 @@ function openForm(id){
   if(!ME){ go("me"); return; }
   const c = id ? CASES.find(x=>x.id===id) : null;
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${c?"修改案例":"寫一個 AI 案例"}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
