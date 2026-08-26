@@ -143,6 +143,7 @@ a{color:inherit;text-decoration:none}
 .qrbox{margin-top:16px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:var(--r);text-align:center}
 .buycard{cursor:pointer;overflow:hidden}
 .buycard:hover{box-shadow:0 3px 14px rgba(21,41,107,.14)}
+.buycard.past{opacity:.62}
 .buyimg{width:100%;height:150px;object-fit:cover;display:block}
 .buybody{padding:12px 14px}
 .buytitle{font-weight:700;font-size:1rem}
@@ -488,6 +489,7 @@ a.btn{text-decoration:none}
   <symbol id="i-form" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3Z"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4Z"/></symbol>
 </svg>
 <header class="top">
@@ -503,13 +505,14 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-needs"></main>
 <main class="wrap view" id="v-me"></main>
 <main class="wrap view" id="v-claim"></main>
+<main class="wrap view" id="v-buys"></main>
 <main class="wrap view" id="v-admin"></main>
 <main class="wrap view" id="v-form"></main>
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:57</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -519,6 +522,7 @@ a.btn{text-decoration:none}
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
   <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
+  <button data-v="buys"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
@@ -763,37 +767,69 @@ async function doCancel(postId){
   }
 }
 
+// ── 團購分頁：完整清單（首頁只放進行中的摘要）──────────
+function renderBuys(){
+  const mine = MY_ORDERS;
+  const g = st => BUYS.filter(b => b.status === st);
+  const sect = (title, list, empty) => `
+    <div class="sec"><h2>${title}</h2></div>
+    ${list.length ? list.map(buyRow).join("") : `<div class="card"><div class="empty">${empty}</div></div>`}`;
+
+  el("v-buys").innerHTML = `
+    <div class="sec"><h2>夥伴團購</h2>${
+      ME ? `<span class="more" onclick="openBuyForm()">＋ 我要開團</span>` : ""}</div>
+    ${!ME ? `<div class="card"><div class="empty">用 LINE 登入之後就能訂購與開團</div></div>` : ""}
+    ${isOfficer() ? `<div class="card" style="padding:12px 16px">
+      <span class="more" onclick="openBuyPending()">審核待上架的團購 →</span></div>` : ""}
+
+    ${sect("進行中", g("open"), ME ? "目前沒有進行中的團購，按上面「＋ 我要開團」就能開始" : "目前沒有進行中的團購")}
+    ${g("closed").length ? sect("已成團", g("closed"), "") : ""}
+    ${g("cancelled").length ? sect("未達門檻，已取消", g("cancelled"), "") : ""}
+
+    ${mine.length ? `<div class="sec" style="margin-top:22px"><h2>我訂了什麼</h2></div>
+      <div class="card admincard">${
+        [...new Set(mine.map(o => o.buy_id))].map(bid => {
+          const b = BUYS.find(x => x.id === bid);
+          const os = mine.filter(o => o.buy_id === bid);
+          const n = os.reduce((a,o) => a + o.qty, 0);
+          return `<div class="arow" onclick="openBuy(${bid})">
+            <span>${esc(b ? b.title : "（已移除）")}</span>
+            <span class="mnote">${n} 件</span><span class="ago">›</span></div>`;
+        }).join("")}</div>` : ""}`;
+}
+function buyRow(b){
+  const items = BUY_ITEMS[b.id] || [];
+  const totQty = items.reduce((a,i) => a + ((BUY_PROG[i.id]||{}).qty || 0), 0);
+  const reached = items.filter(i => ((BUY_PROG[i.id]||{}).qty || 0) >= i.min_qty).length;
+  const my = MY_ORDERS.filter(o => o.buy_id === b.id).reduce((a,o) => a + o.qty, 0);
+  const days = daysLeft(b.deadline);
+  const cover = items.find(i => (i.photos||[]).length);
+  const prices = items.map(i => i.unit_price).filter(x => x > 0);
+  const dead = b.status !== "open";
+  return `<div class="card buycard${dead ? " past" : ""}" onclick="openBuy(${b.id})">
+    ${cover ? `<img class="buyimg" src="${esc(cover.photos[0])}" alt="">` : ""}
+    <div class="buybody">
+      <div class="buytitle">${esc(b.title)}</div>
+      <div class="buymeta">${esc(memberName(b.owner_id))}　｜　${items.length} 樣商品${
+        prices.length ? `　｜　$${Math.min(...prices)}${
+          Math.max(...prices) !== Math.min(...prices) ? `～$${Math.max(...prices)}` : ""}` : ""}　｜　${
+        b.status === "closed" ? "已成團" : b.status === "cancelled" ? "未達門檻" :
+        days < 0 ? "已截止" : days === 0 ? "今天截止" : `剩 ${days} 天`}</div>
+      <div class="buymeta">累積 <b>${totQty}</b> 件${
+        reached ? `　<span class="okmark">✓ ${reached} 樣已成團</span>` : ""}${
+        my ? `　｜　我訂了 <b>${my}</b> 件` : ""}</div>
+    </div></div>`;
+}
+
 // ── 團購（S9 #22 / S10 #23）──────────────────────────
 // 獨立於月例會：有商品規格與金額，跟「席次」是不同的東西。
 function buyBlock(){
   const live = BUYS.filter(b => b.status === "open");
-  const mine = MY_ORDERS;
   let h = `<div class="sec"><h2>夥伴團購</h2>${
-    ME ? `<span class="more" onclick="openBuyForm()">＋ 我要開團</span>` : ""}</div>`;
-  if(isOfficer()) h += `<div class="card" style="padding:10px 14px"><span class="more" onclick="openBuyPending()">審核待上架的團購 →</span></div>`;
+    live.length ? `<span class="more" onclick="go('buys')">全部 ${live.length}</span>` : ""}</div>`;
   if(!live.length) return h + `<div class="card"><div class="empty">目前沒有進行中的團購${
-    ME ? '<br><span style="font-size:.82rem">按上面「＋ 我要開團」就能開始</span>' : ""}</div></div>`;
-  h += live.map(b => {
-    const items = BUY_ITEMS[b.id] || [];
-    const totQty = items.reduce((a,i) => a + ((BUY_PROG[i.id]||{}).qty || 0), 0);
-    const reached = items.filter(i => ((BUY_PROG[i.id]||{}).qty || 0) >= i.min_qty).length;
-    const my = mine.filter(o => o.buy_id === b.id).reduce((a,o) => a + o.qty, 0);
-    const days = daysLeft(b.deadline);
-    const cover = items.find(i => (i.photos||[]).length);
-    const prices = items.map(i => i.unit_price).filter(x => x > 0);
-    return `<div class="card buycard" onclick="openBuy(${b.id})">
-      ${cover ? `<img class="buyimg" src="${esc(cover.photos[0])}" alt="">` : ""}
-      <div class="buybody">
-        <div class="buytitle">${esc(b.title)}</div>
-        <div class="buymeta">${esc(memberName(b.owner_id))}　｜　${items.length} 樣商品${
-          prices.length ? `　｜　$${Math.min(...prices)}${
-            Math.max(...prices) !== Math.min(...prices) ? `～$${Math.max(...prices)}` : ""}` : ""}　｜　${
-          days < 0 ? "已截止" : days === 0 ? "今天截止" : `剩 ${days} 天`}</div>
-        <div class="buymeta">目前累積 <b>${totQty}</b> 件${
-          reached ? `　<span class="okmark">✓ ${reached} 樣已成團</span>` : ""}${
-          my ? `　｜　我訂了 <b>${my}</b> 件` : ""}</div>
-      </div></div>`;
-  }).join("");
+    ME ? `<br><span style="font-size:.82rem">到左邊的<b onclick="go('buys')" style="color:var(--blue-500);cursor:pointer">團購</b>就能開團</span>` : ""}</div></div>`;
+  h += live.slice(0,3).map(buyRow).join("");
   return h;
 }
 const daysLeft = d => {
@@ -1905,6 +1941,7 @@ function paintMe(){
 function render(v){
   if(v==="home") el("v-home").innerHTML = homeHTML();
   if(v==="admin") renderAdmin();
+  if(v==="buys") renderBuys();
 
   if(v==="members"){
     el("v-members").innerHTML = `
