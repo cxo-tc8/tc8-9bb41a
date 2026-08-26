@@ -2004,9 +2004,9 @@ function render(v){
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
           <input id="nq" placeholder="搜尋大家想解的問題" oninput="filterNeeds()"></div>
         <div class="chips" id="nfilter">
-          <button class="chip on" data-f="open">還在找</button>
+          <button class="chip on" data-f="all">全部</button>
+          <button class="chip" data-f="open">還在找</button>
           <button class="chip" data-f="closed">已經找到</button>
-          <button class="chip" data-f="all">全部</button>
         </div>
       </div>
       ${ME?`<div class="actions" style="margin-top:10px">
@@ -2713,7 +2713,7 @@ function openNeedDetail(id){
 
 function filterNeeds(){
   const q=(el("nq")?.value||"").trim().toLowerCase();
-  const f=el("nfilter")?.querySelector(".chip.on")?.dataset.f || "open";
+  const f=el("nfilter")?.querySelector(".chip.on")?.dataset.f || "all";
   let list = NEEDS.filter(n => f==="all" ? true : f==="closed" ? !!n.closed_at : !n.closed_at);
   if(q) list = list.filter(n => [n.title,n.problem,n.tried,memberName(n.member_id)].some(x=>(x||"").toLowerCase().includes(q)));
   el("nlist").innerHTML = list.map(needRow).join("") ||
