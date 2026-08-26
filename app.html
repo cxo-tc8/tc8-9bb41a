@@ -471,7 +471,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:44</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1804,7 +1804,9 @@ function homeHTML(){
         <div class="actions">
           ${monthly.signup_open
               ? signupButton(monthly)
-              : (monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:"")}
+              : (isOfficer()
+                  ? `<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">尚未開放報名（去打開）</button>`
+                  : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
           ${checkinButton(monthly)}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openMeals(${monthly.id})">🍱 餐點選項</button>`:""}
@@ -2471,7 +2473,7 @@ function openPost(kind, id){
   if(!ME){ go("me"); return; }
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
-    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup","signup_link"],
+    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup"],
     event:        ["speaker_free","place","dates","time","fee","body","link","album"],
     notice:       ["msgtype","body"],
     survey:       ["msgtype","body"],
@@ -2546,8 +2548,9 @@ function openPost(kind, id){
         <div class="help">講者、工作人員的位子，不開放報名。可報名人數 = 人數上限 − 保留席</div>
         <input type="text" id="p_reserved" value="${p&&p.reserved_seats?p.reserved_seats:""}" placeholder="例：2"></div>`:""}
       ${has("signup")?`<div class="field"><label>線上報名</label>
-        <div class="help">打開之後，夥伴在首頁按一下就能報名並選餐點。
-          關著的時候顯示的是下面填的外部報名連結</div>
+        <div class="help"><b>打開</b>：夥伴在首頁按一下就報名，順便選餐點、登記來賓。<br>
+          <b>關著</b>：首頁不會出現報名按鈕。<br>
+          餐點在首頁的「🍱 餐點選項」設定，跟這裡是分開的兩件事</div>
         <div class="pills" id="p_signupopen">
           <button type="button" class="pill${p&&p.signup_open?" on":""}" data-s="1">開放報名</button>
           <button type="button" class="pill${p&&p.signup_open?"":" on"}" data-s="0">還沒開放</button>
