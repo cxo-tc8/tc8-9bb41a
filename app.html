@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:11</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:13</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1017,8 +1017,8 @@ function buyRow(b){
       ${ME && (b.owner_id === ME.id || isOfficer()) ? `<div class="actions" style="margin-top:10px">
         <button class="mbtn" onclick="event.stopPropagation();openBuyForm(${b.id})">✏️ 改內容</button>
         <button class="mbtn" onclick="event.stopPropagation();openBuyDetail(${b.id}, '')">📋 訂購名單</button>
-        <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-          onclick="event.stopPropagation();removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
+        ${isOfficer() ? `<button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
+          onclick="event.stopPropagation();removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>` : ""}
       </div>` : ""}
     </div></div>`;
 }
@@ -1098,8 +1098,8 @@ function openBuy(buyId){
       ${ME && (b.owner_id === ME.id || isOfficer()) ? `<div class="field" style="margin-top:20px">
         <button class="mbtn add" onclick="openBuyDetail(${buyId}, '')">📋 看訂購名單與統計</button>
         <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購與商品</button>
-        <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-          onclick="removeBuy(${buyId}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button></div>` : ""}
+        ${isOfficer() ? `<button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
+          onclick="removeBuy(${buyId}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button>` : ""}</div>` : ""}
     </div>`;
   go("form");
 }
@@ -1199,7 +1199,7 @@ function openBuyForm(buyId){
         ${b && (b.status === "draft" || b.status === "rejected") ? `
           <button class="btn btn-primary" onclick="submitBuy(${b.id}, this)"
             ${items.length ? "" : "disabled style='opacity:.45'"}>送出給幹部審核</button>` : ""}
-        ${b ? `<button class="btn btn-ghost" style="color:#b4261a"
+        ${b && isOfficer() ? `<button class="btn btn-ghost" style="color:#b4261a"
             onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button>` : ""}
       </div>
       ${b && (b.status === "draft" || b.status === "rejected") ? `<div class="mnote" style="margin-top:8px">${
