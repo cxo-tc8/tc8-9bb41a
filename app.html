@@ -609,7 +609,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 13:03</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 13:28</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1507,6 +1507,47 @@ async function openBuyDetail(buyId, from){
 }
 
 // 幹部總覽：一頁看完每一團、每一樣商品訂到幾件，點商品就進去看是誰訂的
+// 幹部：誰綁了、綁在哪個名字上、綁錯了在這裡解除
+async function openBindList(){
+  if(!isOfficer()) return;
+  el("v-form").innerHTML = `${backBar()}<div class="form"><div class="busy">載入中…</div></div>`;
+  go("form");
+  const r = await fn("bind_list");
+  if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
+  el("v-form").innerHTML = `${backBar()}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">夥伴綁定狀況</div>
+      <div class="bstat" style="margin-top:12px">
+        <div><b>${r.bound}</b><span>已綁定</span></div>
+        <div class="${r.unbound ? "warn" : ""}"><b>${r.unbound}</b><span>還沒綁</span></div>
+        <div><b>${r.total}</b><span>名冊人數</span></div>
+      </div>
+      <div class="mnote" style="margin-top:10px">
+        解除之後，那個人下次打開 App 會回到「你是哪一位？」重新選一次。<br>
+        每一次綁定與解除都會留下紀錄（誰在什麼時候幫誰解的）。</div>
+
+      <div class="sec" style="margin-top:22px"><h2>已綁定</h2><span class="more">${r.bound}</span></div>
+      <div class="card admincard">${r.list.length ? r.list.map(m => `<div class="arow">
+        <span style="flex:1">${esc(m.name)}<br><span class="mnote">${esc(m.company||"")}　${(m.bound_at||"").slice(0,10)} 綁定</span></span>
+        <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
+          onclick="unbindMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">解除</button>
+      </div>`).join("") : `<div class="empty">還沒有人綁定</div>`}</div>
+
+      <div class="sec" style="margin-top:22px"><h2>還沒綁定</h2><span class="more">${r.unbound}</span></div>
+      <div class="card admincard">${r.waiting.length ? r.waiting.map(m => `<div class="arow">
+        <span style="flex:1">${esc(m.name)}<span class="mnote">　${esc(m.company||"")}</span></span>
+        <span class="tagw">未綁</span></div>`).join("") : `<div class="empty">全部都綁好了</div>`}</div>
+    </div>`;
+}
+
+async function unbindMember(id, name){
+  if(!confirm(`確定要解除「${name}」的 LINE 綁定嗎？\n\n解除後他下次打開 App 會回到「你是哪一位？」重新選。\n他目前的登入也會失效。`)) return;
+  const r = await fn("unbind", {member_id: id});
+  if(r.error){ alert(r.error); return; }
+  alert(`已解除「${r.name}」的綁定，請他重新開啟 App 選一次。`);
+  openBindList();
+}
+
 async function openBuyOverview(){
   if(!isOfficer()) return;
   const r = await buyApi("overview", {});
@@ -1620,6 +1661,8 @@ async function renderAdmin(){
         ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="go('me')"><span>👤 新夥伴申請</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
+      <div class="arow" onclick="openBindList()">
+        <span>🔗 夥伴綁定狀況（綁錯了在這裡解除）</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -2927,8 +2970,12 @@ function openApply(){
 }
 
 async function sendApply(){
-  const b=el("ap_save"); b.disabled=true; b.textContent="送出中…";
   const g=k=>el("ap_"+k).value;
+  const name = (g("name")||"").trim();
+  if(!name){ el("ap_err").innerHTML='<div class="err">請先填姓名</div>'; return; }
+  // ⛔ 綁定是一對一、之後要幹部才解除得掉，送出前一定要再問一次
+  if(!confirm(`請問你是「${name}」嗎？\n\n送出後這個 LINE 就代表你，要更改需要請幹部處理。`)) return;
+  const b=el("ap_save"); b.disabled=true; b.textContent="送出中…";
   const r = await fn("apply", {name:g("name"), company:g("company"), title:g("title"),
     industry:g("industry"), intro:g("intro"), description:g("description")});
   if(r.error){ el("ap_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
@@ -3864,7 +3911,7 @@ async function renderClaim(){
       <div style="color:var(--muted);font-size:.86rem;margin-bottom:14px;line-height:1.7">
         選出自己，之後這個 LINE 就代表你，不用再選。<br>
         <b>名單裡沒有你？</b>按最下面的「我不在名單上，幫我建檔」。</div>
-      <input class="search" style="width:100%;margin-bottom:10px;padding:0 12px" placeholder="輸入名字快速找" oninput="filterClaim(this.value)">
+      <input class="search" style="width:100%;margin-bottom:10px;padding:0 12px" placeholder="輸入名字快速找，找不到就按下面建檔" oninput="filterClaim(this.value)">
       <div class="pick" id="picklist"></div>
       <div id="claimErr"></div>
       <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
@@ -3889,7 +3936,7 @@ function filterClaim(q){
        </div>`;
 }
 async function doClaim(id, name){
-  if(!confirm(`確定你是「${name}」嗎？\n綁定後要改需要請幹部解除。`)) return;
+  if(!confirm(`請問你是「${name}」嗎？\n\n確定後這個 LINE 就代表你，要更改需要請幹部解除綁定。`)) return;
   const r = await fn("claim", {member_id:id});
   if(r.error){ el("claimErr").innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
   await loadMe(); go("me");
