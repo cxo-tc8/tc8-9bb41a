@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:27</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 15:45</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1716,6 +1716,8 @@ async function renderAdmin(){
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="openBindList()">
         <span>🔗 夥伴綁定狀況（綁錯了在這裡解除）</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openRetired()">
+        <span>🚪 已退出的夥伴（可以加回來）</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -3084,7 +3086,7 @@ async function reviewMember(id, act, name){
   if(act==="reject" && !confirm(`確定退回「${name}」的申請嗎？資料會被刪除，他可以重新申請。`)) return;
   const r = await fn(act, {id});
   if(r.error) return alert(r.error);
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
   openReview();
 }
 
@@ -3201,7 +3203,7 @@ async function saveProfile(){
   });
   if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent="儲存"; return; }
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
   await loadMe();
   openMember(ME.id);
 }
@@ -3976,8 +3978,56 @@ function openMember(id){
         <div class="card">${his.length ? his.map(caseRow).join("")
           : `<div class="empty">還沒有案例${ME&&ME.id===m.id?'<br><span style="font-size:.82rem">到「我的」寫下第一個</span>':""}</div>`}</div>`;
     })()}`;
+  if(isOfficer() && ME.id !== m.id){
+    el("v-mdetail").insertAdjacentHTML("beforeend", `
+      <div style="margin-top:20px;text-align:center">
+        <button class="btn btn-ghost btn-sm" style="color:#b4261a"
+          onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">標記為已退出</button>
+        <div class="mnote" style="margin-top:6px">從名冊移除，他分享過的案例與需求會留著</div>
+      </div>`);
+  }
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-mdetail").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function retireMember(id, name){
+  // ⛔ 這是會改變名冊的動作，先把後果講清楚
+  if(!confirm(`確定要把「${name}」標記為已退出嗎？\n\n・名片牆上不會再出現\n・他的 LINE 綁定會解除\n・他分享過的 AI 案例與需求會保留\n\n之後可以在「分會管理 → 已退出的夥伴」把他加回來。`)) return;
+  const r = await fn("retire", {member_id: id});
+  if(r.error){ alert(r.error); return; }
+  await reloadMembers();
+  alert(`已把「${r.name}」標記為退出`);
+  go("members");
+}
+
+async function reloadMembers(){
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
+}
+
+// 幹部：已退出的名單，可以加回來
+async function openRetired(){
+  if(!isOfficer()) return;
+  el("v-form").innerHTML = `${backBar()}<div class="form"><div class="busy">載入中…</div></div>`;
+  go("form");
+  const r = await fn("retired_list");
+  if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
+  el("v-form").innerHTML = `${backBar()}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">已退出的夥伴</div>
+      <div class="mnote" style="margin-top:6px">他們不會出現在名片牆，但分享過的案例與需求都還在。按「加回來」就會恢復。</div>
+      <div class="card admincard" style="margin-top:14px">${r.list.length ? r.list.map(m => `<div class="arow">
+        <span style="flex:1">${esc(m.name)}<br><span class="mnote">${esc(m.company||"")}　${m.exit_date||""} 退出</span></span>
+        <button class="mbtn" onclick="unretireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">加回來</button>
+      </div>`).join("") : `<div class="empty">目前沒有已退出的夥伴</div>`}</div>
+    </div>`;
+}
+async function unretireMember(id, name){
+  if(!confirm(`要把「${name}」加回名冊嗎？`)) return;
+  const r = await fn("unretire", {member_id: id});
+  if(r.error){ alert(r.error); return; }
+  await reloadMembers();
+  alert(`「${r.name}」已經回到名冊上`);
+  openRetired();
 }
 
 /* ── 認領身分 ───────────────────────────── */
@@ -4044,7 +4094,7 @@ async function loadMe(){
   el("v-home").innerHTML = '<div class="busy">載入中…</div>';
   try{
     [MEMBERS, TAGS, CASES] = await Promise.all([
-      rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
+      rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc"),
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
