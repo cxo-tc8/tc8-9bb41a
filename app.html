@@ -111,6 +111,19 @@ a{color:inherit;text-decoration:none}
   border:none;background:rgba(255,255,255,.14);color:#fff;border-radius:10px;cursor:pointer}
 .burger:active{background:rgba(255,255,255,.26)}
 @media (min-width:1024px){ .burger{display:none} }
+.card.important{border-color:#e5b4ae;box-shadow:0 1px 3px rgba(192,57,43,.13)}
+.card.important .notice .t{color:#c0392b}
+.notice .ic.red{background:#fde8e8;color:#c0392b}
+.imptag{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;
+  background:#c0392b;color:#fff;font-size:.72rem;font-weight:700;vertical-align:1px}
+.lightbox{position:fixed;inset:0;background:rgba(8,14,28,.92);z-index:80;display:none;
+  align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.lightbox.on{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px;object-fit:contain}
+.lightx{position:absolute;top:14px;right:16px;width:40px;height:40px;border:none;border-radius:50%;
+  background:rgba(255,255,255,.16);color:#fff;font-size:1.5rem;line-height:1;cursor:pointer}
+.spcell .ph{cursor:zoom-in}
+.itemphotos img{cursor:zoom-in}
 .scrim{position:fixed;inset:0;background:rgba(10,20,40,.42);opacity:0;pointer-events:none;
   transition:opacity .2s;z-index:60}
 .scrim.on{opacity:1;pointer-events:auto}
@@ -549,6 +562,10 @@ a.btn{text-decoration:none}
 </header>
 
 <!-- 手機用的完整選單：底部橫排放不下的都在這裡 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightimg" alt="">
+  <button class="lightx" aria-label="關閉">×</button>
+</div>
 <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
 <aside class="drawer" id="drawer">
   <div class="drawerhead">
@@ -575,7 +592,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:36</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:42</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -606,7 +623,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
@@ -1010,7 +1027,7 @@ function openBuy(buyId){
         const mine = myOf(it.id);
         return `<div class="itemcard">
           ${(it.photos||[]).length ? `<div class="itemphotos">${
-            it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="">`).join("")}</div>` : ""}
+            it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${esc(u)}')">`).join("")}</div>` : ""}
           <div class="itemname">${esc(it.name)}</div>
           <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件</div>
           ${it.body ? `<div class="mdesc" style="margin-top:6px;white-space:pre-wrap">${esc(it.body)}</div>` : ""}
@@ -2079,6 +2096,20 @@ function syncAdminNav(){
   b.style.display = isOfficer() ? "" : "none";
   if(sep) sep.style.display = isOfficer() ? "" : "none";
 }
+// 點圖放大。⛔ 不用 window.open：LINE 內建瀏覽器會擋開新分頁，
+//    而且跳出去之後使用者要按上一頁才回得來。
+function openLightbox(url){
+  el("lightimg").src = url;
+  el("lightbox").classList.add("on");
+  document.body.style.overflow = "hidden";
+}
+function closeLightbox(){
+  el("lightbox").classList.remove("on");
+  document.body.style.overflow = "";
+  el("lightimg").src = "";
+}
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeLightbox(); });
+
 // 手機的完整選單。⚠️ 一般夥伴看不到「分會管理」——它不只是藏起來，
 // 每個管理用的 API 後端也各自驗身分。
 const DRAWER_ITEMS = [
@@ -2409,7 +2440,7 @@ function homeHTML(){
         ${(()=>{const sps=[[monthly.speaker,monthly.speaker_photo],[monthly.speaker2,monthly.speaker2_photo]].filter(x=>x[0]);
           return sps.length?`<div class="spgrid">`+sps.map(([sp,ph])=>`
             <div class="spcell">
-              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
+              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${esc(ph)}')" title="點一下放大">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
               <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         ${signupBlock(monthly)}
@@ -2442,6 +2473,7 @@ function homeHTML(){
   // ⚠️ 首頁不能什麼都放——一年後會變成一條捲不完的長河
   const msgs = [...notices, ...surveys].sort((a,b)=>
     ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
+    || (b.important?1:0) - (a.important?1:0)                                        // 再來是重要公告
     || new Date(b.created_at) - new Date(a.created_at));
   h += `<div class="sec"><h2>公告與問卷</h2>${
     msgs.length > 3 ? `<span class="more" onclick="go('notices')">全部 ${msgs.length}</span>`
@@ -2497,9 +2529,10 @@ function dueLabel(d){
 // 有照片和沒照片是兩種版型：
 // 照片本身就是吸引點擊的東西，縮成 52px 等於白貼；沒照片就別留一塊空白
 function noticeCard(p){
-  return `<div class="card"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
-    <div class="ic"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
-    <div style="flex:1;min-width:0"><div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${esc(p.title)}</div>
+  return `<div class="card${p.important?" important":""}"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
+    <div class="ic${p.important?" red":""}"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
+    <div style="flex:1;min-width:0"><div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${
+      p.important?`<span class="imptag">重要</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
       <div class="d">${ago(p.created_at)}</div></div>
     ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('notice',${p.id})">編輯</button>`
@@ -3095,6 +3128,7 @@ let MSGKIND = "notice";
 function switchMsgType(k){
   MSGKIND = k;
   el("p_msgtype").querySelectorAll(".pill").forEach(b=>b.classList.toggle("on", b.dataset.k===k));
+  el("noticefields").style.display = (k==="survey")?"none":"block";
   el("surveyfields").style.display = k==="survey" ? "block" : "none";
   el("p_save").textContent = el("p_save").dataset.editing==="1" ? "儲存" : (k==="survey"?"發布問卷":"發布公告");
 }
@@ -3167,6 +3201,14 @@ function openPost(kind, id){
           <button type="button" class="pill${kind!=="survey"?" on":""}" data-k="notice" onclick="switchMsgType('notice')">公告</button>
           <button type="button" class="pill${kind==="survey"?" on":""}" data-k="survey" onclick="switchMsgType('survey')">問卷</button>
         </div></div>`:""}
+      ${has("msgtype")?`<div id="noticefields" style="display:${kind==="survey"?"none":"block"}">
+        <div class="field"><label>重要程度</label>
+          <div class="help">標成「重要」會置頂並用紅色顯示。⚠️ 每一則都重要，就等於沒有一則重要</div>
+          <div class="pills" id="p_imp">
+            <button type="button" class="pill${p&&p.important?"":" on"}" data-i="0">一般</button>
+            <button type="button" class="pill${p&&p.important?" on":""}" data-i="1">重要</button>
+          </div></div>
+      </div>`:""}
       ${has("msgtype")?`<div id="surveyfields" style="display:${kind==="survey"?"block":"none"}">
         <div style="color:var(--muted);font-size:.85rem;margin-top:12px;line-height:1.7">
         問卷本身用 Google 表單做，這裡只放連結和完成率。<b>系統不記錄誰填了誰沒填。</b></div>
@@ -3280,6 +3322,8 @@ function openPost(kind, id){
     el("p_vis").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_signupopen")) el("p_signupopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_signupopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  if(el("p_imp")) el("p_imp").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_imp").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_waitopen")) el("p_waitopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_waitopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_org")) el("p_org").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
@@ -3321,6 +3365,7 @@ async function savePost(kind, id){
     signup_open: el("p_signupopen") ? el("p_signupopen").querySelector(".pill.on").dataset.s === "1" : undefined,
     waitlist_open: el("p_waitopen") ? el("p_waitopen").querySelector(".pill.on").dataset.w === "1" : undefined,
     org: el("p_org") ? el("p_org").querySelector(".pill.on").dataset.o : undefined,
+    important: el("p_imp") ? el("p_imp").querySelector(".pill.on").dataset.i === "1" : undefined,
     done_count:g("done_count"), admin_link:g("admin_link"),
     visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
@@ -3535,7 +3580,7 @@ function openMember(id){
         <div style="font-size:.85rem;color:var(--muted);margin-top:3px">${esc([m.tag,m.company,m.title].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
       </div>
       ${(m.photos||[]).length > 1 ? `<div class="mgal">${
-        m.photos.slice(1).map(u => `<img src="${esc(u)}" alt="" onclick="window.open('${esc(u)}','_blank')">`).join("")}</div>` : ""}
+        m.photos.slice(1).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${esc(u)}')">`).join("")}</div>` : ""}
       ${blk("一句話自介", m.intro)}
       ${blk("我可以提供的資源", m.resource)}
       ${blk("我想在 TC8 獲得", m.wish)}
