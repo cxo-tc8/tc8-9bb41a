@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 15:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:01</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1560,6 +1560,59 @@ async function saveTalk(postId, slot, btn){
   go("home"); renderHome();
 }
 
+// 幹部：一張清單看完所有夥伴，綁定／退出／刪除都在這裡做
+let MADMIN = null, MADMIN_TAB = "all";
+async function openMemberAdmin(tab){
+  if(!isOfficer()) return;
+  if(tab) MADMIN_TAB = tab;
+  if(!MADMIN){
+    el("v-form").innerHTML = `${backBar()}<div class="form"><div class="busy">載入中…</div></div>`;
+    go("form");
+  }
+  const r = await fn("member_admin");
+  if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
+  MADMIN = r;
+  const F = {
+    all:      m => m.status === null,
+    unbound:  m => m.status === null && !m.bound_at,
+    bound:    m => m.status === null && m.bound_at,
+    retired:  m => m.status !== null,
+  };
+  const list = (r.list || []).filter(F[MADMIN_TAB] || F.all);
+  const TABS = [["all","全部現任",r.stats.total],["unbound","還沒綁",r.stats.unbound],
+                ["bound","已綁定",r.stats.bound],["retired","已退出",r.stats.retired]];
+  el("v-form").innerHTML = `${backBar()}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">夥伴管理</div>
+      <div class="mnote" style="margin-top:6px">
+        綁定、退出、刪除都在這裡做。<b>解除綁定</b>＝他下次開 App 重選一次；
+        <b>退出</b>＝名冊上消失但內容留著；<b>刪除</b>＝只有完全沒內容的重複帳號刪得掉。</div>
+      <div class="tools" style="margin-top:12px"><div class="chips">
+        ${TABS.map(([k,label,n]) => `<button class="chip${MADMIN_TAB===k?" on":""}"
+          onclick="openMemberAdmin('${k}')">${label} ${n}</button>`).join("")}
+      </div></div>
+      <div class="card admincard" style="margin-top:10px">${list.length ? list.map(m => `
+        <div class="arow" style="align-items:flex-start">
+          <span style="flex:1;min-width:0">
+            <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
+            <div class="mnote" style="margin-top:2px">
+              ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}<br>
+              ${m.joined_at ? `加入 ${m.joined_at}　｜　` : ""}${
+                m.status !== null ? `<span class="tagx">已退出${m.exit_date?" "+m.exit_date:""}</span>`
+                : m.bound_at ? `<span class="okmark">✓ 已綁定 ${String(m.bound_at).slice(0,10)}</span>`
+                : `<span class="tagw">還沒綁</span>`}</div>
+          </span>
+          <span class="actions" style="flex:none;flex-direction:column;gap:6px">
+            ${m.status !== null
+              ? `<button class="mbtn" onclick="unretireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">加回來</button>`
+              : `${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">解綁</button>` : ""}
+                 ${m.id !== ME.id ? `<button class="mbtn" onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">退出</button>
+                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="deleteMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">刪除</button>` : ""}`}
+          </span>
+        </div>`).join("") : `<div class="empty">這個分類沒有人</div>`}</div>
+    </div>`;
+}
+
 // 幹部：誰綁了、綁在哪個名字上、綁錯了在這裡解除
 async function openBindList(){
   if(!isOfficer()) return;
@@ -1597,8 +1650,8 @@ async function unbindMember(id, name){
   if(!confirm(`確定要解除「${name}」的 LINE 綁定嗎？\n\n解除後他下次打開 App 會回到「你是哪一位？」重新選。\n他目前的登入也會失效。`)) return;
   const r = await fn("unbind", {member_id: id});
   if(r.error){ alert(r.error); return; }
+  MADMIN = null; await openMemberAdmin();
   alert(`已解除「${r.name}」的綁定，請他重新開啟 App 選一次。`);
-  openBindList();
 }
 
 async function openBuyOverview(){
@@ -1714,10 +1767,8 @@ async function renderAdmin(){
         ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="go('me')"><span>👤 新夥伴申請</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="openBindList()">
-        <span>🔗 夥伴綁定狀況（綁錯了在這裡解除）</span><span class="ago">›</span></div>
-      <div class="arow" onclick="openRetired()">
-        <span>🚪 已退出的夥伴（可以加回來）</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openMemberAdmin()">
+        <span>👥 夥伴管理（綁定・退出・刪除）</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -4002,8 +4053,8 @@ async function deleteMember(id, name){
   const r = await fn("remove_member", {member_id: id});
   if(r.error){ alert(r.error); return; }
   await reloadMembers();
+  MADMIN = null; await openMemberAdmin();
   alert(`已刪掉「${r.name}」`);
-  go("members");
 }
 
 async function retireMember(id, name){
@@ -4012,8 +4063,8 @@ async function retireMember(id, name){
   const r = await fn("retire", {member_id: id});
   if(r.error){ alert(r.error); return; }
   await reloadMembers();
+  MADMIN = null; await openMemberAdmin();
   alert(`已把「${r.name}」標記為退出`);
-  go("members");
 }
 
 async function reloadMembers(){
@@ -4042,8 +4093,8 @@ async function unretireMember(id, name){
   const r = await fn("unretire", {member_id: id});
   if(r.error){ alert(r.error); return; }
   await reloadMembers();
+  MADMIN = null; await openMemberAdmin();
   alert(`「${r.name}」已經回到名冊上`);
-  openRetired();
 }
 
 /* ── 認領身分 ───────────────────────────── */
