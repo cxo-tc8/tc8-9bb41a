@@ -465,6 +465,13 @@ a.btn{text-decoration:none}
 .fbn .fbody{padding:13px 15px}
 .fbn .fbody .t{font-weight:800;font-size:1.02rem;line-height:1.45}
 /* 連續缺席的燈：要看得見才有用——淡淡的灰字等於沒做 */
+/* ⛔ .card 本身沒有 padding（內距一向由裡面的元素負責，例如 .detail），
+   內容裸塞進去就會整個貼齊邊緣。報名區自己帶內距。 */
+.signupcard{padding:15px 16px}
+.signupcard .seatline{margin-bottom:2px}
+/* 點讚不做成「跟報名區一樣重的框」：它只有一顆小按鈕，
+   重要性也低一階。改成一條輕量橫列，靠按鈕自己的邊框就夠。 */
+.likebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 2px 2px}
 .stag{display:inline-block;font-size:.74rem;font-weight:800;padding:2px 8px;border-radius:99px;margin-top:4px}
 .stag.red{background:#fdecea;color:#b4261a}
 .stag.amber{background:#fff4e0;color:#8a5a00}
@@ -641,7 +648,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:16</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:29</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3114,7 +3121,7 @@ function signupArea(p){
   if(!["monthly","event","member_event"].includes(p.kind)) return "";
   if(!p.signup_open) return "";
   const n = (SEATS[p.id] || {}).taken || 0;
-  return `<div class="card">
+  return `<div class="card signupcard">
     ${signupBlock(p)}
     <div style="color:var(--muted);font-size:.88rem">目前 <b>${n}</b> 人報名${
       ME ? "" : "（用 LINE 登入後看得到是誰）"}</div>
@@ -3549,7 +3556,7 @@ const cmtCount  = (kind, id) => COMMENTS.filter(c => c.kind===kind && c.target_i
 // 點讚列：未登入看得到數字、看不到名字（羅伯特 2026-08-26 決定）
 function likeBar(kind, id){
   const key = kind + ":" + id, n = likeCount(kind, id), liked = MY_REACTS.has(key);
-  return `<div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+  return `<div class="likebar">
     ${ME
       ? `<button class="btn ${liked?"btn-primary":"btn-ghost"} btn-sm" onclick="toggleLike('${kind}',${id})">${
           liked?"👍 已讚":"👍 讚"}${n?"　"+n:""}</button>`
