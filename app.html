@@ -173,6 +173,10 @@ a{color:inherit;text-decoration:none}
 .buycard{cursor:pointer;overflow:hidden}
 .buycard:hover{box-shadow:0 3px 14px rgba(21,41,107,.14)}
 .buycard.past{opacity:.62}
+.mphoto{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+.mgal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.mgal img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;display:block;
+  border:1px solid var(--line);cursor:pointer}
 .buyimg{width:100%;height:150px;object-fit:cover;display:block}
 .buybody{padding:12px 14px}
 .buytitle{font-weight:700;font-size:1rem}
@@ -561,7 +565,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:21</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:24</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -593,7 +597,7 @@ const industryNames = {
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
 const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
-const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,q_why_tc8,q_ai_needs,q_book_club";
+const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
@@ -2760,6 +2764,11 @@ function openProfile(){
       <div class="field"><label>網站</label>
         <input type="text" id="pf_web" maxlength="200" value="${v("web")}" placeholder="https://…"></div>
 
+      <div class="field" style="margin-top:22px"><label>我的照片（最多 3 張）</label>
+        <div class="help">本人照片、產品、店面、作品都可以。第一張會當成你的代表照，
+          出現在夥伴名冊上</div>
+        <div id="pf_album" class="album"></div></div>
+
       <div class="field" style="margin-top:24px"><label>為什麼來 TC8？</label>
         <div class="help">以下三題都是選填，寫了幹部與夥伴才知道怎麼幫你</div>
         <textarea id="pf_q_why_tc8" maxlength="800">${v("q_why_tc8")}</textarea></div>
@@ -2778,7 +2787,29 @@ function openProfile(){
     </div>`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-form").classList.add("on"); window.scrollTo(0,0);
+  renderPfAlbum();   // 要等畫面掛好才畫，否則抓不到 #pf_album
 }
+
+let PF_PHOTOS = [];
+function renderPfAlbum(){
+  const box = el("pf_album"); if(!box) return;
+  box.innerHTML = PF_PHOTOS.map((u,i) => `<div class="thumb"><img src="${esc(u)}" alt="">
+      ${i===0?`<span class="coverbadge">代表照</span>`:""}
+      <button type="button" class="thumbx" onclick="rmPfPhoto(${i})" aria-label="移除">×</button></div>`).join("")
+    + (PF_PHOTOS.length < 3
+       ? `<button type="button" class="addphoto" onclick="addPfPhoto()">＋<span>加照片</span><small>${PF_PHOTOS.length}/3</small></button>`
+       : `<div class="addphoto" style="opacity:.5;cursor:default"><small>已達 3 張上限</small></div>`);
+}
+function addPfPhoto(){
+  pickPhoto("event", st => {
+    if(st.loading){ el("pf_album").insertAdjacentHTML("beforeend",
+      '<div class="thumb" id="pfup" style="display:grid;place-items:center;font-size:.75rem;color:var(--muted)">上傳中…</div>'); return; }
+    const t = el("pfup"); if(t) t.remove();
+    if(st.error){ alert(st.error); return; }
+    PF_PHOTOS.push(st.url); PF_PHOTOS = PF_PHOTOS.slice(0,3); renderPfAlbum();
+  }, 1200);
+}
+function rmPfPhoto(i){ PF_PHOTOS.splice(i,1); renderPfAlbum(); }
 
 async function saveProfile(){
   const b = el("pf_save"); b.disabled = true; b.textContent = "儲存中…";
@@ -2788,6 +2819,7 @@ async function saveProfile(){
     tag:g("tag"), description:g("description"), web:g("web"), intro:g("intro"),
     resource:g("resource"), wish:g("wish"), topic:g("topic"),
     q_why_tc8:g("q_why_tc8"), q_ai_needs:g("q_ai_needs"), q_book_club:g("q_book_club"),
+    photos: PF_PHOTOS,
   });
   if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent="儲存"; return; }
@@ -3446,7 +3478,9 @@ function memberCard(m){
   const line = (lbl,v) => v ? `<div class="mline"><b>${lbl}</b>${esc(v)}</div>` : "";
   return `<article class="mcard" onclick="openMember(${m.id})">
     <div class="mhead">
-      ${avatar(m.name)}
+      ${(m.photos||[]).length
+        ? `<img class="mphoto" src="${esc(m.photos[0])}" alt="${esc(m.name)}">`
+        : avatar(m.name)}
       <div style="flex:1;min-width:0">
         <div class="n">${esc(m.name)}</div>
         <div class="t">${esc(m.title||"")}</div>
@@ -3484,15 +3518,22 @@ function openMember(id){
     <button class="back" onclick="go('members')"><svg width="17" height="17"><use href="#i-back"/></svg>夥伴</button>
     <article class="card detail">
       <div style="display:flex;gap:13px;align-items:center">
-        <div class="ava" style="width:58px;height:58px;font-size:1.2rem">${esc(m.name.slice(0,1))}</div>
+        ${(m.photos||[]).length
+          ? `<img src="${esc(m.photos[0])}" alt="${esc(m.name)}" style="width:58px;height:58px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)">`
+          : `<div class="ava" style="width:58px;height:58px;font-size:1.2rem">${esc(m.name.slice(0,1))}</div>`}
         <div style="flex:1"><h2 style="font-size:1.2rem">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</h2>
         <div style="font-size:.85rem;color:var(--muted);margin-top:3px">${esc([m.tag,m.company,m.title].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
       </div>
+      ${(m.photos||[]).length > 1 ? `<div class="mgal">${
+        m.photos.slice(1).map(u => `<img src="${esc(u)}" alt="" onclick="window.open('${esc(u)}','_blank')">`).join("")}</div>` : ""}
       ${blk("一句話自介", m.intro)}
       ${blk("我可以提供的資源", m.resource)}
       ${blk("我想在 TC8 獲得", m.wish)}
       ${blk("關注主題", m.topic)}
       ${blk("簡介", m.description)}
+      ${blk("為什麼來 TC8", m.q_why_tc8)}
+      ${blk("對 AI 的需求與想法", m.q_ai_needs)}
+      ${blk("對讀書會／808 五金行的問題", m.q_book_club)}
       ${m.web?`<div class="block"><div class="lbl">網站</div><p><a href="${esc(m.web)}" target="_blank" rel="noopener" style="color:var(--blue-500)">${esc(m.web)}</a></p></div>`:""}
     </article>
     ${(()=>{ const his=CASES.filter(c=>c.member_id===m.id);
