@@ -48,6 +48,39 @@ if bad:
     sys.exit(1)
 print("上線前檢查通過（中文識別字／未授權欄位／select=*）")
 CHECK
+# ── ④ 首頁真的渲染得出來嗎（2026-08-26 血淚：搬動首頁區塊順序造成 const TDZ，
+#      語法檢查完全通過、上線後首頁卡在「載入中…」，是使用者回報才發現）──
+#    語法對 ≠ 跑得起來。這一關實際載入頁面、攔截 JS 錯誤、量首頁字數。
+SHOT="$(mktemp -d)"
+cp app.html "$SHOT/probe.html"
+python3 - "$SHOT/probe.html" <<'PROBE'
+import io,sys
+p=sys.argv[1]; s=io.open(p,encoding="utf-8").read()
+i=s.index("<script>")+len("<script>")
+s=s[:i]+"""
+window.__errs=[];
+window.onerror=function(m,src,l){ window.__errs.push(m+" @行"+l); };
+window.addEventListener("unhandledrejection",e=>window.__errs.push("Promise 未捕捉："+e.reason));
+setTimeout(()=>{document.title="GATE:: "+(window.__errs.join(" | ")||"OK")+" ||| "+((document.getElementById("v-home")||{}).textContent||"").trim().length;},6500);
+"""+s[i:]
+io.open(p,"w",encoding="utf-8").write(s)
+PROBE
+( cd "$SHOT" && python3 -m http.server 8991 >/dev/null 2>&1 & echo $! > "$SHOT/pid" )
+sleep 1
+CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+GATE=$("$CHROME" --headless --disable-gpu --window-size=900,1000 --virtual-time-budget=11000 \
+       --dump-dom "http://localhost:8991/probe.html" 2>/dev/null | grep -o "GATE::[^<]*" | head -1)
+kill "$(cat "$SHOT/pid")" 2>/dev/null; rm -rf "$SHOT"
+ERRS="${GATE#GATE:: }"; ERRS="${ERRS%% |||*}"
+LEN="${GATE##*||| }"
+if [ "$ERRS" != "OK" ] || [ "${LEN:-0}" -lt 200 ]; then
+  echo "🔴 首頁沒有正常渲染，不上線："
+  echo "   JS 錯誤：$ERRS"
+  echo "   首頁字數：${LEN:-?}（正常應該上千字；只有個位數＝卡在「載入中…」）"
+  exit 1
+fi
+echo "首頁渲染檢查通過（無 JS 錯誤，首頁 $LEN 字）"
+
 git add -A && git commit -q -m "${1:-更新}" && git push -q origin main
 echo "✅ 已上線　https://cxo-tc8.github.io/tc8-9bb41a/app.html"
 echo "⚠️ GitHub Pages 快取約 10 分鐘，看不到新版就按 Cmd+Shift+R"
