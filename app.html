@@ -523,7 +523,7 @@ a.btn{text-decoration:none}
 .field .help{font-size:.79rem;color:var(--muted);margin-bottom:6px;line-height:1.6}
 .field input[type=text],.field textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);
   padding:11px 12px;font-size:16px;background:var(--card);min-height:48px;font-family:inherit;line-height:1.6}
-.field textarea{min-height:96px;resize:vertical}
+.field textarea{min-height:200px;resize:vertical;line-height:1.7}
 .field input:focus,.field textarea:focus{outline:none;border-color:var(--blue-500)}
 .pills{display:flex;flex-wrap:wrap;gap:7px}
 .pill{background:var(--card);border:1.5px solid var(--line);color:var(--muted);font-size:.84rem;font-weight:700;
@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:12</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:20</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -4061,7 +4061,22 @@ async function loadMe(){
   go("home");
 })();
 const _go = go;
-go = function(v, b){ _go(v,b); if(v==="claim") renderClaim(); };
+// 多行輸入框自動長高——內容超過目前高度就自己撐開，不用在小框裡捲
+function autoGrow(t){
+  if(!t) return;
+  t.style.height = "auto";
+  t.style.height = Math.max(t.scrollHeight + 2, 200) + "px";
+}
+document.addEventListener("input", e => {
+  if(e.target && e.target.matches && e.target.matches(".field textarea")) autoGrow(e.target);
+});
+
+go = function(v, b){
+  _go(v,b);
+  if(v==="claim") renderClaim();
+  // 表單畫完之後，把已經有內容的欄位先撐到該有的高度
+  if(v==="form") setTimeout(() => document.querySelectorAll("#v-form .field textarea").forEach(autoGrow), 0);
+};
 </script>
 </body>
 </html>
