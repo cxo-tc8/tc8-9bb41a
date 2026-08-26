@@ -75,6 +75,10 @@ a{color:inherit;text-decoration:none}
 .speaker .n{font-weight:700;font-size:.94rem}
 .speaker .r{font-size:.78rem;color:var(--muted)}
 .actions{display:flex;gap:8px;margin-top:13px}
+/* 活動詳情的報名按鈕：照文字長度給寬度就好。
+   .btn 預設 flex:1 是為了首頁那排主要動作，套到這裡會變成兩顆撐滿一整列的大色塊 */
+.actions.compact{flex-wrap:wrap}
+.actions.compact .btn{flex:none;min-height:40px;padding:0 18px;font-size:.88rem}
 .btn{flex:1;min-height:46px;border:none;border-radius:var(--r-sm);font-weight:700;font-size:.92rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .18s,transform .12s}
 .btn:active{transform:scale(.985)}
 .btn-primary{background:var(--orange);color:#fff}
@@ -611,7 +615,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:50</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:55</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3017,7 +3021,7 @@ function signupArea(p){
     <div style="color:var(--muted);font-size:.88rem">目前 <b>${n}</b> 人報名${
       ME ? "" : "（用 LINE 登入後看得到是誰）"}</div>
     ${myOrderLine(p)}
-    <div class="actions" style="margin-top:12px">
+    <div class="actions compact" style="margin-top:12px">
       ${signupButton(p)}
       ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${p.id}, 'openPostDetail(${p.id})')">📋 誰報名了</button>` : ""}
     </div>
@@ -3073,6 +3077,7 @@ function openPostDetail(id){
     <div class="hint" style="text-align:center;margin-top:12px">這一頁有自己的網址，可以直接轉給人看</div>`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-pdetail").classList.add("on"); window.scrollTo(0,0);
+  loadLikers("post", p.id);
 }
 
 // ── 發布 / 編輯貼文 ─────────────────────────────
@@ -3430,9 +3435,8 @@ function likeBar(kind, id){
       ? `<button class="btn ${liked?"btn-primary":"btn-ghost"} btn-sm" onclick="toggleLike('${kind}',${id})">${
           liked?"👍 已讚":"👍 讚"}${n?"　"+n:""}</button>`
       : `<span style="color:var(--muted)">👍 ${n} 個讚</span>`}
-    ${ME && n ? `<button class="btn btn-ghost btn-sm" onclick="whoLiked('${kind}',${id})">看誰按的</button>` : ""}
     ${ME ? "" : `<span class="hint">用 LINE 登入後可以按讚、留言</span>`}
-    <div id="wholiked" style="width:100%"></div>
+    <div id="wholiked" style="flex:1;min-width:0;color:var(--muted);font-size:.85rem"></div>
   </div>`;
 }
 async function toggleLike(kind, id){
@@ -3444,14 +3448,17 @@ async function toggleLike(kind, id){
   // 重畫這一頁（數字在卡片列表也會用到，回頭就會是新的）
   if(kind === "post") openPostDetail(id); else openCase(id);
 }
-async function whoLiked(kind, id){
-  const box = el("wholiked"); if(!box) return;
-  box.innerHTML = `<div class="hint">讀取中…</div>`;
+// 誰按了讚——登入的人一進頁面名字就自己出現，不用再按一顆按鈕
+// ⛔ 但名字仍然只從後端驗身分後取得：未登入的人看得到數字、看不到名字，
+//    這條線是在資料庫層成立的（reactions 整張表 revoke），不是靠前端不畫。
+async function loadLikers(kind, id){
+  if(!ME || !likeCount(kind, id)) return;
   const r = await api("react_who", {kind, target_id: id});
-  if(r.error){ box.innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
+  const box = el("wholiked");
+  // 使用者可能在等待期間就翻頁了，回來時這個框已經不是同一個
+  if(!box || r.error) return;
   const names = (r.list||[]).map(x => esc(x.name)).filter(Boolean);
-  box.innerHTML = `<div style="margin-top:4px;color:var(--muted);font-size:.85rem">${
-    names.length ? names.join("、") : "還沒有人"}</div>`;
+  if(names.length) box.textContent = names.join("、");
 }
 
 async function reloadComments(){
@@ -3979,6 +3986,7 @@ function openCase(id){
     ${commentBlock("case", c.id)}`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-cdetail").classList.add("on"); window.scrollTo(0,0);
+  loadLikers("case", c.id);
 }
 
 function openForm(id){
