@@ -611,7 +611,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:25</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:50</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -647,6 +647,9 @@ const MEMBER_FIELDS = "id,sort,name,line_name,officer,company,title,industry,tag
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
+// 點讚：REACTS 是公開的數字（未登入也看得到）、MY_REACTS 是我按過哪些。
+// ⛔ 「誰按了讚」不在這裡：那要登入後跟後端要（reactions 整張表對外 revoke）
+let REACTS = {}, MY_REACTS = new Set();
 let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
 let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
@@ -2125,7 +2128,7 @@ async function removeGuest(id, name){
 }
 
 // ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
-async function openRoster(postId){
+async function openRoster(postId, backJs){
   if(!ME){ go("me"); return; }
   const r = await signupApi("summary", {post_id: postId});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
@@ -2142,7 +2145,7 @@ async function openRoster(postId){
   const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices || {})))];
 
   el("v-form").innerHTML = `
-    ${backBar()}
+    ${backJs ? backTo(backJs, "回這則活動") : backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">報名名單　${esc(p ? p.title : "")}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
@@ -2928,7 +2931,8 @@ function noticeCard(p){
     <div style="flex:1;min-width:0"><div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${
       p.important?`<span class="imptag">重要</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
-      <div class="d">${ago(p.created_at)}</div></div>
+      <div class="d">${ago(p.created_at)}</div>
+      ${statLine(p)}</div>
     ${isOfficer()?`<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('notice',${p.id})">編輯</button>`
       :`<svg class="go" width="18" height="18"><use href="#i-go"/></svg>`}</div></div>`;
 }
@@ -2951,6 +2955,15 @@ function surveyCard(p){
   </div></div>`;
 }
 
+// 卡片上的互動：報名幾人・幾個讚・幾則留言。都是 0 就整行不出現，不佔版面。
+function statLine(p){
+  const n = ["monthly","event","member_event"].includes(p.kind) && p.signup_open
+    ? ((SEATS[p.id] || {}).taken || 0) : 0;
+  const parts = [n ? `✅ ${n} 人報名` : "", likeCount("post", p.id) ? `👍 ${likeCount("post", p.id)}` : "",
+                 cmtCount("post", p.id) ? `💬 ${cmtCount("post", p.id)}` : ""].filter(Boolean);
+  return parts.length ? `<div class="d" style="margin-top:3px">${parts.join("　・　")}</div>` : "";
+}
+
 function eventBlock(list, showAuthor){
   // 一種卡片走天下：沒照片就少了圖片區，寬度完全一樣、自動並排
   return `<div class="evgrid">${list.map(p=>eventCard(p, showAuthor)).join("")}</div>`;
@@ -2970,6 +2983,7 @@ function eventCard(p, showAuthor){
       ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
       <div class="evmeta">${[who, whenLabel(p), p.time_text ? esc(p.time_text) : "",
         p.place ? "📍 " + esc(p.place) : "", p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
+      ${statLine(p)}
     </div>
   </article>`;
 }
@@ -2982,8 +2996,32 @@ function linkRow(p, showAuthor){
       : `<svg width="18" height="18" style="color:var(--muted);flex:none"><use href="#i-${p.link?"link":"case"}"/></svg>`}
     <div style="flex:1;min-width:0"><div class="t">${esc(p.title)}</div>
       ${p.body?`<div class="d" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.body)}</div>`:""}
-      <div class="d">${[who, whenLabel(p), p.link?"有連結":""].filter(Boolean).join("　・　")}</div></div>
+      <div class="d">${[who, whenLabel(p), p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
+      ${statLine(p)}</div>
     <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>`;
+}
+
+// 活動詳情頁的報名區（羅伯特 2026-08-26：「不管哪個活動 下方都要可以報名，
+// 然後大家都可以看到是否有報名」）
+//
+// ⭐ 這裡幾乎沒有新邏輯：signupButton() 本來就會自己處理
+//    「沒填名額＝不限」「沒有餐點選項＝一鍵報名」，所以轉貼活動與夥伴活動
+//    直接沿用同一套元件、同一張 signups 表。兩份名單必然對不起來。
+// ⛔ 現場報到刻意不放這裡：那只在月例會當天的首頁出現，多一個入口只會讓人以為沒做完。
+function signupArea(p){
+  if(!["monthly","event","member_event"].includes(p.kind)) return "";
+  if(!p.signup_open) return "";
+  const n = (SEATS[p.id] || {}).taken || 0;
+  return `<div class="card">
+    ${signupBlock(p)}
+    <div style="color:var(--muted);font-size:.88rem">目前 <b>${n}</b> 人報名${
+      ME ? "" : "（用 LINE 登入後看得到是誰）"}</div>
+    ${myOrderLine(p)}
+    <div class="actions" style="margin-top:12px">
+      ${signupButton(p)}
+      ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${p.id}, 'openPostDetail(${p.id})')">📋 誰報名了</button>` : ""}
+    </div>
+  </div>`;
 }
 
 // 活動／公告的完整內容（跟案例一樣的第二層，有自己的網址可以轉給人）
@@ -3029,6 +3067,9 @@ function openPostDetail(id){
         <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
         <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(p.link)}</div>`:""}
     </article>
+    ${signupArea(p)}
+    ${likeBar("post", p.id)}
+    ${commentBlock("post", p.id)}
     <div class="hint" style="text-align:center;margin-top:12px">這一頁有自己的網址，可以直接轉給人看</div>`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-pdetail").classList.add("on"); window.scrollTo(0,0);
@@ -3347,8 +3388,13 @@ async function sendComment(kind, targetId){
   if(r.error){ el("cmterr").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     btn.disabled=false; btn.textContent="送出留言"; return; }
   await reloadComments();
+  reopenTarget(kind, targetId);
+}
+// 留言送出／刪除後要回到原來那一頁——活動也是留言的對象了，不能只認得需求與案例
+function reopenTarget(kind, targetId){
   if(kind==="need") openNeedDetail(targetId);
   else if(kind==="case") openCase(targetId);
+  else if(kind==="post") openPostDetail(targetId);
 }
 
 async function delComment(id, kind, targetId){
@@ -3356,8 +3402,56 @@ async function delComment(id, kind, targetId){
   const r = await api("comment_delete", {id});
   if(r.error) return alert(r.error);
   await reloadComments();
-  if(kind==="need") openNeedDetail(targetId);
-  else if(kind==="case") openCase(targetId);
+  reopenTarget(kind, targetId);
+}
+
+// 點讚：數字走公開 view，我按過哪些要驗身分
+async function reloadReacts(){
+  try{
+    const rows = await rest("v_reaction_counts?select=kind,target_id,cnt");
+    REACTS = Object.fromEntries(rows.map(r => [r.kind + ":" + r.target_id, r.cnt]));
+  }catch(e){ REACTS = {}; console.error("點讚數讀取失敗", e); }
+  MY_REACTS = new Set();
+  if(token()){
+    try{
+      const r = await api("react_mine", {});
+      if(r && r.ok) MY_REACTS = new Set((r.reactions||[]).map(x => x.kind + ":" + x.target_id));
+    }catch(e){ console.error("我的點讚讀取失敗", e); }
+  }
+}
+const likeCount = (kind, id) => REACTS[kind + ":" + id] || 0;
+const cmtCount  = (kind, id) => COMMENTS.filter(c => c.kind===kind && c.target_id===id).length;
+
+// 點讚列：未登入看得到數字、看不到名字（羅伯特 2026-08-26 決定）
+function likeBar(kind, id){
+  const key = kind + ":" + id, n = likeCount(kind, id), liked = MY_REACTS.has(key);
+  return `<div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    ${ME
+      ? `<button class="btn ${liked?"btn-primary":"btn-ghost"} btn-sm" onclick="toggleLike('${kind}',${id})">${
+          liked?"👍 已讚":"👍 讚"}${n?"　"+n:""}</button>`
+      : `<span style="color:var(--muted)">👍 ${n} 個讚</span>`}
+    ${ME && n ? `<button class="btn btn-ghost btn-sm" onclick="whoLiked('${kind}',${id})">看誰按的</button>` : ""}
+    ${ME ? "" : `<span class="hint">用 LINE 登入後可以按讚、留言</span>`}
+    <div id="wholiked" style="width:100%"></div>
+  </div>`;
+}
+async function toggleLike(kind, id){
+  const r = await api("react_toggle", {kind, target_id: id});
+  if(r.error) return alert(r.error);
+  const key = kind + ":" + id;
+  REACTS[key] = r.cnt;
+  if(r.liked) MY_REACTS.add(key); else MY_REACTS.delete(key);
+  // 重畫這一頁（數字在卡片列表也會用到，回頭就會是新的）
+  if(kind === "post") openPostDetail(id); else openCase(id);
+}
+async function whoLiked(kind, id){
+  const box = el("wholiked"); if(!box) return;
+  box.innerHTML = `<div class="hint">讀取中…</div>`;
+  const r = await api("react_who", {kind, target_id: id});
+  if(r.error){ box.innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
+  const names = (r.list||[]).map(x => esc(x.name)).filter(Boolean);
+  box.innerHTML = `<div style="margin-top:4px;color:var(--muted);font-size:.85rem">${
+    names.length ? names.join("、") : "還沒有人"}</div>`;
 }
 
 async function reloadComments(){
@@ -3881,6 +3975,7 @@ function openCase(id){
         <div class="d">有同樣困擾的夥伴可以找他</div></div></div>`:""}
       ${mine?`<div style="margin-top:18px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delCase(${c.id})">刪除這則案例</button></div>`:""}
     </article>
+    ${likeBar("case", c.id)}
     ${commentBlock("case", c.id)}`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-cdetail").classList.add("on"); window.scrollTo(0,0);
@@ -4198,6 +4293,7 @@ async function loadMe(){
   const jumped = await handleCallback();
   const st = await loadMe();
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
+  await reloadReacts();  // 同理：MY_REACTS 需要通行證才知道我按過哪些
   await reloadBuys();
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
