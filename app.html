@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 15:48</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 15:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3980,14 +3980,30 @@ function openMember(id){
     })()}`;
   if(isOfficer() && ME.id !== m.id){
     el("v-mdetail").insertAdjacentHTML("beforeend", `
-      <div style="margin-top:20px;text-align:center">
-        <button class="btn btn-ghost btn-sm" style="color:#b4261a"
-          onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">標記為已退出</button>
-        <div class="mnote" style="margin-top:6px">從名冊移除，他分享過的案例與需求會留著</div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="mnote" style="margin-bottom:10px">幹部作業</div>
+        <div class="actions">
+          <button class="mbtn" onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">🚪 標記為已退出</button>
+          <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
+            onclick="deleteMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">🗑 刪掉這筆</button>
+        </div>
+        <div class="mnote" style="margin-top:8px">
+          <b>標記為已退出</b>：名冊上消失，他分享過的案例與需求留著，之後可以加回來。<br>
+          <b>刪掉這筆</b>：用在同一個人重複建了兩筆的情況。只有<b>完全沒有內容</b>的帳號刪得掉。</div>
       </div>`);
   }
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-mdetail").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function deleteMember(id, name){
+  // ⛔ 真的刪除、救不回來。後端還會再檢查一次有沒有內容
+  if(!confirm(`確定要刪掉「${name}」這筆資料嗎？\n\n用在同一個人重複建了兩筆的情況。\n這是真的刪除，救不回來。\n\n如果他有案例、需求、報名等紀錄，系統會擋下來。`)) return;
+  const r = await fn("remove_member", {member_id: id});
+  if(r.error){ alert(r.error); return; }
+  await reloadMembers();
+  alert(`已刪掉「${r.name}」`);
+  go("members");
 }
 
 async function retireMember(id, name){
