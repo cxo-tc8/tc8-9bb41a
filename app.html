@@ -85,6 +85,12 @@ a{color:inherit;text-decoration:none}
 .seatline.full{color:var(--orange-dark);font-weight:700}
 .myorder{margin-top:10px;padding:10px 12px;background:var(--chip);border-radius:var(--r-sm);font-size:.88rem;color:var(--text)}
 .myorder b{color:var(--blue-900)}
+.myorder.wait{background:#fff6e5}
+.myorder-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cancelbtn{flex:none;background:none;border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:5px 10px;font-size:.8rem;color:var(--muted);cursor:pointer}
+.cancelbtn:hover{border-color:var(--orange);color:var(--orange)}
+.btn-wait{background:#e8a33d;color:#fff}
 .dietnote{margin-top:4px;font-size:.82rem;color:var(--muted)}
 .mealopt{display:flex;flex-wrap:wrap;gap:8px}
 .mealopt .pill.sold{opacity:.45;text-decoration:line-through;cursor:not-allowed}
@@ -419,7 +425,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:10</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:19</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -445,7 +451,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,waitlist_open,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
@@ -526,9 +532,12 @@ function seatsLeft(postId){
 // 剩餘席次那一行；沒開放報名或不限名額就不顯示
 function signupBlock(p){
   if(!p.signup_open) return "";
-  const left = seatsLeft(p.id);
-  if(left === null) return `<div class="seatline">開放報名中</div>`;
-  return `<div class="seatline${left===0?" full":""}">${left===0 ? "名額已滿" : `還剩 <b>${left}</b> 個位子`}</div>`;
+  const left = seatsLeft(p.id), st = SEATS[p.id] || {};
+  const wait = st.waiting ? `　候補 <b>${st.waiting}</b> 位` : "";
+  if(left === null) return `<div class="seatline">開放報名中${wait}</div>`;
+  if(left === 0) return `<div class="seatline full">名額已滿${
+    p.waitlist_open ? "，可以登記候補" : ""}${wait}</div>`;
+  return `<div class="seatline">還剩 <b>${left}</b> 個位子${wait}</div>`;
 }
 // 今天是不是這場活動的日子
 // ⚠️ 一定要指定 Asia/Taipei：瀏覽器可能在別的時區，而「今天」對夥伴永遠是台灣的今天。
@@ -552,14 +561,19 @@ async function doCheckin(postId){
 function signupButton(p){
   if(!ME) return `<a class="btn btn-ghost" onclick="go('me')">登入後報名</a>`;
   const hasMeals = mealGroups(p.id).length > 0;
-  if(MY_SIGNUPS.has(p.id)){
+  const mine = MY_SIGNUPS.get(p.id);
+  if(mine){
     // 已報名的人還是要能改餐點（改餐點不會再佔一個新位子，後端有處理）
     return hasMeals
       ? `<button class="btn btn-ghost" onclick="openSignup(${p.id})">改我的餐點</button>`
-      : `<button class="btn btn-done" disabled>✓ 已報名</button>`;
+      : `<button class="btn btn-done" disabled>${mine.status==="waitlist"?"候補中":"✓ 已報名"}</button>`;
   }
   const left = seatsLeft(p.id);
-  if(left === 0) return `<button class="btn btn-done" disabled>名額已滿</button>`;
+  if(left === 0){
+    return p.waitlist_open
+      ? `<button class="btn btn-wait" onclick="${hasMeals?`openSignup(${p.id})`:`doSignup(${p.id}, this)`}">登記候補</button>`
+      : `<button class="btn btn-done" disabled>名額已滿</button>`;
+  }
   return hasMeals
     ? `<button class="btn btn-primary" onclick="openSignup(${p.id})">我要報名</button>`
     : `<button class="btn btn-primary" onclick="doSignup(${p.id}, this)">我要報名</button>`;
@@ -570,9 +584,29 @@ function myOrderLine(p){
   if(!mine) return "";
   const c = mine.meal_choices || {};
   const items = Object.entries(c).map(([g,id]) => `${esc(g)}：<b>${esc(mealLabel(id))}</b>`);
-  return `<div class="myorder">✓ 你已報名${
-    items.length ? "　　" + items.join("　") : ""
-  }${mine.diet_note ? `<div class="dietnote">備註：${esc(mine.diet_note)}</div>` : ""}</div>`;
+  const waiting = mine.status === "waitlist";
+  return `<div class="myorder${waiting?" wait":""}">
+    <div class="myorder-top">
+      <span>${waiting ? "🕐 你在候補名單上，有人取消就會自動遞補給你" : "✓ 你已報名"}${
+        items.length ? "　　" + items.join("　") : ""}</span>
+      <button class="cancelbtn" onclick="doCancel(${p.id})">取消報名</button>
+    </div>
+    ${mine.diet_note ? `<div class="dietnote">備註：${esc(mine.diet_note)}</div>` : ""}</div>`;
+}
+// ⚠️ 截止之後也能取消——總務需要知道誰不來了。
+//    而且回報要跟實際一致：不可以出現「成功取消 0 筆」這種話。
+async function doCancel(postId){
+  const p = POSTS.find(x => x.id === postId);
+  if(!confirm(`確定要取消「${p ? p.title : ""}」的報名嗎？\n\n如果已經訂了餐，請盡早取消，
+餐點是提前訂的，太晚說會造成浪費。`)) return;
+  const r = await signupApi("cancel", {post_id: postId});
+  await reloadSeats(); renderHome();
+  if(r && r.ok){
+    alert(r.already ? "你先前已經取消過了" : "已取消報名"
+      + (r.promoted_member_id ? "，你的位子已經自動遞補給候補的夥伴" : ""));
+  }else{
+    alert((r && r.message) || "取消失敗，請再試一次");
+  }
 }
 
 // ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
@@ -659,7 +693,7 @@ function renderMeals(postId){
     <div class="mrow${m.active ? "" : " off"}">
       <input class="mi-label" value="${esc(m.label)}" placeholder="名稱">
       <input class="mi-price" type="number" value="${m.price}" placeholder="0">
-      <input class="mi-stock" type="number" value="${m.stock}" title="-1 = 不限量">
+      <input class="mi-stock" type="number" value="${m.stock}" title="-1 = 不限量（一般都填 -1）">
       <input class="mi-sort" type="number" value="${m.sort}" title="數字小的排前面">
       <button class="mbtn save" onclick="saveMeal(${m.id}, ${postId}, this)">存</button>
       <button class="mbtn" onclick="toggleMeal(${m.id}, ${!m.active}, ${postId})">${m.active ? "停用" : "啟用"}</button>
@@ -671,7 +705,8 @@ function renderMeals(postId){
       <div style="font-weight:800;font-size:1.15rem">餐點選項　${esc(p ? p.title : "")}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
         每個月的菜色不一樣，在這裡改就好，不必找人改程式。<br>
-        <b>庫存填 -1 就是不限量</b>；限量的選項被選完會自動變成「已額滿」。<br>
+        <b>庫存一般用不到，留 −1 就好</b>（−1 = 不限量，訂幾份就幾份）。<br>
+        只有真的限量的東西才填數字，例如「手工甜點只做 10 份」，選完會自動變「已額滿」。<br>
         <b>排序</b>數字小的排前面，它也決定群組的先後（想讓餐點排在飲品前面就把餐點的數字調小）。<br>
         不要的選項按「停用」<b>不要刪掉</b>——刪了的話，以前報名的人選了什麼就查不到了。
       </div>
@@ -1770,7 +1805,7 @@ function openPost(kind, id){
   if(!ME){ go("me"); return; }
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
-    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup_link"],
+    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup","signup_link"],
     event:        ["speaker_free","place","dates","time","fee","body","link","album"],
     notice:       ["msgtype","body"],
     survey:       ["msgtype","body"],
@@ -1838,7 +1873,25 @@ function openPost(kind, id){
       ${has("photo2")?photoField("p_speaker2_photo","第二位主講者照片", p&&p.speaker2_photo):""}
       ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
       ${has("event_at")?`<div class="field"><label>時間</label><input type="datetime-local" id="p_event_at" value="${dtLocal(p&&p.event_at)}" class="dateinput" style="width:100%"></div>`:""}
-      ${has("capacity")?`<div class="field"><label>名額</label><input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：50"></div>`:""}
+      ${has("capacity")?`<div class="field"><label>人數上限</label>
+        <div class="help">空白 = 不限人數。改小到低於已報名人數時系統會擋下來</div>
+        <input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：60"></div>`:""}
+      ${has("signup")?`<div class="field"><label>保留席</label>
+        <div class="help">講者、工作人員的位子，不開放報名。可報名人數 = 人數上限 − 保留席</div>
+        <input type="text" id="p_reserved" value="${p&&p.reserved_seats?p.reserved_seats:""}" placeholder="例：2"></div>`:""}
+      ${has("signup")?`<div class="field"><label>線上報名</label>
+        <div class="help">打開之後，夥伴在首頁按一下就能報名並選餐點。
+          關著的時候顯示的是下面填的外部報名連結</div>
+        <div class="pills" id="p_signupopen">
+          <button type="button" class="pill${p&&p.signup_open?" on":""}" data-s="1">開放報名</button>
+          <button type="button" class="pill${p&&p.signup_open?"":" on"}" data-s="0">還沒開放</button>
+        </div></div>`:""}
+      ${has("signup")?`<div class="field"><label>額滿之後</label>
+        <div class="help">開放候補的話，額滿後還是可以登記，有人取消就自動遞補給等最久的那位</div>
+        <div class="pills" id="p_waitopen">
+          <button type="button" class="pill${p&&p.waitlist_open?" on":""}" data-w="1">可以候補</button>
+          <button type="button" class="pill${p&&p.waitlist_open?"":" on"}" data-w="0">額滿就關閉</button>
+        </div></div>`:""}
       ${has("body")?`<div class="field"><label>內容</label>
         <div class="help">${kind==="notice"?"公告內容，寫清楚一點":"簡單說明就好"}</div>
         <textarea id="p_body" maxlength="3000">${val("body")}</textarea></div>`:""}
@@ -1871,6 +1924,10 @@ function openPost(kind, id){
     </div>`;
   if(el("p_vis")) el("p_vis").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_vis").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  if(el("p_signupopen")) el("p_signupopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_signupopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  if(el("p_waitopen")) el("p_waitopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_waitopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_msgtype")) MSGKIND = kind==="survey" ? "survey" : "notice";
   if(el("p_album")) renderAlbum();
   if(el("p_required")){
@@ -1902,6 +1959,11 @@ async function savePost(kind, id){
     speaker:g("speaker"), speaker2:g("speaker2"), time_text:g("time_text"), fee:g("fee"),
     speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
     photos: el("p_photos") ? JSON.parse(el("p_photos").value||"[]") : undefined, start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
+    reserved_seats: g("reserved"),
+    // ⚠️ 後端是 !!b.signup_open：沒送這個欄位就會被當成 false，
+    //    等於幹部每編輯一次月例會就把報名默默關掉。所以一定要送。
+    signup_open: el("p_signupopen") ? el("p_signupopen").querySelector(".pill.on").dataset.s === "1" : undefined,
+    waitlist_open: el("p_waitopen") ? el("p_waitopen").querySelector(".pill.on").dataset.w === "1" : undefined,
     done_count:g("done_count"), admin_link:g("admin_link"),
     visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
