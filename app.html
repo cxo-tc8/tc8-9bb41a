@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:31</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:36</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1320,8 +1320,9 @@ function payBlock(r){
       ? `<div class="mnote" style="margin-top:8px">錢統一交給財務長，在這裡登記。系統會記錄是誰勾的。</div>`
       : `<div class="mnote" style="margin-top:8px">繳費一律由幹部登記，開單的人只看得到收了沒</div>`}
     <div class="rosterwrap" style="margin-top:10px"><table class="roster">
-      <thead><tr><th>姓名</th><th>件數</th><th>應付</th><th>收款</th></tr></thead>
-      <tbody>${ppl.map(x => `<tr>
+      <thead><tr><th>#</th><th>姓名</th><th>件數</th><th>應付</th><th>收款</th></tr></thead>
+      <tbody>${ppl.map((x,i) => `<tr>
+        <td>${i+1}</td>
         <td>${esc(x.name)}</td>
         <td>${x.qty}</td>
         <td>$${x.amount}${x.mismatch ? `<span class="tagx">勾選時是 $${x.paid_amount}</span>` : ""}</td>
