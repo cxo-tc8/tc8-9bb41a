@@ -561,7 +561,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:17</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:19</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -820,13 +820,16 @@ async function doCancel(postId){
 
 // ── 活動分頁：TC8／CXO／夥伴 三層，各自照月份分組 ──────────
 // 首頁只放最近的幾則；全部的歷史在這裡，照月份收起來，一年後也不會變成長河。
-let ACT_TAB = "tc8";
+let ACT_TAB = "all";
 const ORG_TABS = [
-  ["tc8", "TC8"],
-  ["cxo", "CXO"],
+  ["all",    "全部"],
+  ["tc8",    "TC8"],
+  ["cxo",    "CXO"],
   ["member", "夥伴的活動"],
 ];
 function actsOf(tab){
+  const isAct = p => p.kind === "monthly" || p.kind === "event" || p.kind === "member_event";
+  if(tab === "all")    return POSTS.filter(isAct);
   if(tab === "member") return POSTS.filter(p => p.kind === "member_event");
   if(tab === "tc8")    return POSTS.filter(p => p.kind === "monthly" || (p.kind === "event" && p.org === "tc8"));
   return POSTS.filter(p => p.kind === "event" && p.org !== "tc8");
@@ -862,9 +865,10 @@ function renderActs(){
       <div class="monthsec${k === twNow ? " now" : ""}">
         <div class="monthlbl">${monthLabel(k)}${k === twNow ? "　<span class='nowtag'>本月</span>" : ""}
           <span class="mnote">${ps.length} 則</span></div>
-        ${eventBlock(ps, ACT_TAB === "member")}
+        ${eventBlock(ps, ACT_TAB === "member" || ACT_TAB === "all")}
       </div>`).join("")
-      : `<div class="card"><div class="empty">這一類還沒有活動</div></div>`}`;
+      : `<div class="card"><div class="empty">${
+          ACT_TAB === "all" ? "還沒有任何活動" : "這一類還沒有活動"}</div></div>`}`;
 }
 
 // ── 公告分頁：公告與問卷，一樣照月份 ─────────────────────
