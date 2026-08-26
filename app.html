@@ -116,6 +116,15 @@ a{color:inherit;text-decoration:none}
 .notice .ic.red{background:#fde8e8;color:#c0392b}
 .imptag{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;
   background:#c0392b;color:#fff;font-size:.72rem;font-weight:700;vertical-align:1px}
+/* 導覽上的「有新東西」紅點 */
+.nav button{position:relative}
+.newdot{position:absolute;min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+  background:#c0392b;color:#fff;font-size:.66rem;font-weight:800;line-height:17px;
+  text-align:center;box-shadow:0 0 0 2px var(--card)}
+@media (max-width:1023px){ .newdot{top:4px;left:calc(50% + 4px)} }
+@media (min-width:1024px){ .newdot{top:50%;right:16px;transform:translateY(-50%)} }
+.newpill{flex:none;background:#fde8e8;color:#c0392b;font-size:.72rem;font-weight:700;
+  padding:2px 8px;border-radius:999px}
 .lightbox{position:fixed;inset:0;background:rgba(8,14,28,.92);z-index:80;display:none;
   align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
 .lightbox.on{display:flex}
@@ -592,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:46</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:49</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2110,6 +2119,48 @@ function closeLightbox(){
 }
 document.addEventListener("keydown", e => { if(e.key === "Escape") closeLightbox(); });
 
+// ── 「有新東西」紅點 ────────────────────────────────
+// ⭐ 用「你上次看過之後新增幾則」，不是「最近 N 天發布」——
+//    後者你昨天才看完、今天紅點還在，看三次就麻痺了。點進去看過就消失，紅點才有意義。
+// 記在這台裝置的 localStorage：換手機會重新算，但省掉一張表與每次讀寫的往返。
+const SEEN_KEY = v => "tc8_seen_" + v;
+function seenAt(v){
+  try{
+    const t = localStorage.getItem(SEEN_KEY(v));
+    if(t) return new Date(t);
+    // 第一次使用：把「現在」當基準，否則一進來每個分頁都是紅的
+    const now = new Date().toISOString();
+    localStorage.setItem(SEEN_KEY(v), now);
+    return new Date(now);
+  }catch(e){ return new Date(); }   // 無痕模式讀不到就當作沒有新東西
+}
+function markSeen(v){
+  try{ localStorage.setItem(SEEN_KEY(v), new Date().toISOString()); }catch(e){}
+}
+// 每個分頁「算什麼是新的」
+function newItems(v){
+  const since = seenAt(v);
+  const after = x => x && new Date(x) > since;
+  if(v === "notices") return POSTS.filter(p => (p.kind==="notice"||p.kind==="survey") && after(p.created_at));
+  if(v === "acts")    return POSTS.filter(p => ["monthly","event","member_event"].includes(p.kind) && after(p.created_at));
+  if(v === "cases")   return CASES.filter(c => after(c.created_at));
+  if(v === "needs")   return NEEDS.filter(n => after(n.created_at));
+  if(v === "buys")    return BUYS.filter(b => b.status === "open" && after(b.created_at));
+  return [];
+}
+const NEW_VIEWS = ["notices","acts","cases","needs","buys"];
+function syncNewBadges(){
+  NEW_VIEWS.forEach(v => {
+    const n = newItems(v).length;
+    document.querySelectorAll(`.nav button[data-v="${v}"]`).forEach(b => {
+      let dot = b.querySelector(".newdot");
+      if(!n){ if(dot) dot.remove(); return; }
+      if(!dot){ dot = document.createElement("span"); dot.className = "newdot"; b.appendChild(dot); }
+      dot.textContent = n > 9 ? "9+" : n;
+    });
+  });
+}
+
 // 手機的完整選單。⚠️ 一般夥伴看不到「分會管理」——它不只是藏起來，
 // 每個管理用的 API 後端也各自驗身分。
 const DRAWER_ITEMS = [
@@ -2126,11 +2177,15 @@ const DRAWER_ITEMS = [
 function openDrawer(){
   el("drawerlist").innerHTML = DRAWER_ITEMS
     .filter(([,,,officerOnly]) => !officerOnly || isOfficer())
-    .map(([v, ic, label, officerOnly]) => `
-      <button class="drawerrow${officerOnly ? " officer" : ""}" onclick="goFromDrawer('${v}')">
+    .map(([v, ic, label, officerOnly]) => {
+      const n = NEW_VIEWS.includes(v) ? newItems(v).length : 0;
+      return `<button class="drawerrow${officerOnly ? " officer" : ""}" onclick="goFromDrawer('${v}')">
         <svg width="20" height="20"><use href="#${ic}"/></svg><span>${label}</span>
+        ${n ? `<span class="newpill">${n > 9 ? "9+" : n} 則新的</span>` : ""}
         <svg class="go" width="17" height="17"><use href="#i-go"/></svg>
-      </button>`).join("");
+      </button>`;
+    }).join("");
+  syncNewBadges();
   el("drawer").classList.add("on");
   el("scrim").classList.add("on");
   document.body.style.overflow = "hidden";
@@ -2154,6 +2209,7 @@ function go(v, btn){
   if(btn===undefined) window.scrollTo(0,0);
   syncAdminNav();
   render(v);
+  markSeen(v); syncNewBadges();   // 看過了就把紅點消掉
 }
 document.querySelectorAll(".nav button").forEach(b=> b.onclick = ()=> go(b.dataset.v));
 
@@ -3672,6 +3728,7 @@ async function loadMe(){
   const st = await loadMe();
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
   await reloadBuys();
+  syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
   if(el("v-claim").classList.contains("on")) return renderClaim();
   go("home");
