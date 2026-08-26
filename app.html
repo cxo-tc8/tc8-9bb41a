@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:01</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:06</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1573,14 +1573,17 @@ async function openMemberAdmin(tab){
   if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
   MADMIN = r;
   const F = {
+    pending:  m => m.status === "pending",
     all:      m => m.status === null,
     unbound:  m => m.status === null && !m.bound_at,
     bound:    m => m.status === null && m.bound_at,
-    retired:  m => m.status !== null,
+    // ⛔ pending 是待審申請不是已退出，兩者的 status 都不是 null
+    retired:  m => m.status !== null && m.status !== "pending",
   };
   const list = (r.list || []).filter(F[MADMIN_TAB] || F.all);
-  const TABS = [["all","全部現任",r.stats.total],["unbound","還沒綁",r.stats.unbound],
-                ["bound","已綁定",r.stats.bound],["retired","已退出",r.stats.retired]];
+  const TABS = [["pending","🔔 待審核",r.stats.pending],["all","全部現任",r.stats.total],
+                ["unbound","還沒綁",r.stats.unbound],["bound","已綁定",r.stats.bound],
+                ["retired","已退出",r.stats.retired]];
   el("v-form").innerHTML = `${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">夥伴管理</div>
@@ -1598,12 +1601,16 @@ async function openMemberAdmin(tab){
             <div class="mnote" style="margin-top:2px">
               ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}<br>
               ${m.joined_at ? `加入 ${m.joined_at}　｜　` : ""}${
-                m.status !== null ? `<span class="tagx">已退出${m.exit_date?" "+m.exit_date:""}</span>`
+                m.status === "pending" ? `<span class="tagw">🔔 等待審核</span>${m.intro?`<br>「${esc(m.intro)}」`:""}${m.description?`<br>${esc(m.description)}`:""}`
+                : m.status !== null ? `<span class="tagx">已退出${m.exit_date?" "+m.exit_date:""}</span>`
                 : m.bound_at ? `<span class="okmark">✓ 已綁定 ${String(m.bound_at).slice(0,10)}</span>`
                 : `<span class="tagw">還沒綁</span>`}</div>
           </span>
           <span class="actions" style="flex:none;flex-direction:column;gap:6px">
-            ${m.status !== null
+            ${m.status === "pending"
+              ? `<button class="mbtn add" onclick="reviewMember(${m.id},'approve','${esc((m.name||"").replace(/'/g,""))}')">核可</button>
+                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewMember(${m.id},'reject','${esc((m.name||"").replace(/'/g,""))}')">退回</button>`
+            : m.status !== null
               ? `<button class="mbtn" onclick="unretireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">加回來</button>`
               : `${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">解綁</button>` : ""}
                  ${m.id !== ME.id ? `<button class="mbtn" onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">退出</button>
@@ -1765,7 +1772,7 @@ async function renderAdmin(){
       <div class="arow" onclick="openBuyOverview()">
         <span>📦 團購（審核・訂購名單・收款）</span>
         ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="go('me')"><span>👤 新夥伴申請</span>
+      <div class="arow" onclick="openMemberAdmin('pending')"><span>👤 新夥伴申請（審核）</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="openMemberAdmin()">
         <span>👥 夥伴管理（綁定・退出・刪除）</span><span class="ago">›</span></div>
@@ -3138,7 +3145,8 @@ async function reviewMember(id, act, name){
   const r = await fn(act, {id});
   if(r.error) return alert(r.error);
   MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
-  openReview();
+  // 從夥伴管理進來的就回夥伴管理，從「我的 → 新夥伴審核」進來的才回舊頁
+  if(MADMIN){ MADMIN = null; await openMemberAdmin(); } else openReview();
 }
 
 function openProfile(){
