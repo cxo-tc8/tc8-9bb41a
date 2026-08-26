@@ -455,8 +455,8 @@ a.btn{text-decoration:none}
 .fbn{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
   border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:box-shadow .18s}
 .fbn:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
-.fbn .fimg{aspect-ratio:16/9;background:var(--line-soft)}
-.fbn .fimg img{width:100%;height:100%;object-fit:cover;display:block}
+.fbn .fimg{aspect-ratio:16/9;min-height:0;overflow:hidden;background:var(--line-soft)}
+.fbn .fimg img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 /* 還沒放圖的時候不要留一塊灰色空格——用底色橫幅撐住，之後上傳圖片就換掉 */
 .fbn .fband{aspect-ratio:16/9;background:linear-gradient(135deg,var(--blue-900),var(--blue-500));
   color:#fff;display:flex;flex-direction:column;justify-content:center;padding:18px 20px}
@@ -469,8 +469,13 @@ a.btn{text-decoration:none}
   overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .12s}
 .evcard:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
 .evcard:active{transform:scale(.995)}
-.evphoto{position:relative;aspect-ratio:16/9;background:var(--line-soft)}
-.evphoto img{width:100%;height:100%;object-fit:cover;display:block}
+/* ⛔ min-height:0 不能省：.evphoto 是 flex 子項，預設 min-height:auto 代表
+   「不得小於內容」，直式照片的原始高度會整個蓋過 aspect-ratio。
+   實測沒加之前是 358×477，加了才是 358×201（設了、不報錯、畫面照樣不對）。 */
+.evphoto{position:relative;aspect-ratio:16/9;min-height:0;overflow:hidden;background:var(--line-soft)}
+/* ⛔ object-fit:cover 預設從正中央裁，直式照片的人頭正好落在被砍的那一段。
+   改成靠上緣裁——合照、人像、活動照的臉幾乎都在上半部，砍掉的是腳邊與地板。 */
+.evphoto img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 .evcount{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.6);color:#fff;
   font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:99px}
 .evbody{padding:13px 15px 14px;display:flex;flex-direction:column;flex:1}
@@ -632,7 +637,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:59</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:03</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3000,7 +3005,7 @@ function featuredBanner(p){
            <div class="t">${esc(p.title)}</div></div>`}
     <div class="fbody">
       ${img ? `<div class="t">${esc(p.title)}</div>` : ""}
-      <div class="d">${[whenLabel(p), p.time_text ? esc(p.time_text) : "",
+      <div class="d">${[whenLabel(p) || fmtDate(p.event_at), p.time_text ? esc(p.time_text) : "",
         p.place ? "📍 " + esc(p.place) : ""].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
     </div>
@@ -3724,7 +3729,8 @@ function openPost(kind, id){
   if(!ME){ go("me"); return; }
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
-    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup"],
+    // album＝活動照片／海報。月例會原本沒有這一格，所以它的橫幅只能用底色撐著
+    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup","album"],
     event:        ["speaker_free","place","dates","time","fee","body","link","album"],
     notice:       ["msgtype","body"],
     survey:       ["msgtype","body"],
