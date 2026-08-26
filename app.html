@@ -106,6 +106,35 @@ a{color:inherit;text-decoration:none}
 .arow>span:first-child{flex:1}
 .ago{color:var(--muted);font-size:1.2rem}
 /* 幹部功能跟一般分頁之間隔一條線——它們是不同性質的東西 */
+/* 手機底部橫排最多放 5 個；活動／公告／團購／分會管理改從「我的」進入 */
+.burger{display:grid;place-items:center;width:38px;height:38px;flex:none;margin-right:2px;
+  border:none;background:rgba(255,255,255,.14);color:#fff;border-radius:10px;cursor:pointer}
+.burger:active{background:rgba(255,255,255,.26)}
+@media (min-width:1024px){ .burger{display:none} }
+.scrim{position:fixed;inset:0;background:rgba(10,20,40,.42);opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:60}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:270px;max-width:82vw;background:var(--card);
+  z-index:61;transform:translateX(-102%);transition:transform .24s cubic-bezier(.4,0,.2,1);
+  box-shadow:2px 0 22px rgba(10,20,40,.18);overflow-y:auto;
+  padding-bottom:env(safe-area-inset-bottom)}
+.drawer.on{transform:none}
+.drawerhead{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid var(--line)}
+.drawerhead img{border-radius:10px}
+.drawerhead b{font-size:.98rem}
+.drawerhead .sub{font-size:.78rem;color:var(--muted)}
+.drawerx{margin-left:auto;border:none;background:none;font-size:1.5rem;color:var(--muted);
+  cursor:pointer;line-height:1;padding:0 4px}
+.drawerrow{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:none;
+  background:none;font-size:.96rem;color:var(--text);cursor:pointer;text-align:left;
+  border-bottom:1px solid var(--line-soft)}
+.drawerrow svg{color:var(--muted);flex:none}
+.drawerrow span{flex:1}
+.drawerrow .go{color:var(--line)}
+.drawerrow:active{background:var(--chip)}
+.drawerrow.officer{border-top:6px solid var(--bg);color:var(--blue-900);font-weight:600}
+.deskonly{display:none!important}
+@media (min-width:1024px){ .deskonly{display:flex!important} }
 .navsep{display:none}
 @media (min-width:1024px){
   .navsep{display:block;height:1px;background:var(--line);margin:8px 16px}
@@ -496,10 +525,25 @@ a.btn{text-decoration:none}
   <symbol id="i-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.6 4.4L18 10l-4.4 1.6L12 16l-1.6-4.4L6 10l4.4-1.6L12 4Z"/></symbol>
 </svg>
 <header class="top">
+  <button class="burger" onclick="openDrawer()" aria-label="選單">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
   <img class="logo" src="logo.png" alt="CXO TC8" width="34" height="34">
   <div><h1>CXO TC8</h1><div class="sub">AI 案例與活動中心</div></div>
   <button class="me" id="meBtn" onclick="onMe()" style="border:none;cursor:pointer"><span class="dot" id="meDot" style="background:#9aa4b2"></span><span id="meName">登入</span></button>
 </header>
+
+<!-- 手機用的完整選單：底部橫排放不下的都在這裡 -->
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawerhead">
+    <img src="logo.png" alt="" width="40" height="40">
+    <div><b>CXO TC8</b><div class="sub">斯巴達分會</div></div>
+    <button class="drawerx" onclick="closeDrawer()" aria-label="關閉">×</button>
+  </div>
+  <div id="drawerlist"></div>
+</aside>
 
 <main class="wrap view on" id="v-home"></main>
 <main class="wrap view" id="v-members"></main>
@@ -508,6 +552,8 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-needs"></main>
 <main class="wrap view" id="v-me"></main>
 <main class="wrap view" id="v-claim"></main>
+<main class="wrap view" id="v-acts"></main>
+<main class="wrap view" id="v-notices"></main>
 <main class="wrap view" id="v-buys"></main>
 <main class="wrap view" id="v-admin"></main>
 <main class="wrap view" id="v-form"></main>
@@ -515,7 +561,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:03</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:12</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -524,11 +570,13 @@ a.btn{text-decoration:none}
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
   <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
-  <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
-  <button data-v="buys"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
+  <button data-v="needs" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
+  <button data-v="acts" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-spark"/></svg>活動</button>
+  <button data-v="notices" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告</button>
+  <button data-v="buys" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
-  <button data-v="admin" id="nav-admin" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
+  <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
 </nav>
 
 <script>
@@ -544,7 +592,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
@@ -768,6 +816,72 @@ async function doCancel(postId){
   }else{
     alert((r && r.message) || "取消失敗，請再試一次");
   }
+}
+
+// ── 活動分頁：TC8／CXO／夥伴 三層，各自照月份分組 ──────────
+// 首頁只放最近的幾則；全部的歷史在這裡，照月份收起來，一年後也不會變成長河。
+let ACT_TAB = "tc8";
+const ORG_TABS = [
+  ["tc8", "TC8"],
+  ["cxo", "CXO"],
+  ["member", "夥伴的活動"],
+];
+function actsOf(tab){
+  if(tab === "member") return POSTS.filter(p => p.kind === "member_event");
+  if(tab === "tc8")    return POSTS.filter(p => p.kind === "monthly" || (p.kind === "event" && p.org === "tc8"));
+  return POSTS.filter(p => p.kind === "event" && p.org !== "tc8");
+}
+// 用活動日期分月；沒有活動日期就用發布日期
+const monthKey = p => {
+  const d = p.event_at || p.start_date || p.created_at;
+  return d ? new Date(d).toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"}).slice(0,7) : "0000-00";
+};
+const monthLabel = k => k === "0000-00" ? "沒有日期"
+  : `${k.slice(0,4)} 年 ${Number(k.slice(5,7))} 月`;
+
+function groupByMonth(list){
+  const g = {};
+  list.forEach(p => { (g[monthKey(p)] ??= []).push(p); });
+  // 新的月份排前面；同一個月內也是新的在前
+  return Object.entries(g).sort((a,b) => b[0].localeCompare(a[0]))
+    .map(([k, v]) => [k, v.sort((x,y) => String(monthKey(y)+ (y.event_at||"")).localeCompare(String(monthKey(x)+(x.event_at||""))))]);
+}
+function renderActs(){
+  const list = actsOf(ACT_TAB);
+  const groups = groupByMonth(list);
+  const twNow = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"}).slice(0,7);
+  el("v-acts").innerHTML = `
+    <div class="sec"><h2>活動</h2>${
+      isOfficer() ? `<span class="more" onclick="openPost('event')">＋ 發布活動</span>`
+      : ME ? `<span class="more" onclick="openPost('member_event')">＋ 貼我的活動</span>` : ""}</div>
+    <div class="tools"><div class="chips" id="acttabs">
+      ${ORG_TABS.map(([k, label]) => `<button class="chip${ACT_TAB===k?" on":""}"
+        onclick="ACT_TAB='${k}';renderActs()">${label} ${actsOf(k).length}</button>`).join("")}
+    </div></div>
+    ${groups.length ? groups.map(([k, ps]) => `
+      <div class="monthsec${k === twNow ? " now" : ""}">
+        <div class="monthlbl">${monthLabel(k)}${k === twNow ? "　<span class='nowtag'>本月</span>" : ""}
+          <span class="mnote">${ps.length} 則</span></div>
+        ${eventBlock(ps, ACT_TAB === "member")}
+      </div>`).join("")
+      : `<div class="card"><div class="empty">這一類還沒有活動</div></div>`}`;
+}
+
+// ── 公告分頁：公告與問卷，一樣照月份 ─────────────────────
+function renderNotices(){
+  const list = POSTS.filter(p => p.kind === "notice" || p.kind === "survey");
+  const groups = groupByMonth(list);
+  const twNow = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"}).slice(0,7);
+  el("v-notices").innerHTML = `
+    <div class="sec"><h2>公告與問卷</h2>${
+      isOfficer() ? `<span class="more" onclick="openPost('notice')">＋ 發布</span>` : ""}</div>
+    ${groups.length ? groups.map(([k, ps]) => `
+      <div class="monthsec${k === twNow ? " now" : ""}">
+        <div class="monthlbl">${monthLabel(k)}${k === twNow ? "　<span class='nowtag'>本月</span>" : ""}
+          <span class="mnote">${ps.length} 則</span></div>
+        ${ps.map(x => x.kind === "survey" ? surveyCard(x) : noticeCard(x)).join("")}
+      </div>`).join("")
+      : `<div class="card"><div class="empty">還沒有公告</div></div>`}`;
 }
 
 // ── 團購分頁：完整清單（首頁只放進行中的摘要）──────────
@@ -1928,10 +2042,43 @@ function backBar(label){
 // 幹部才看得到「分會管理」這個分頁入口
 function syncAdminNav(){
   const b = el("nav-admin"), sep = el("nav-sep"); if(!b) return;
-  const show = isOfficer() ? "" : "none";
-  b.style.display = show;
-  if(sep) sep.style.display = show;
+  // ⚠️ 用 visibility 之外的方式控制：deskonly 已經用 !important 管住手機版，
+  //    這裡只負責「非幹部完全不出現」
+  b.style.display = isOfficer() ? "" : "none";
+  if(sep) sep.style.display = isOfficer() ? "" : "none";
 }
+// 手機的完整選單。⚠️ 一般夥伴看不到「分會管理」——它不只是藏起來，
+// 每個管理用的 API 後端也各自驗身分。
+const DRAWER_ITEMS = [
+  ["home",    "i-home",   "首頁",   false],
+  ["acts",    "i-spark",  "活動",   false],
+  ["notices", "i-bell",   "公告與問卷", false],
+  ["members", "i-people", "夥伴",   false],
+  ["cases",   "i-case",   "AI 案例", false],
+  ["needs",   "i-need",   "AI 需求", false],
+  ["buys",    "i-bag",    "團購",   false],
+  ["me",      "i-me",     "我的",   false],
+  ["admin",   "i-shield", "分會管理", true],
+];
+function openDrawer(){
+  el("drawerlist").innerHTML = DRAWER_ITEMS
+    .filter(([,,,officerOnly]) => !officerOnly || isOfficer())
+    .map(([v, ic, label, officerOnly]) => `
+      <button class="drawerrow${officerOnly ? " officer" : ""}" onclick="goFromDrawer('${v}')">
+        <svg width="20" height="20"><use href="#${ic}"/></svg><span>${label}</span>
+        <svg class="go" width="17" height="17"><use href="#i-go"/></svg>
+      </button>`).join("");
+  el("drawer").classList.add("on");
+  el("scrim").classList.add("on");
+  document.body.style.overflow = "hidden";
+}
+function closeDrawer(){
+  el("drawer").classList.remove("on");
+  el("scrim").classList.remove("on");
+  document.body.style.overflow = "";
+}
+function goFromDrawer(v){ closeDrawer(); go(v); }
+
 function go(v, btn){
   // 進表單之前先記下現在在哪
   if(v === "form"){
@@ -1997,6 +2144,8 @@ function render(v){
   if(v==="home") el("v-home").innerHTML = homeHTML();
   if(v==="admin") renderAdmin();
   if(v==="buys") renderBuys();
+  if(v==="acts") renderActs();
+  if(v==="notices") renderNotices();
 
   if(v==="members"){
     el("v-members").innerHTML = `
@@ -2020,7 +2169,13 @@ function render(v){
   }
 
   if(v==="cases"){
+    // 案例與需求是同一件事的兩面（我做過什麼 ↔ 我卡在哪），
+    // 所以兩頁互相有對方的入口，看的人不必自己在兩邊來回比對
     el("v-cases").innerHTML = `
+      <div class="tools" style="padding-bottom:0"><div class="chips">
+        <button class="chip on">AI 案例 ${CASES.length}</button>
+        <button class="chip" onclick="go('needs')">AI 需求 ${NEEDS.filter(n=>!n.closed_at).length}</button>
+      </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
           <input id="cq" placeholder="搜你想解決的問題，例如：報價單" oninput="filterCases()"></div>
@@ -2038,6 +2193,10 @@ function render(v){
 
   if(v==="needs"){
     el("v-needs").innerHTML = `
+      <div class="tools" style="padding-bottom:0"><div class="chips">
+        <button class="chip" onclick="go('cases')">AI 案例 ${CASES.length}</button>
+        <button class="chip on">AI 需求 ${NEEDS.filter(n=>!n.closed_at).length}</button>
+      </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
           <input id="nq" placeholder="搜尋大家想解的問題" oninput="filterNeeds()"></div>
@@ -2243,21 +2402,26 @@ function homeHTML(){
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
-  h += `<div class="sec"><h2>CXO & TC8 活動</h2>${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
-  h += events.length ? eventBlock(events)
+  h += `<div class="sec"><h2>近期活動</h2>${events.length > 3 ? `<span class="more" onclick="go('acts')">全部 ${events.length}</span>` : ""}${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
+  h += events.length ? eventBlock(events.slice(0,3))
     : `<div class="card"><div class="empty">還沒有活動</div></div>`;
 
-  // 公告與問卷（同一區：對讀的人來說都是「幹部有話說」）
+  // 公告與問卷：只放最新 3 則，其餘進「公告」分頁
+  // ⚠️ 首頁不能什麼都放——一年後會變成一條捲不完的長河
   const msgs = [...notices, ...surveys].sort((a,b)=>
     ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
     || new Date(b.created_at) - new Date(a.created_at));
-  h += `<div class="sec"><h2>公告與問卷</h2>${isOfficer()?`<span class="more" onclick="openPost('notice')">＋ 發布</span>`:""}</div>`;
-  h += msgs.length ? msgs.map(p => p.kind==="survey" ? surveyCard(p) : noticeCard(p)).join("")
+  h += `<div class="sec"><h2>公告與問卷</h2>${
+    msgs.length > 3 ? `<span class="more" onclick="go('notices')">全部 ${msgs.length}</span>`
+    : isOfficer() ? `<span class="more" onclick="openPost('notice')">＋ 發布</span>` : ""}</div>`;
+  h += msgs.length ? msgs.slice(0,3).map(p => p.kind==="survey" ? surveyCard(p) : noticeCard(p)).join("")
     : `<div class="card"><div class="empty">還沒有公告或問卷</div></div>`;
 
-  // 夥伴的近期活動
-  h += `<div class="sec"><h2>夥伴的近期活動</h2>${ME?`<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>`:""}</div>`;
-  h += mEvents.length ? eventBlock(mEvents, true)
+  // 夥伴的近期活動：只放最新 3 則
+  h += `<div class="sec"><h2>夥伴的近期活動</h2>${
+    mEvents.length > 3 ? `<span class="more" onclick="ACT_TAB='member';go('acts')">全部 ${mEvents.length}</span>`
+    : ME ? `<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>` : ""}</div>`;
+  h += mEvents.length ? eventBlock(mEvents.slice(0,3), true)
     : `<div class="card"><div class="empty">還沒有夥伴張貼活動${ME?'<br><span style="font-size:.82rem">你的活動、開課、展覽都可以貼上來</span>':""}</div></div>`;
 
   // 夥伴團購
@@ -2910,7 +3074,15 @@ function openPost(kind, id){
   }[kind] || ["body"];
   const has = f => F.includes(f);
   const val = f => p && p[f]!=null ? esc(p[f]) : "";
-  const dtLocal = iso => iso ? new Date(iso).toISOString().slice(0,16) : "";
+  // datetime-local 要的是「當地時間」字串。
+  // ⛔ 不可以用 toISOString()：那是 UTC，塞進去會少 8 小時，
+  //    而存檔時又把它當成當地時間轉回 UTC → **每編輯一次就退 8 小時**，
+  //    退到跨日就變前一天（9/24 → 9/23 → 9/22）。讀寫要用同一套時區假設。
+  const dtLocal = iso => {
+    if(!iso) return "";
+    const d = new Date(iso);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+  };
 
   el("v-form").innerHTML = `
     ${backBar('取消')}
@@ -2955,6 +3127,13 @@ function openPost(kind, id){
 
       ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
       ${has("photo1")?photoField("p_speaker_photo","第一位主講者照片", p&&p.speaker_photo):""}
+      ${kind==="event"?`<div class="field" style="margin-top:14px"><label>誰辦的</label>
+        <div class="help">分開之後，「活動」那一頁才能照 TC8／CXO 分類</div>
+        <div class="pills" id="p_org">
+          <button type="button" class="pill${p&&p.org==="tc8"?" on":""}" data-o="tc8">TC8 自己辦的</button>
+          <button type="button" class="pill${!p||p.org!=="tc8"&&p.org!=="other"?" on":""}" data-o="cxo">CXO 總會</button>
+          <button type="button" class="pill${p&&p.org==="other"?" on":""}" data-o="other">其他</button>
+        </div></div>`:""}
       ${has("speaker_free")?`<div class="field"><label>講者</label>
         <div class="help">幾位都可以，用頓號分開。例：郝旭烈、許景泰 Jerry、Kim 阿金</div>
         <input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
@@ -3031,6 +3210,8 @@ function openPost(kind, id){
     el("p_signupopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_waitopen")) el("p_waitopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_waitopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  if(el("p_org")) el("p_org").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_org").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_msgtype")) MSGKIND = kind==="survey" ? "survey" : "notice";
   if(el("p_album")) renderAlbum();
   if(el("p_required")){
@@ -3067,6 +3248,7 @@ async function savePost(kind, id){
     //    等於幹部每編輯一次月例會就把報名默默關掉。所以一定要送。
     signup_open: el("p_signupopen") ? el("p_signupopen").querySelector(".pill.on").dataset.s === "1" : undefined,
     waitlist_open: el("p_waitopen") ? el("p_waitopen").querySelector(".pill.on").dataset.w === "1" : undefined,
+    org: el("p_org") ? el("p_org").querySelector(".pill.on").dataset.o : undefined,
     done_count:g("done_count"), admin_link:g("admin_link"),
     visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
