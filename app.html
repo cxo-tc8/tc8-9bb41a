@@ -488,7 +488,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:26</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:33</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -994,8 +994,7 @@ async function renderAdmin(){
     ${monthly ? `<div class="sec" style="margin-top:22px"><h2>${esc(monthly.title)}</h2></div>
     <div class="card admincard">
       <div class="arow" onclick="openRoster(${monthly.id})"><span>📋 報名名單與餐點統計</span><span class="ago">›</span></div>
-      <div class="arow" onclick="openBoard(${monthly.id})"><span>✅ 報到台</span><span class="ago">›</span></div>
-      <div class="arow" onclick="openCheckinAdmin(${monthly.id})"><span>🔳 報到碼與時間窗</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openBoard(${monthly.id})"><span>✅ 報到台（含報到碼）</span><span class="ago">›</span></div>
       <div class="arow" onclick="openMeals(${monthly.id})"><span>🍱 餐點選項</span><span class="ago">›</span></div>
       <div class="arow" onclick="openPost('monthly',${monthly.id})"><span>✏️ 編輯這場</span><span class="ago">›</span></div>
     </div>` : `<div class="card"><div class="empty">還沒有排定的月例會</div></div>`}
@@ -1107,6 +1106,41 @@ function renderBoard(){
     <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">報到台　${esc(p ? p.title : "")}</div>
+
+      ${r.code ? `
+        <div class="qrbox" style="margin-top:14px">
+          <div class="qrhint">請夥伴在首頁按「報到」，輸入這組碼</div>
+          <div class="qrcode">${esc(r.code)}</div>
+          <div class="qrhint2">投影在螢幕上，或寫在報到台的牌子上。
+            <b>輸入這組碼就完成報到了，不用再來這裡打勾。</b></div>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="mbtn" onclick="toggleCkCfg()">⚙︎ 時間窗與會場座標</button>
+            <button class="mbtn" onclick="closeCheckin(${postId})">關閉報到</button>
+          </div>
+        </div>
+        <div id="ckcfg" style="display:none">
+          <div class="field"><label>報到開始時間</label>
+            <div class="help">空白 = 不限制。設了之後，這個時間之前輸入碼會被擋下來</div>
+            <input type="datetime-local" id="ck_open" value="${r.opens_at ? toLocalInput(r.opens_at) : ""}"></div>
+          <div class="field"><label>報到結束時間</label>
+            <div class="help">擋掉事後補簽</div>
+            <input type="datetime-local" id="ck_close" value="${r.closes_at ? toLocalInput(r.closes_at) : ""}"></div>
+          <div class="field"><label>會場座標（選填）</label>
+            <div class="help">填了之後會記下每個人報到時離會場多遠。<b>不會擋人</b>，
+              但有人在家輸入轉傳出去的碼，你在下面名單看得到距離</div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="ck_lat" placeholder="緯度" value="${r.venue_lat ?? ""}" style="flex:1;min-width:0">
+              <input type="text" id="ck_lng" placeholder="經度" value="${r.venue_lng ?? ""}" style="flex:1;min-width:0">
+              <button class="mbtn" style="flex:none" onclick="useHere()">用現在位置</button>
+            </div></div>
+          <button class="mbtn add" onclick="saveCheckinCfg(${postId}, this)">存設定</button>
+        </div>`
+      : `<div class="qrbox" style="margin-top:14px">
+          <div class="qrhint">這場還沒開始報到</div>
+          <button class="btn btn-primary" style="margin-top:12px;max-width:260px;margin-left:auto;margin-right:auto"
+            onclick="startCheckin(${postId})">開始報到，產生一組碼</button>
+        </div>`}
+
       <div class="bstat">
         <div><b>${r.guests.length}</b><span>來賓</span></div>
         <div><b>${gDone}</b><span>來賓到了</span></div>
@@ -1116,7 +1150,11 @@ function renderBoard(){
         <div class="warn"><b>${walkin.length}</b><span>沒報名卻來</span></div>
       </div>
 
-      <div class="field" style="margin-top:20px">
+      <div class="mnote" style="margin-top:18px;padding:10px 12px;background:var(--chip);border-radius:var(--r-sm)">
+        下面的打勾<b>只給兩種人用</b>：①來賓（他沒有 LINE 帳號）②手機沒電或不會操作的夥伴。<br>
+        自己輸入過碼的夥伴會自動變成「✓ 到了」，不需要重複打勾。
+      </div>
+      <div class="field" style="margin-top:16px">
         <label>今天的來賓（${gDone}/${r.guests.length}）</label>
         <div class="help">來賓不必自己操作，點一下就完成報到</div>
         ${r.guests.length ? r.guests.map(g => `
@@ -1160,6 +1198,21 @@ function renderBoard(){
       </div>
     </div>`;
 }
+// datetime-local 要「當地時間」的字串；直接 toISOString 會變成 UTC，畫面上會少 8 小時
+function toLocalInput(iso){
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+function toggleCkCfg(){
+  const c = el("ckcfg"); if(!c) return;
+  c.style.display = c.style.display === "none" ? "block" : "none";
+}
+async function startCheckin(postId){
+  const r = await checkinApi("open", {post_id: postId});
+  if(!r || !r.ok){ alert((r && r.message) || "開啟失敗"); return; }
+  await openBoard(postId);
+}
+
 async function markCheck(memberId, guestId, undo){
   const r = await checkinApi("mark", {post_id: BOARD_POST, member_id: memberId, guest_id: guestId, undo: !!undo});
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
@@ -1172,48 +1225,7 @@ async function setAbsence(memberId, reason){
   await openBoard(BOARD_POST);
 }
 
-// ── 幹部：開啟報到、拿 QR ─────────────────────────────
-async function openCheckinAdmin(postId){
-  if(!isOfficer()) return;
-  const p = POSTS.find(x => x.id === postId);
-  const r = await checkinApi("open", {post_id: postId});
-  if(!r || !r.ok){ alert((r && r.message) || "開啟失敗"); return; }
-  el("v-form").innerHTML = `
-    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
-    <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">報到碼　${esc(p ? p.title : "")}</div>
-      <div style="color:var(--muted);font-size:.85rem;margin-top:8px;line-height:1.8">
-        <b>這組碼只有這一場能用</b>，下一場會換一組新的。<br>
-        碼本身就是「只有到現場才拿得到的東西」——沒來的人不知道今天是哪一組。<br>
-        ⚠️ 但它也可能被拍照傳到群組裡。所以請一併設下面的
-        <b>報到時間窗</b>與<b>會場座標</b>：時間窗擋事後補簽，座標讓遠端報到留下痕跡。
-      </div>
-      <div class="qrbox">
-        <div class="qrhint">請夥伴在首頁按「報到」，輸入這組碼</div>
-        <div class="qrcode">${esc(r.code)}</div>
-        <div class="qrhint2">投影在螢幕上，或寫在白板／報到台的牌子上</div>
-      </div>
-      <div class="field" style="margin-top:18px"><label>報到開始時間</label>
-        <div class="help">空白 = 不限制。設了之後，這個時間之前掃 QR 會被擋下來</div>
-        <input type="datetime-local" id="ck_open" value="${r.opens_at ? new Date(r.opens_at).toISOString().slice(0,16) : ""}"></div>
-      <div class="field"><label>報到結束時間</label>
-        <div class="help">擋掉事後補簽</div>
-        <input type="datetime-local" id="ck_close" value="${r.closes_at ? new Date(r.closes_at).toISOString().slice(0,16) : ""}"></div>
-      <div class="field"><label>會場座標（選填）</label>
-        <div class="help">填了之後，系統會記下每個人報到時離會場多遠。
-          <b>不會擋人</b>，但有人在家掃轉傳的 QR，你看得到</div>
-        <div style="display:flex;gap:8px">
-          <input type="text" id="ck_lat" placeholder="緯度 24.16" value="${p&&p.venue_lat!=null?p.venue_lat:""}" style="flex:1;min-width:0">
-          <input type="text" id="ck_lng" placeholder="經度 120.64" value="${p&&p.venue_lng!=null?p.venue_lng:""}" style="flex:1;min-width:0">
-          <button class="mbtn" style="flex:none" onclick="useHere()">用現在位置</button>
-        </div></div>
-      <div class="formbar">
-        <button class="btn btn-primary" onclick="saveCheckinCfg(${postId}, this)">存設定</button>
-        <button class="btn btn-ghost" onclick="closeCheckin(${postId})">關閉報到</button>
-      </div>
-    </div>`;
-  go("form");
-}
+// ── 報到碼與設定已併進報到台（openBoard），不再另開一頁 ──
 function useHere(){
   if(!navigator.geolocation){ alert("這個瀏覽器拿不到定位"); return; }
   navigator.geolocation.getCurrentPosition(p => {
@@ -1232,6 +1244,7 @@ async function saveCheckinCfg(postId, btn){
   btn.disabled = false; btn.textContent = "存設定";
   alert(r && r.ok ? "已儲存" : "儲存失敗");
   await reloadPosts();
+  await openBoard(postId);
 }
 async function closeCheckin(postId){
   if(!confirm("關閉之後，現在貼出去的 QR 就失效了。確定嗎？")) return;
@@ -1926,10 +1939,9 @@ function homeHTML(){
               : (isOfficer()
                   ? `<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">尚未開放報名（去打開）</button>`
                   : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
+          ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>` : ""}
           ${checkinButton(monthly)}
           ${isOfficer() ? `<button class="btn btn-checkin" onclick="openBoard(${monthly.id})">✅ 報到台</button>` : ""}
-          ${isOfficer() ? `<button class="btn btn-ghost" onclick="openCheckinAdmin(${monthly.id})">🔳 報到碼</button>` : ""}
-          ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>` : ""}
         </div>
         ${isOfficer() ? `<div class="adminbar">
           <span class="adminlbl">幹部</span>
