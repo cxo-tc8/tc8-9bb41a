@@ -83,6 +83,35 @@ a{color:inherit;text-decoration:none}
 .seatline{margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:.88rem;color:var(--muted)}
 .seatline b{color:var(--orange);font-weight:800;font-size:1.05rem}
 .seatline.full{color:var(--orange-dark);font-weight:700}
+.myorder{margin-top:10px;padding:10px 12px;background:var(--chip);border-radius:var(--r-sm);font-size:.88rem;color:var(--text)}
+.myorder b{color:var(--blue-900)}
+.dietnote{margin-top:4px;font-size:.82rem;color:var(--muted)}
+.mealopt{display:flex;flex-wrap:wrap;gap:8px}
+.mealopt .pill.sold{opacity:.45;text-decoration:line-through;cursor:not-allowed}
+.mealprice{font-size:.78rem;color:var(--muted);margin-left:4px}
+.mhead{display:grid;grid-template-columns:1fr 72px 72px 62px auto auto;gap:6px;font-size:.75rem;color:var(--muted);margin:6px 0 3px;padding:0 2px}
+.mrow{display:grid;grid-template-columns:1fr 72px 72px 62px auto auto;gap:6px;align-items:center;margin-top:6px}
+.mrow input{min-height:40px;padding:0 9px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:.9rem;width:100%}
+.mrow.off input{opacity:.5;text-decoration:line-through}
+.mbtn{min-height:40px;padding:0 12px;white-space:nowrap;border:1.5px solid var(--line);background:var(--card);border-radius:var(--r-sm);font-size:.85rem;font-weight:600;cursor:pointer}
+.mbtn.save{background:var(--blue-500);color:#fff;border-color:var(--blue-500)}
+.mbtn.add{margin-top:8px;width:100%;color:var(--blue-500);border-style:dashed}
+.mnote{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.tally{margin-top:6px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.tallyrow{display:flex;justify-content:space-between;padding:9px 12px;font-size:.9rem;border-top:1px solid var(--line-soft)}
+.tallyrow:first-child{border-top:none}
+.tallyrow b{font-size:1.05rem;color:var(--blue-900)}
+.tallyrow.sum{background:var(--chip);font-weight:700}
+.rosterwrap{margin-top:6px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
+.roster{border-collapse:collapse;width:100%;font-size:.86rem;white-space:nowrap}
+.roster th,.roster td{padding:7px 10px;border-bottom:1px solid var(--line-soft);text-align:left}
+.roster th{background:var(--chip);font-weight:700;position:sticky;top:0}
+.roster td:first-child,.roster th:first-child{color:var(--muted);text-align:right}
+@media (max-width:640px){
+  .mhead{display:none}
+  .mrow{grid-template-columns:1fr 60px 60px 52px;grid-auto-rows:auto}
+  .mrow .mbtn{grid-column:span 1}
+}
 
 a.btn{text-decoration:none}
 .btn-sm{min-height:44px;font-size:.86rem;padding:0 15px;flex:none}
@@ -390,7 +419,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 07:58</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:10</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -421,7 +450,8 @@ const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,descripti
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
-let MY_SIGNUPS = new Set();  // 我報名了哪幾場
+let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
+let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -461,14 +491,32 @@ async function reloadSeats(){
     const rows = await rest("v_post_seats?select=post_id,capacity,reserved_seats,taken");
     SEATS = Object.fromEntries(rows.map(r => [r.post_id, r]));
   }catch(e){ console.error("席次讀取失敗", e); }
-  MY_SIGNUPS = new Set();
+  try{
+    // 停用的選項讀不到（RLS 擋住），所以前台自動只看得到現行的
+    MEALS = await rest("meal_options?select=id,post_id,grp,label,price,stock,sort&order=grp.asc,sort.asc");
+    const t = await rest("v_meal_taken?select=option_id,taken");
+    MEAL_TAKEN = Object.fromEntries(t.map(x => [x.option_id, x.taken]));
+  }catch(e){ MEALS = []; MEAL_TAKEN = {}; console.error("餐點選項讀取失敗", e); }
+
+  MY_SIGNUPS = new Map();
   if(token()){
     try{
       const r = await signupApi("mine", {});
-      if(r && r.ok) MY_SIGNUPS = new Set((r.signups||[]).map(x => x.post_id));
+      if(r && r.ok) MY_SIGNUPS = new Map((r.signups||[]).map(x => [x.post_id, x]));
     }catch(e){ console.error("報名狀態讀取失敗", e); }
   }
 }
+// 這一場適用的選項＝專屬這場的 ＋ 通用預設
+const mealsFor = postId => MEALS.filter(m => m.post_id === null || m.post_id === postId);
+// 群組的順序＝該群組裡最小的排序值。
+// 不用群組名稱排序——那會變成照筆畫排，「飲品」會跑到「餐點」前面。
+const mealGroups = postId => {
+  const ms = mealsFor(postId), min = {};
+  ms.forEach(m => { min[m.grp] = Math.min(min[m.grp] ?? 9e9, m.sort); });
+  return [...new Set(ms.map(m => m.grp))].sort((a, b) => (min[a] - min[b]) || a.localeCompare(b));
+};
+const soldOut = m => m.stock >= 0 && (MEAL_TAKEN[m.id] || 0) >= m.stock;
+const mealLabel = id => (MEALS.find(m => m.id === Number(id)) || {}).label || "";
 // 剩幾位；capacity 沒填 = 不限名額，回 null
 function seatsLeft(postId){
   const s = SEATS[postId];
@@ -503,10 +551,259 @@ async function doCheckin(postId){
 // 報名按鈕：沒登入不給按、已報名顯示狀態、額滿停用
 function signupButton(p){
   if(!ME) return `<a class="btn btn-ghost" onclick="go('me')">登入後報名</a>`;
-  if(MY_SIGNUPS.has(p.id)) return `<button class="btn btn-done" disabled>✓ 已報名</button>`;
+  const hasMeals = mealGroups(p.id).length > 0;
+  if(MY_SIGNUPS.has(p.id)){
+    // 已報名的人還是要能改餐點（改餐點不會再佔一個新位子，後端有處理）
+    return hasMeals
+      ? `<button class="btn btn-ghost" onclick="openSignup(${p.id})">改我的餐點</button>`
+      : `<button class="btn btn-done" disabled>✓ 已報名</button>`;
+  }
   const left = seatsLeft(p.id);
   if(left === 0) return `<button class="btn btn-done" disabled>名額已滿</button>`;
-  return `<button class="btn btn-primary" onclick="doSignup(${p.id}, this)">我要報名</button>`;
+  return hasMeals
+    ? `<button class="btn btn-primary" onclick="openSignup(${p.id})">我要報名</button>`
+    : `<button class="btn btn-primary" onclick="doSignup(${p.id}, this)">我要報名</button>`;
+}
+// 已報名的人看得到自己訂了什麼——報到當天也是看這一行
+function myOrderLine(p){
+  const mine = MY_SIGNUPS.get(p.id);
+  if(!mine) return "";
+  const c = mine.meal_choices || {};
+  const items = Object.entries(c).map(([g,id]) => `${esc(g)}：<b>${esc(mealLabel(id))}</b>`);
+  return `<div class="myorder">✓ 你已報名${
+    items.length ? "　　" + items.join("　") : ""
+  }${mine.diet_note ? `<div class="dietnote">備註：${esc(mine.diet_note)}</div>` : ""}</div>`;
+}
+
+// ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
+async function openRoster(postId){
+  if(!isOfficer()) return;
+  const r = await signupApi("summary", {post_id: postId});
+  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  const p = POSTS.find(x => x.id === postId);
+  const grps = Object.keys(r.tally);
+  const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices)))];
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">報名名單　${esc(p ? p.title : "")}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
+        已確認報名 <b style="color:var(--orange);font-size:1.1rem">${r.total}</b> 人${
+          r.no_choice ? `，其中 <b>${r.no_choice}</b> 人沒有訂餐` : ""}
+      </div>
+      ${grps.map(g => `
+        <div class="field" style="margin-top:18px">
+          <label>${esc(g)}統計</label>
+          <div class="tally">${Object.entries(r.tally[g])
+            .sort((a,b) => b[1]-a[1])
+            .map(([k,v]) => `<div class="tallyrow"><span>${esc(k)}</span><b>${v}</b></div>`).join("")}
+            <div class="tallyrow sum"><span>小計</span><b>${Object.values(r.tally[g]).reduce((a,b)=>a+b,0)}</b></div>
+          </div>
+        </div>`).join("")}
+      <div class="field" style="margin-top:22px">
+        <label>完整名單</label>
+        <div class="rosterwrap"><table class="roster">
+          <thead><tr><th>#</th><th>姓名</th><th>專業別</th>${
+            cols.map(c => `<th>${esc(c)}</th>`).join("")}<th>備註</th></tr></thead>
+          <tbody>${r.list.map((x,i) => `<tr>
+            <td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.tag||"")}</td>
+            ${cols.map(c => `<td>${esc(x.choices[c] || "—")}</td>`).join("")}
+            <td>${esc(x.diet_note || "")}</td></tr>`).join("")}</tbody>
+        </table></div>
+        <button class="mbtn add" onclick='downloadRoster(${JSON.stringify(cols)}, ${postId})'>⬇︎ 下載成 Excel 可開的檔（CSV）</button>
+        <div class="help" style="margin-top:6px">
+          ⚠️ 在 LINE 裡面開這個網頁下載不會成功（LINE 的瀏覽器擋下載）。
+          請先用 Chrome 或 Safari 開啟本站再按下載。
+        </div>
+      </div>
+    </div>`;
+  window.__roster = r;
+  go("form");
+}
+function downloadRoster(cols, postId){
+  const r = window.__roster; if(!r) return;
+  const p = POSTS.find(x => x.id === postId);
+  const head = ["編號","姓名","專業別", ...cols, "飲食備註"];
+  const rows = r.list.map((x,i) => [i+1, x.name, x.tag||"", ...cols.map(c => x.choices[c] || ""), x.diet_note || ""]);
+  const esc2 = v => `"${String(v).replace(/"/g, '""')}"`;
+  // \uFEFF 是 BOM：沒有它，Excel 開啟中文 CSV 會變亂碼
+  const csv = "\uFEFF" + [head, ...rows].map(r2 => r2.map(esc2).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = `報名名單_${(p&&p.title||"").replace(/[\\/:*?"<>|]/g,"")}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ── 幹部：管這一場的餐點選項 ────────────────────────
+// ⛔ 停用不刪除：刪掉之後，上個月報名的人選了什麼就查不到了
+let MEAL_ALL = [];
+async function openMeals(postId){
+  if(!isOfficer()) return;
+  const r = await signupApi("opt_all", {});
+  MEAL_ALL = (r && r.options) || [];
+  renderMeals(postId);
+  go("form");
+}
+function renderMeals(postId){
+  const p = POSTS.find(x => x.id === postId);
+  const mine = MEAL_ALL.filter(m => m.post_id === postId);
+  const shared = MEAL_ALL.filter(m => m.post_id === null);
+  // ⚠️ 用跟報名表單同一套排序規則。原本這裡各寫一份，結果只改到一邊，
+  //    幹部後台的「飲品」還是排在「餐點」前面。
+  const all = [...mine, ...shared], gmin = {};
+  all.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
+  const groups = [...new Set(all.map(m => m.grp))]
+    .sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
+  const row = m => `
+    <div class="mrow${m.active ? "" : " off"}">
+      <input class="mi-label" value="${esc(m.label)}" placeholder="名稱">
+      <input class="mi-price" type="number" value="${m.price}" placeholder="0">
+      <input class="mi-stock" type="number" value="${m.stock}" title="-1 = 不限量">
+      <input class="mi-sort" type="number" value="${m.sort}" title="數字小的排前面">
+      <button class="mbtn save" onclick="saveMeal(${m.id}, ${postId}, this)">存</button>
+      <button class="mbtn" onclick="toggleMeal(${m.id}, ${!m.active}, ${postId})">${m.active ? "停用" : "啟用"}</button>
+    </div>`;
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">餐點選項　${esc(p ? p.title : "")}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
+        每個月的菜色不一樣，在這裡改就好，不必找人改程式。<br>
+        <b>庫存填 -1 就是不限量</b>；限量的選項被選完會自動變成「已額滿」。<br>
+        <b>排序</b>數字小的排前面，它也決定群組的先後（想讓餐點排在飲品前面就把餐點的數字調小）。<br>
+        不要的選項按「停用」<b>不要刪掉</b>——刪了的話，以前報名的人選了什麼就查不到了。
+      </div>
+      ${groups.map(g => `
+        <div class="field" style="margin-top:20px">
+          <label>${esc(g)}</label>
+          <div class="mhead"><span>名稱</span><span>價格</span><span>庫存</span><span>排序</span><span></span><span></span></div>
+          ${mine.filter(m => m.grp === g).map(row).join("")}
+          ${shared.filter(m => m.grp === g).map(m => `
+            <div class="mrow${m.active ? "" : " off"}" style="opacity:.7">
+              <input value="${esc(m.label)}" disabled>
+              <input value="${m.price}" disabled><input value="${m.stock}" disabled>
+              <input value="${m.sort}" disabled><span class="mnote">每場通用</span><span></span>
+            </div>`).join("")}
+          <button class="mbtn add" onclick="addMeal('${esc(g)}', ${postId})">＋ 加一個${esc(g)}選項</button>
+        </div>`).join("")}
+      <div class="field" style="margin-top:22px">
+        <label>加一個新群組</label>
+        <div class="help">例如「點心」。加了之後報名的人就要各選一項。不必改程式</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="text" id="m_newgrp" placeholder="群組名稱，例如：點心" style="flex:1;min-width:0">
+          <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="addGroup(${postId})">建立</button>
+        </div>
+      </div>
+    </div>`;
+}
+async function saveMeal(id, postId, btn){
+  const r = btn.closest(".mrow");
+  btn.disabled = true; btn.textContent = "…";
+  const res = await signupApi("opt_save", {
+    id, post_id: postId,
+    grp: MEAL_ALL.find(m => m.id === id).grp,
+    label: r.querySelector(".mi-label").value.trim(),
+    price: Number(r.querySelector(".mi-price").value) || 0,
+    stock: Number(r.querySelector(".mi-stock").value),
+    sort: Number(r.querySelector(".mi-sort").value) || 0,
+  });
+  btn.disabled = false; btn.textContent = "存";
+  if(!res || !res.ok){ alert((res && res.message) || "存檔失敗"); return; }
+  await reloadSeats(); await openMeals(postId);
+}
+async function toggleMeal(id, active, postId){
+  const res = await signupApi("opt_toggle", {id, active});
+  if(!res || !res.ok){ alert("失敗"); return; }
+  await reloadSeats(); await openMeals(postId);
+}
+async function addMeal(grp, postId){
+  const label = prompt(`新的「${grp}」選項名稱`); if(!label) return;
+  const sameGrp = MEAL_ALL.filter(m => m.grp === grp);
+  const sort = (sameGrp.length ? Math.max(...sameGrp.map(m => m.sort)) : 0) + 10;
+  const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
+  if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
+  await reloadSeats(); await openMeals(postId);
+}
+async function addGroup(postId){
+  const grp = (el("m_newgrp").value || "").trim(); if(!grp) return;
+  const label = prompt(`「${grp}」的第一個選項名稱`); if(!label) return;
+  const sort = (MEAL_ALL.length ? Math.max(...MEAL_ALL.map(m => m.sort)) : 0) + 100;
+  const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
+  if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
+  await reloadSeats(); await openMeals(postId);
+}
+
+// ── 報名表單（要選餐點時才走這裡）──────────────────
+let SIGNUP_PICK = {};   // 群組 → 選項 id
+function openSignup(postId){
+  if(!ME){ go("me"); return; }
+  const p = POSTS.find(x => x.id === postId); if(!p) return;
+  const mine = MY_SIGNUPS.get(postId);
+  SIGNUP_PICK = Object.assign({}, (mine && mine.meal_choices) || {});
+  const groups = mealGroups(postId);
+  const left = seatsLeft(postId);
+
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${mine ? "改我的餐點" : "報名"}　${esc(p.title)}</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
+        ${p.event_at ? esc(fmtDate(p.event_at)) + "　" : ""}${p.place ? "📍 " + esc(p.place) : ""}
+        ${left !== null ? `<br>還剩 <b style="color:var(--orange)">${left}</b> 個位子` : ""}
+      </div>
+      ${groups.map((g, gi) => `
+        <div class="field" style="margin-top:18px">
+          <label>${esc(g)}</label>
+          <div class="pills mealopt" id="g${gi}">
+            ${mealsFor(postId).filter(m => m.grp === g).map(m => {
+              const out = soldOut(m), on = String(SIGNUP_PICK[g]) === String(m.id);
+              return `<button type="button" class="pill${on ? " on" : ""}${out && !on ? " sold" : ""}"
+                ${out && !on ? "disabled" : ""}
+                onclick="pickMeal('${esc(g)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
+                  m.price > 0 ? `<span class="mealprice">$${m.price}</span>` : ""
+                }${out ? "（已額滿）" : ""}</button>`;
+            }).join("")}
+          </div>
+        </div>`).join("")}
+      <div class="field" style="margin-top:18px">
+        <label>飲食備註（選填）</label>
+        <div class="help">素食、過敏、不吃牛之類的，總務訂餐時會看到</div>
+        <input type="text" id="s_diet" maxlength="200" value="${mine ? esc(mine.diet_note || "") : ""}">
+      </div>
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="submitSignup(${postId}, this)">${mine ? "存起來" : "送出報名"}</button>
+      </div>
+    </div>`;
+  go("form");
+}
+function pickMeal(grp, id, gi, btn){
+  SIGNUP_PICK[grp] = String(id);
+  document.querySelectorAll(`#g${gi} .pill`).forEach(x => x.classList.remove("on"));
+  btn.classList.add("on");
+}
+async function submitSignup(postId, btn){
+  const groups = mealGroups(postId);
+  const missing = groups.filter(g => !SIGNUP_PICK[g]);
+  if(missing.length){ alert("還沒選：" + missing.join("、")); return; }
+  btn.disabled = true; btn.textContent = "送出中…";
+  const r = await signupApi("register", {
+    post_id: postId, meal_choices: SIGNUP_PICK, diet_note: (el("s_diet").value || "").trim(),
+  });
+  await reloadSeats();
+  if(r && r.ok){
+    go("home"); renderHome();
+    alert(r.already ? "已更新你的餐點" : "報名完成！");
+  }else{
+    // 餐點被搶走時後端會告訴我們還剩哪些可選，直接講給他聽，不要只說「失敗」
+    let msg = (r && r.message) || "報名失敗，請再試一次";
+    if(r && r.error === "OPTION_SOLD_OUT" && (r.alternatives || []).length){
+      msg += "\n\n還可以選：" + r.alternatives.map(a => a.label).join("、");
+    }
+    openSignup(postId);   // 重開表單，帶著剛更新的售罄狀態
+    alert(msg);
+  }
 }
 
 async function doSignup(postId, btn){
@@ -817,12 +1114,15 @@ function homeHTML(){
               <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         ${signupBlock(monthly)}
+        ${myOrderLine(monthly)}
         <div class="actions">
           ${monthly.signup_open
               ? signupButton(monthly)
               : (monthly.link?`<a class="btn btn-primary" href="${esc(monthly.link)}" target="_blank" rel="noopener">我要報名</a>`:"")}
           ${checkinButton(monthly)}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openMeals(${monthly.id})">🍱 餐點選項</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>`:""}
         </div>
       </div></section>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
