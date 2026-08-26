@@ -147,11 +147,11 @@ a{color:inherit;text-decoration:none}
 .drawerrow:active{background:var(--chip)}
 .drawerrow.officer{border-top:6px solid var(--bg);color:var(--blue-900);font-weight:600}
 .deskonly{display:none!important}
-/* 手機底部的順序跟側欄不同（首頁・夥伴・活動・AI案例・團購・我的），
+/* 手機底部的順序跟側欄不同（首頁・公告・活動・AI案例・團購・我的），
    但清單只有一份——用 order 重排，不要複製成兩份 HTML */
 @media (max-width:1023px){
   .nav button[data-v="home"]{order:1}
-  .nav button[data-v="members"]{order:2}
+  .nav button[data-v="notices"]{order:2}
   .nav button[data-v="acts"]{order:3}
   .nav button[data-v="cases"]{order:4}
   .nav button[data-v="buys"]{order:5}
@@ -592,19 +592,19 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:43</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:46</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
     <div class="brandname">斯巴達分會</div>
   </div>
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
-  <button data-v="notices" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告</button>
+  <button data-v="notices"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告</button>
   <button data-v="acts"><svg class="ic" width="21" height="21"><use href="#i-spark"/></svg>活動</button>
   <button data-v="buys"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>AI 案例</button>
   <button data-v="needs" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>Q&amp;A</button>
-  <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
+  <button data-v="members" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
