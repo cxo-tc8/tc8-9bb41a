@@ -164,6 +164,9 @@ a{color:inherit;text-decoration:none}
   padding:5px 0;font-size:.86rem}
 .vargrp{margin-top:10px}
 .vargrpname{font-size:.82rem;color:var(--muted);margin-bottom:5px}
+.varmv{border:none;background:none;color:var(--blue-500);cursor:pointer;font-size:.9rem;
+  line-height:1;padding:0 3px}
+.varmv:hover{color:var(--blue-900)}
 .varx{margin-left:6px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1}
 .pill.dashed{border-style:dashed;color:var(--blue-500)}
 .qtyin{min-height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:1rem;width:110px}
@@ -512,7 +515,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:57</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:59</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1031,12 +1034,15 @@ function openItemForm(buyId, itemId){
         <div id="it_photos" class="album"></div></div>
 
       ${it ? `<div class="field" style="margin-top:18px"><label>規格</label>
-        <div class="help">例如「顏色：紅、藍」「尺寸：M、L、XL」。
-          訂購的人每一組都要選一個。沒有規格的商品就不用加</div>
+        <div class="help">例如「顏色：紅、藍」「尺寸：M、L、XL」。訂購的人每一組都要選一個。<br>
+          用 <b>◂ ▸</b> 調整前後順序，<b>×</b> 移除。沒有規格的商品就不用加</div>
         ${grps.map(g => `<div class="vargrp">
           <div class="vargrpname">${esc(g)}</div>
-          <div class="pills">${vars.filter(x => x.grp === g).map(x =>
-            `<span class="pill">${esc(x.label)}
+          <div class="pills">${vars.filter(x => x.grp === g).map((x, xi, arr) =>
+            `<span class="pill">
+              ${xi > 0 ? `<button class="varmv" title="往前移" onclick="moveVariant(${x.id}, ${arr[xi-1].id}, ${buyId}, ${it.id})">◂</button>` : ""}
+              ${esc(x.label)}
+              ${xi < arr.length-1 ? `<button class="varmv" title="往後移" onclick="moveVariant(${x.id}, ${arr[xi+1].id}, ${buyId}, ${it.id})">▸</button>` : ""}
               <button class="varx" onclick="delVariant(${x.id}, ${buyId}, ${it.id})">×</button></span>`).join("")}
             <button type="button" class="pill dashed" onclick="addVariant(${buyId}, ${it.id}, '${esc(g)}')">＋</button>
           </div></div>`).join("")}
@@ -1098,6 +1104,17 @@ async function addVariant(buyId, itemId, presetGrp){
   const r = await buyApi("variant_save", {item_id: itemId, grp, label,
     sort: (same.length ? Math.max(...same.map(x => x.sort)) : 0) + 10});
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await reloadBuys(); openItemForm(buyId, itemId);
+}
+// 調規格順序：跟旁邊那個「交換」sort 值。
+// ⚠️ 用交換而不是重新編號——同一群組的 sort 集合不變，
+//    所以群組本身的先後（由群組內最小 sort 決定）不會跟著跳動。
+async function moveVariant(id, otherId, buyId, itemId){
+  const vs = BUY_VARS[itemId] || [];
+  const a = vs.find(x => x.id === id), b = vs.find(x => x.id === otherId);
+  if(!a || !b) return;
+  await buyApi("variant_save", {id: a.id, item_id: itemId, grp: a.grp, label: a.label, sort: b.sort});
+  await buyApi("variant_save", {id: b.id, item_id: itemId, grp: b.grp, label: b.label, sort: a.sort});
   await reloadBuys(); openItemForm(buyId, itemId);
 }
 async function delVariant(id, buyId, itemId){
