@@ -3086,7 +3086,7 @@ async function reviewMember(id, act, name){
   if(act==="reject" && !confirm(`確定退回「${name}」的申請嗎？資料會被刪除，他可以重新申請。`)) return;
   const r = await fn(act, {id});
   if(r.error) return alert(r.error);
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
   openReview();
 }
 
@@ -3203,7 +3203,7 @@ async function saveProfile(){
   });
   if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent="儲存"; return; }
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
   await loadMe();
   openMember(ME.id);
 }
@@ -4001,7 +4001,7 @@ async function retireMember(id, name){
 }
 
 async function reloadMembers(){
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc");
+  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
 }
 
 // 幹部：已退出的名單，可以加回來
@@ -4094,7 +4094,7 @@ async function loadMe(){
   el("v-home").innerHTML = '<div class="busy">載入中…</div>';
   try{
     [MEMBERS, TAGS, CASES] = await Promise.all([
-      rest("members?select=" + MEMBER_FIELDS + "&status=is.null&order=sort.asc"),
+      rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
