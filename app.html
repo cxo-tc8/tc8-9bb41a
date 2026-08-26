@@ -134,6 +134,16 @@ a{color:inherit;text-decoration:none}
 .drawerrow:active{background:var(--chip)}
 .drawerrow.officer{border-top:6px solid var(--bg);color:var(--blue-900);font-weight:600}
 .deskonly{display:none!important}
+/* 手機底部的順序跟側欄不同（首頁・夥伴・活動・AI案例・團購・我的），
+   但清單只有一份——用 order 重排，不要複製成兩份 HTML */
+@media (max-width:1023px){
+  .nav button[data-v="home"]{order:1}
+  .nav button[data-v="members"]{order:2}
+  .nav button[data-v="acts"]{order:3}
+  .nav button[data-v="cases"]{order:4}
+  .nav button[data-v="buys"]{order:5}
+  .nav button[data-v="me"]{order:6}
+}
 @media (min-width:1024px){ .deskonly{display:flex!important} }
 .navsep{display:none}
 @media (min-width:1024px){
@@ -565,19 +575,19 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:27</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:36</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
     <div class="brandname">斯巴達分會</div>
   </div>
   <button class="on" data-v="home"><svg class="ic" width="21" height="21"><use href="#i-home"/></svg>首頁</button>
-  <button data-v="acts" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-spark"/></svg>活動</button>
-  <button data-v="notices" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告與問卷</button>
-  <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
-  <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>AI 案例</button>
-  <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>AI 需求</button>
+  <button data-v="notices" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告</button>
+  <button data-v="acts"><svg class="ic" width="21" height="21"><use href="#i-spark"/></svg>活動</button>
   <button data-v="buys"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
+  <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>AI 案例</button>
+  <button data-v="needs" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>Q&amp;A</button>
+  <button data-v="members"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
@@ -2073,12 +2083,12 @@ function syncAdminNav(){
 // 每個管理用的 API 後端也各自驗身分。
 const DRAWER_ITEMS = [
   ["home",    "i-home",   "首頁",   false],
-  ["acts",    "i-spark",  "活動",   false],
   ["notices", "i-bell",   "公告與問卷", false],
-  ["members", "i-people", "夥伴",   false],
-  ["cases",   "i-case",   "AI 案例", false],
-  ["needs",   "i-need",   "AI 需求", false],
+  ["acts",    "i-spark",  "活動",   false],
   ["buys",    "i-bag",    "團購",   false],
+  ["cases",   "i-case",   "AI 案例", false],
+  ["needs",   "i-need",   "Q&A",   false],
+  ["members", "i-people", "夥伴",   false],
   ["me",      "i-me",     "我的",   false],
   ["admin",   "i-shield", "分會管理", true],
 ];
@@ -2196,7 +2206,7 @@ function render(v){
     el("v-cases").innerHTML = `
       <div class="tools" style="padding-bottom:0"><div class="chips">
         <button class="chip on">AI 案例 ${CASES.length}</button>
-        <button class="chip" onclick="go('needs')">AI 需求 ${NEEDS.filter(n=>!n.closed_at).length}</button>
+        <button class="chip" onclick="go('needs')">Q&amp;A ${NEEDS.filter(n=>!n.closed_at).length}</button>
       </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
@@ -2217,11 +2227,11 @@ function render(v){
     el("v-needs").innerHTML = `
       <div class="tools" style="padding-bottom:0"><div class="chips">
         <button class="chip" onclick="go('cases')">AI 案例 ${CASES.length}</button>
-        <button class="chip on">AI 需求 ${NEEDS.filter(n=>!n.closed_at).length}</button>
+        <button class="chip on">Q&amp;A ${NEEDS.filter(n=>!n.closed_at).length}</button>
       </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
-          <input id="nq" placeholder="搜尋大家想解的問題" oninput="filterNeeds()"></div>
+          <input id="nq" placeholder="搜尋大家提出的問題" oninput="filterNeeds()"></div>
         <div class="chips" id="nfilter">
           <button class="chip on" data-f="all">全部</button>
           <button class="chip" data-f="open">還在找</button>
@@ -2229,7 +2239,7 @@ function render(v){
         </div>
       </div>
       ${ME?`<div class="actions" style="margin-top:10px">
-        <button class="btn btn-primary" onclick="openNeed()"><svg width="17" height="17"><use href="#i-plus"/></svg>提出我的需求</button></div>`:""}
+        <button class="btn btn-primary" onclick="openNeed()"><svg width="17" height="17"><use href="#i-plus"/></svg>我要提問</button></div>`:""}
       <div class="card" id="nlist" style="margin-top:10px"></div>`;
     el("nfilter").onclick = e => { const c=e.target.closest(".chip"); if(!c) return;
       el("nfilter").querySelectorAll(".chip").forEach(x=>x.classList.remove("on")); c.classList.add("on"); filterNeeds(); };
@@ -2970,7 +2980,7 @@ function filterNeeds(){
   let list = NEEDS.filter(n => f==="all" ? true : f==="closed" ? !!n.closed_at : !n.closed_at);
   if(q) list = list.filter(n => [n.title,n.problem,n.tried,memberName(n.member_id)].some(x=>(x||"").toLowerCase().includes(q)));
   el("nlist").innerHTML = list.map(needRow).join("") ||
-    `<div class="empty">${NEEDS.length?"這個條件下沒有需求":"還沒有人提出需求"+(ME?'<br><span style="font-size:.82rem">按上面「提出我的需求」，會自動掛你的名字</span>':"")}</div>`;
+    `<div class="empty">${NEEDS.length?"這個條件下沒有問題":"還沒有人提問"+(ME?'<br><span style="font-size:.82rem">按上面「我要提問」，會自動掛你的名字</span>':"")}</div>`;
 }
 
 function openNeed(id){
@@ -2979,7 +2989,7 @@ function openNeed(id){
   el("v-form").innerHTML = `
     <button class="back" onclick="go('needs')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
     <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">${n?"修改需求":"提出我的需求"}</div>
+      <div style="font-weight:800;font-size:1.15rem">${n?"修改我的問題":"我要提問"}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
         講一件你想用 AI 解、但還沒解掉的事。<b>會自動掛上你的名字（${esc(ME.name)}）</b>，
         會裡有辦法的人看到就能找你。</div>
