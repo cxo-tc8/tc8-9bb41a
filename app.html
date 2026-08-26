@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:38</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:47</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -968,13 +968,14 @@ function renderBuys(){
       <span class="more" onclick="openBuyPending()">審核待上架的團購 →</span></div>` : ""}
 
     ${(() => {
-      const waiting = ME ? BUYS.filter(x => x.owner_id === ME.id && (x.status === "pending" || x.status === "rejected")) : [];
+      const S = {draft:"📝 還沒送審", pending:"🕐 等幹部核可", rejected:"⛔ 已退回，可修改後再送"};
+      const waiting = ME ? BUYS.filter(x => x.owner_id === ME.id && S[x.status]) : [];
       return waiting.length ? `<div class="sec" style="margin-top:22px"><h2>我開的，還沒上架</h2></div>
         <div class="card admincard">${waiting.map(x => `<div class="arow" onclick="openBuyForm(${x.id})">
           <span>${esc(x.title)}</span>
-          <span class="mnote">${x.status === "rejected" ? "⛔ 已退回" : "🕐 等幹部核可"}</span>
+          <span class="mnote">${S[x.status]}</span>
           <span class="ago">›</span></div>`).join("")}</div>
-        <div class="mnote" style="margin:6px 2px 0">點進去可以繼續加商品、改價格。核可之後才會出現在上面。</div>` : "";
+        <div class="mnote" style="margin:6px 2px 0">點進去加商品、改價格。加完自己按「送出給幹部審核」。</div>` : "";
     })()}
 
     ${sect("進行中", g("open"), ME ? "目前沒有進行中的團購，按上面「＋ 我要開團」就能開始" : "目前沒有進行中的團購")}
@@ -1171,8 +1172,8 @@ function openBuyForm(buyId){
       <div class="field"><label>截止日 *</label>
         <input type="date" id="gb_deadline" value="${v("deadline")}"></div>
 
-      ${b ? `<div class="sec" style="margin-top:24px"><h2>商品（${items.length} 樣）</h2>
-        <span class="more" onclick="openItemForm(${b.id})">＋ 加一樣商品</span></div>
+      ${b ? `<div class="sec" style="margin-top:24px"><h2>商品（${items.length} 樣）</h2></div>
+        <button class="btn btn-primary" style="width:100%" onclick="openItemForm(${b.id})">＋ 加一樣商品</button>
       ${items.length ? items.map(it => `<div class="card" style="padding:12px 14px;margin-top:10px">
         <div style="display:flex;gap:10px;align-items:flex-start">
           ${(it.photos||[]).length ? `<img src="${esc(it.photos[0])}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none">` : ""}
@@ -1189,12 +1190,32 @@ function openBuyForm(buyId){
       : `<div class="mnote" style="margin-top:18px">先把這張單存起來，才能加商品</div>`}
 
       <div class="formbar">
-        <button class="btn btn-primary" onclick="saveBuy(${buyId || "null"}, this)">${b ? "存起來" : "建立，接著加商品"}</button>
+        <button class="btn ${b && (b.status === "draft" || b.status === "rejected") ? "btn-ghost" : "btn-primary"}"
+          onclick="saveBuy(${buyId || "null"}, this)">${b ? "存起來" : "建立，接著加商品"}</button>
+        ${b && (b.status === "draft" || b.status === "rejected") ? `
+          <button class="btn btn-primary" onclick="submitBuy(${b.id}, this)"
+            ${items.length ? "" : "disabled style='opacity:.45'"}>送出給幹部審核</button>` : ""}
       </div>
+      ${b && (b.status === "draft" || b.status === "rejected") ? `<div class="mnote" style="margin-top:8px">${
+        items.length
+          ? "商品都加好了就按「送出給幹部審核」。送出前這張單只有你看得到。"
+          : "⚠️ 至少要有一樣商品才能送審。先按上面「＋ 加一樣商品」。"}</div>` : ""}
     </div>`;
   go("form");
   if(buyId) loadPayInto("gb_pay", buyId);   // 收款是即時資料，表單畫完再非同步補上
 }
+async function submitBuy(buyId, btn){
+  btn.disabled = true; btn.textContent = "送出中…";
+  const r = await buyApi("submit", {id: buyId});
+  if(!r || !r.ok){
+    btn.disabled = false; btn.textContent = "送出給幹部審核";
+    alert((r && r.message) || "送出失敗"); return;
+  }
+  await reloadBuys();
+  alert("已送出，等幹部核可");
+  go("buys"); renderBuys();
+}
+
 async function saveBuy(buyId, btn){
   const title = el("gb_title").value.trim(), deadline = el("gb_deadline").value;
   if(!title){ alert("請填團購名稱"); return; }
@@ -1207,7 +1228,7 @@ async function saveBuy(buyId, btn){
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
   await reloadBuys();
   if(buyId){ alert("已更新"); openBuyForm(buyId); }
-  else { alert("建立完成，接下來加商品。這張單會等幹部核可後才上架。"); openBuyForm(r.id); }
+  else { alert("建好了！接下來加商品。加完再自己送出給幹部審核。"); openBuyForm(r.id); }
 }
 
 // ── 一樣商品的設定：名稱、價格、數量下限、規格、照片（最多 2 張）──
@@ -1234,30 +1255,49 @@ function openItemForm(buyId, itemId){
       <div class="field"><label>照片（最多 2 張）</label>
         <div id="it_photos" class="album"></div></div>
 
-      ${it ? `<div class="field" style="margin-top:18px"><label>規格</label>
-        <div class="help">例如「顏色：紅、藍」「尺寸：M、L、XL」。訂購的人每一組都要選一個。<br>
-          用 <b>◂ ▸</b> 調整前後順序，<b>×</b> 移除。沒有規格的商品就不用加</div>
-        ${grps.map(g => `<div class="vargrp">
-          <div class="vargrpname">${esc(g)}</div>
-          <div class="pills">${vars.filter(x => x.grp === g).map((x, xi, arr) =>
-            `<span class="pill">
-              ${xi > 0 ? `<button class="varmv" title="往前移" onclick="moveVariant(${x.id}, ${arr[xi-1].id}, ${buyId}, ${it.id})">◂</button>` : ""}
-              ${esc(x.label)}
-              ${xi < arr.length-1 ? `<button class="varmv" title="往後移" onclick="moveVariant(${x.id}, ${arr[xi+1].id}, ${buyId}, ${it.id})">▸</button>` : ""}
-              <button class="varx" onclick="delVariant(${x.id}, ${buyId}, ${it.id})">×</button></span>`).join("")}
-            <button type="button" class="pill dashed" onclick="addVariant(${buyId}, ${it.id}, '${esc(g)}')">＋</button>
-          </div></div>`).join("")}
-        <button class="mbtn add" onclick="addVariant(${buyId}, ${it.id})">＋ 加一組規格（顏色、尺寸…）</button>
-      </div>` : `<div class="mnote" style="margin-top:16px">先存起來，才能設定規格</div>`}
+      <div class="field" style="margin-top:18px"><label>規格（沒有就留空）</label>
+        <div class="help">左邊填類別、右邊填選項，選項用<b>逗號或頓號</b>隔開。<br>
+          訂購的人每一組都要選一個。順序就是這裡填的順序。</div>
+        <div id="spec_rows"></div>
+        <button type="button" class="mbtn add" onclick="addSpecRow()">＋ 再加一組</button>
+      </div>
 
       <div class="formbar">
         <button class="btn btn-primary" onclick="saveItem(${buyId}, ${itemId || "null"}, this)">${it ? "存起來" : "新增"}</button>
         ${it ? `<button class="btn btn-ghost" onclick="removeItem(${buyId}, ${it.id})">刪掉這樣商品</button>` : ""}
       </div>
     </div>`;
+  SPEC_ROWS = grps.map(g => ({
+    grp: g,
+    labels: vars.filter(x => x.grp === g).sort((a2,b2) => a2.sort - b2.sort).map(x => x.label).join("、"),
+  }));
+  if(!SPEC_ROWS.length) SPEC_ROWS = [{grp:"", labels:""}];
   go("form");
   renderItemPhotos();
+  renderSpecRows();
 }
+// 規格一次全部攤開：三列空白 + 既有的，使用者一眼看得完該填什麼
+let SPEC_ROWS = [];
+function renderSpecRows(){
+  const box = el("spec_rows"); if(!box) return;
+  box.innerHTML = SPEC_ROWS.map((r, i) => `<div class="mrow" style="margin-top:8px">
+      <input type="text" placeholder="類別（顏色）" maxlength="20" value="${esc(r.grp)}"
+        oninput="SPEC_ROWS[${i}].grp=this.value" style="flex:0 0 34%">
+      <input type="text" placeholder="選項（紅、藍、黑）" maxlength="300" value="${esc(r.labels)}"
+        oninput="SPEC_ROWS[${i}].labels=this.value">
+      <button type="button" class="mbtn" onclick="rmSpecRow(${i})">×</button>
+    </div>`).join("");
+}
+function addSpecRow(){ SPEC_ROWS.push({grp:"", labels:""}); renderSpecRows(); }
+function rmSpecRow(i){ SPEC_ROWS.splice(i,1); if(!SPEC_ROWS.length) SPEC_ROWS.push({grp:"",labels:""}); renderSpecRows(); }
+// 逗號、頓號、全形逗號都收；空白與重複自動去掉
+function collectSpecs(){
+  return SPEC_ROWS.map(r => ({
+    grp: (r.grp||"").trim(),
+    labels: [...new Set((r.labels||"").split(/[,，、\n]/).map(x => x.trim()).filter(Boolean))],
+  })).filter(x => x.grp && x.labels.length);
+}
+
 function renderItemPhotos(){
   const box = el("it_photos"); if(!box) return;
   box.innerHTML = ITEM_PHOTOS.map((u,i) => `<div class="thumb"><img src="${esc(u)}" alt="">
@@ -1285,12 +1325,13 @@ async function saveItem(buyId, itemId, btn){
     unit_price: Number(el("it_price").value) || 0,
     min_qty: Number(el("it_min").value) || 1,
     photos: ITEM_PHOTOS,
+    specs: collectSpecs(),
     sort: itemId ? undefined : ((BUY_ITEMS[buyId]||[]).length + 1) * 10,
   });
   btn.disabled = false;
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
   await reloadBuys();
-  openItemForm(buyId, r.id);   // 留在同一頁，接著設規格
+  openBuyForm(buyId);   // 規格已經一起存好了，直接回到這張單看結果
 }
 async function removeItem(buyId, itemId){
   if(!confirm("確定要刪掉這樣商品嗎？已經訂購的紀錄也會一起消失。")) return;
@@ -1298,32 +1339,6 @@ async function removeItem(buyId, itemId){
   if(!r || !r.ok){ alert("失敗"); return; }
   await reloadBuys(); openBuyForm(buyId);
 }
-async function addVariant(buyId, itemId, presetGrp){
-  const grp = presetGrp || prompt("規格類別（例如：顏色、尺寸）", "尺寸"); if(!grp) return;
-  const label = prompt(`「${grp}」的選項（例如：M）`); if(!label) return;
-  const same = (BUY_VARS[itemId]||[]).filter(x => x.grp === grp);
-  const r = await buyApi("variant_save", {item_id: itemId, grp, label,
-    sort: (same.length ? Math.max(...same.map(x => x.sort)) : 0) + 10});
-  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
-  await reloadBuys(); openItemForm(buyId, itemId);
-}
-// 調規格順序：跟旁邊那個「交換」sort 值。
-// ⚠️ 用交換而不是重新編號——同一群組的 sort 集合不變，
-//    所以群組本身的先後（由群組內最小 sort 決定）不會跟著跳動。
-async function moveVariant(id, otherId, buyId, itemId){
-  const vs = BUY_VARS[itemId] || [];
-  const a = vs.find(x => x.id === id), b = vs.find(x => x.id === otherId);
-  if(!a || !b) return;
-  await buyApi("variant_save", {id: a.id, item_id: itemId, grp: a.grp, label: a.label, sort: b.sort});
-  await buyApi("variant_save", {id: b.id, item_id: itemId, grp: b.grp, label: b.label, sort: a.sort});
-  await reloadBuys(); openItemForm(buyId, itemId);
-}
-async function delVariant(id, buyId, itemId){
-  const r = await buyApi("variant_save", {id, item_id: itemId, active: false, grp: "規格", label: "－"});
-  if(!r || !r.ok){ alert("失敗"); return; }
-  await reloadBuys(); openItemForm(buyId, itemId);
-}
-
 // 收款對帳：錢統一交給財務長，所以按「人」收、按「人」勾
 function payBlock(r){
   const ppl = r.people || [];
