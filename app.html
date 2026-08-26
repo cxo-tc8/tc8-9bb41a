@@ -609,7 +609,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 13:02</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 13:03</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3176,6 +3176,7 @@ async function sendComment(kind, targetId){
     btn.disabled=false; btn.textContent="送出留言"; return; }
   await reloadComments();
   if(kind==="need") openNeedDetail(targetId);
+  else if(kind==="case") openCase(targetId);
 }
 
 async function delComment(id, kind, targetId){
@@ -3184,6 +3185,7 @@ async function delComment(id, kind, targetId){
   if(r.error) return alert(r.error);
   await reloadComments();
   if(kind==="need") openNeedDetail(targetId);
+  else if(kind==="case") openCase(targetId);
 }
 
 async function reloadComments(){
@@ -3684,7 +3686,8 @@ function openCase(id){
         <div style="flex:1"><div class="t">願意分享：${esc(share)}</div>
         <div class="d">有同樣困擾的夥伴可以找他</div></div></div>`:""}
       ${mine?`<div style="margin-top:18px;text-align:center"><button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="delCase(${c.id})">刪除這則案例</button></div>`:""}
-    </article>`;
+    </article>
+    ${commentBlock("case", c.id)}`;
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-cdetail").classList.add("on"); window.scrollTo(0,0);
 }
