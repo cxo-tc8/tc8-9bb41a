@@ -152,6 +152,19 @@ a{color:inherit;text-decoration:none}
 .bar{height:8px;background:var(--chip);border-radius:99px;overflow:hidden;margin:9px 0 6px}
 .barfill{height:100%;background:var(--orange);border-radius:99px;transition:width .3s}
 .barfill.ok{background:#1f7a4d}
+.itemcard{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.itemname{font-weight:700;font-size:1.02rem}
+.itemphotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.itemphotos img{width:100%;height:130px;object-fit:cover;border-radius:8px;display:block}
+.itemphotos img:only-child{grid-column:span 2;height:170px}
+.ordbox{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.myorders{margin-top:10px;padding:8px 10px;background:var(--chip);border-radius:var(--r-sm)}
+.myorderrow{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:5px 0;font-size:.86rem}
+.vargrp{margin-top:10px}
+.vargrpname{font-size:.82rem;color:var(--muted);margin-bottom:5px}
+.varx{margin-left:6px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1}
+.pill.dashed{border-style:dashed;color:var(--blue-500)}
 .qtyin{min-height:44px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:1rem;width:110px}
 .creditbig{margin-top:16px;padding:22px;background:var(--chip);border-radius:var(--r);text-align:center}
 .cnum{font-size:3.4rem;font-weight:800;color:var(--blue-900);line-height:1}
@@ -496,7 +509,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:39</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -533,7 +546,7 @@ let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
 let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
 let MY_CHECKINS = new Set();         // 我報到過哪幾場
-let BUYS = [], BUY_PROG = {}, BUY_VARS = {}, MY_ORDERS = [];  // 團購
+let BUYS = [], BUY_ITEMS = {}, BUY_PROG = {}, BUY_VARS = {}, MY_ORDERS = [];  // 團購
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -570,12 +583,16 @@ async function buyApi(action, body){
 async function reloadBuys(){
   try{
     // RLS 已經擋掉待審／退回的單，這裡讀到的都是可以公開看的
-    BUYS = await rest("group_buys?select=id,owner_id,title,body,photos,unit_price,min_qty,deadline,status&order=deadline.asc");
-    const pr = await rest("v_gb_progress?select=buy_id,min_qty,qty,buyers");
-    BUY_PROG = Object.fromEntries(pr.map(x => [x.buy_id, x]));
-    const vs = await rest("group_buy_variants?select=id,buy_id,grp,label,sort&order=sort.asc");
+    BUYS = await rest("group_buys?select=id,owner_id,title,body,deadline,status&order=deadline.asc");
+    // 一張單多樣商品：商品、規格、進度都按「商品」分組
+    const its = await rest("group_buy_items?select=id,buy_id,name,body,unit_price,min_qty,photos,sort&order=sort.asc");
+    BUY_ITEMS = {};
+    its.forEach(i => { (BUY_ITEMS[i.buy_id] ??= []).push(i); });
+    const pr = await rest("v_gb_progress?select=item_id,buy_id,min_qty,qty,buyers");
+    BUY_PROG = Object.fromEntries(pr.map(x => [x.item_id, x]));
+    const vs = await rest("group_buy_variants?select=id,item_id,grp,label,sort&order=sort.asc");
     BUY_VARS = {};
-    vs.forEach(v => { (BUY_VARS[v.buy_id] ??= []).push(v); });
+    vs.forEach(v => { if(v.item_id) (BUY_VARS[v.item_id] ??= []).push(v); });
   }catch(e){ BUYS = []; console.error("團購讀取失敗", e); }
   MY_ORDERS = [];
   if(token()){
@@ -757,20 +774,23 @@ function buyBlock(){
   if(!live.length) return h + `<div class="card"><div class="empty">目前沒有進行中的團購${
     ME ? '<br><span style="font-size:.82rem">按上面「＋ 我要開團」就能開始</span>' : ""}</div></div>`;
   h += live.map(b => {
-    const pr = BUY_PROG[b.id] || {qty:0, min_qty:b.min_qty, buyers:0};
-    const pct = Math.min(100, Math.round(pr.qty / Math.max(1, b.min_qty) * 100));
+    const items = BUY_ITEMS[b.id] || [];
+    const totQty = items.reduce((a,i) => a + ((BUY_PROG[i.id]||{}).qty || 0), 0);
+    const reached = items.filter(i => ((BUY_PROG[i.id]||{}).qty || 0) >= i.min_qty).length;
     const my = mine.filter(o => o.buy_id === b.id).reduce((a,o) => a + o.qty, 0);
     const days = daysLeft(b.deadline);
+    const cover = items.find(i => (i.photos||[]).length);
+    const prices = items.map(i => i.unit_price).filter(x => x > 0);
     return `<div class="card buycard" onclick="openBuy(${b.id})">
-      ${(b.photos||[]).length ? `<img class="buyimg" src="${esc(b.photos[0])}" alt="">` : ""}
+      ${cover ? `<img class="buyimg" src="${esc(cover.photos[0])}" alt="">` : ""}
       <div class="buybody">
         <div class="buytitle">${esc(b.title)}</div>
-        <div class="buymeta">${esc(memberName(b.owner_id))}${
-          b.unit_price ? `　｜　每件 $${b.unit_price}` : ""}　｜　${
+        <div class="buymeta">${esc(memberName(b.owner_id))}　｜　${items.length} 樣商品${
+          prices.length ? `　｜　$${Math.min(...prices)}${
+            Math.max(...prices) !== Math.min(...prices) ? `～$${Math.max(...prices)}` : ""}` : ""}　｜　${
           days < 0 ? "已截止" : days === 0 ? "今天截止" : `剩 ${days} 天`}</div>
-        <div class="bar"><div class="barfill${pr.qty >= b.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
-        <div class="buymeta">已訂 <b>${pr.qty}</b> / 成團 ${b.min_qty} 件${
-          pr.qty >= b.min_qty ? `　<span class="okmark">✓ 已成團</span>` : ""}${
+        <div class="buymeta">目前累積 <b>${totQty}</b> 件${
+          reached ? `　<span class="okmark">✓ ${reached} 樣已成團</span>` : ""}${
           my ? `　｜　我訂了 <b>${my}</b> 件` : ""}</div>
       </div></div>`;
   }).join("");
@@ -782,155 +802,301 @@ const daysLeft = d => {
   return Math.round((new Date(d + "T00:00:00+08:00") - new Date(tw(new Date()) + "T00:00:00+08:00")) / 86400000);
 };
 
-let BUY_QTY = {};
-async function openBuy(buyId){
+// ── 訂購畫面：一樣商品一張卡，各自選規格與數量 ──────────
+function openBuy(buyId){
   const b = BUYS.find(x => x.id === buyId); if(!b) return;
-  const vars = BUY_VARS[buyId] || [];
-  BUY_QTY = {};
-  MY_ORDERS.filter(o => o.buy_id === buyId).forEach(o => { BUY_QTY[o.variant_id ?? "none"] = o.qty; });
-  const pr = BUY_PROG[buyId] || {qty:0, buyers:0};
+  const items = BUY_ITEMS[buyId] || [];
   const canOrder = ME && b.status === "open" && daysLeft(b.deadline) >= 0;
-  el("v-form").innerHTML = `
-    ${backBar()}
+  const myOf = itemId => MY_ORDERS.filter(o => o.item_id === itemId);
+
+  el("v-form").innerHTML = `${backBar()}
     <div class="form">
-      ${(b.photos||[]).length ? `<img src="${esc(b.photos[0])}" style="width:100%;border-radius:var(--r);margin-bottom:12px">` : ""}
       <div style="font-weight:800;font-size:1.15rem">${esc(b.title)}</div>
-      <div class="buymeta" style="margin-top:6px">開團：${esc(memberName(b.owner_id))}${
-        b.unit_price ? `　｜　每件 $${b.unit_price}` : ""}　｜　截止 ${esc(b.deadline)}</div>
-      <div class="buymeta">已訂 <b>${pr.qty}</b> / 成團 ${b.min_qty} 件　${pr.buyers} 人參加</div>
-      ${b.body ? `<div class="mdesc" style="margin-top:12px;white-space:pre-wrap">${esc(b.body)}</div>` : ""}
+      <div class="buymeta" style="margin-top:6px">開團：${esc(memberName(b.owner_id))}　｜　截止 ${esc(b.deadline)}</div>
+      ${b.body ? `<div class="mdesc" style="margin-top:10px;white-space:pre-wrap">${esc(b.body)}</div>` : ""}
       ${!ME ? `<div class="mnote" style="margin-top:16px">登入之後才能訂購</div>` : ""}
-      ${canOrder ? (vars.length ? vars.map(v => `
-        <div class="field" style="margin-top:14px">
-          <label>${esc(v.grp)}：${esc(v.label)}</label>
-          <input type="number" min="0" id="q_${v.id}" value="${BUY_QTY[v.id] || 0}" class="qtyin">
-        </div>`).join("") : `
-        <div class="field" style="margin-top:14px"><label>訂購數量</label>
-          <input type="number" min="0" id="q_none" value="${BUY_QTY.none || 0}" class="qtyin"></div>`) : ""}
-      ${canOrder ? `<div class="field"><label>備註</label>
-        <input type="text" id="q_note" maxlength="200" placeholder="有什麼要告訴開團的人"></div>` : ""}
-      ${canOrder ? `<div class="formbar">
-        <button class="btn btn-primary" onclick="submitOrder(${buyId}, this)">送出訂購</button>
-        <span class="mnote" style="align-self:center">數量填 0 就是取消</span>
-      </div>` : ""}
+      ${!items.length ? `<div class="mnote" style="margin-top:16px">開團的人還沒放商品</div>` : ""}
+
+      ${items.map(it => {
+        const pr = BUY_PROG[it.id] || {qty:0, buyers:0};
+        const pct = Math.min(100, Math.round(pr.qty / Math.max(1, it.min_qty) * 100));
+        const vars = BUY_VARS[it.id] || [];
+        const grps = [...new Set(vars.map(v => v.grp))];
+        const mine = myOf(it.id);
+        return `<div class="itemcard">
+          ${(it.photos||[]).length ? `<div class="itemphotos">${
+            it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="">`).join("")}</div>` : ""}
+          <div class="itemname">${esc(it.name)}</div>
+          <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件</div>
+          ${it.body ? `<div class="mdesc" style="margin-top:6px;white-space:pre-wrap">${esc(it.body)}</div>` : ""}
+          <div class="bar"><div class="barfill${pr.qty >= it.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
+          <div class="buymeta">已訂 <b>${pr.qty}</b> / ${it.min_qty} 件${
+            pr.qty >= it.min_qty ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>
+
+          ${mine.length ? `<div class="myorders">${mine.map(o => `
+            <div class="myorderrow">
+              <span>${o.choices && Object.keys(o.choices).length
+                  ? Object.entries(o.choices).map(([k,v]) => `${esc(k)}：<b>${esc(v)}</b>`).join("　")
+                  : "已訂購"}　×${o.qty}</span>
+              ${canOrder ? `<span>
+                <button class="cancelbtn" onclick="editOrder(${it.id}, ${o.id})">改</button>
+                <button class="cancelbtn" onclick="removeOrder(${o.id})">取消</button></span>` : ""}
+            </div>`).join("")}</div>` : ""}
+
+          ${canOrder ? `<div id="ord_${it.id}" class="ordbox">
+            ${grps.map(g => `<div class="field" style="margin-top:10px">
+              <label>${esc(g)}</label>
+              <div class="pills mealopt" id="v_${it.id}_${esc(g)}">
+                ${vars.filter(v => v.grp === g).map(v =>
+                  `<button type="button" class="pill" onclick="pickVar(${it.id}, '${esc(g)}', '${esc(v.label)}', this)">${esc(v.label)}</button>`).join("")}
+              </div></div>`).join("")}
+            <div class="field" style="margin-top:10px"><label>數量</label>
+              <input type="number" min="1" value="1" id="q_${it.id}" class="qtyin"></div>
+            <button class="mbtn add" onclick="addOrder(${it.id}, this)">${mine.length ? "再加一筆" : "訂購這一樣"}</button>
+          </div>` : ""}
+        </div>`;
+      }).join("")}
+
       ${ME && (b.owner_id === ME.id || isOfficer()) ? `<div class="field" style="margin-top:20px">
         <button class="mbtn add" onclick="openBuyDetail(${buyId})">📋 看訂購名單與統計</button>
-        <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購</button></div>` : ""}
+        <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購與商品</button></div>` : ""}
     </div>`;
   go("form");
 }
-async function submitOrder(buyId, btn){
-  const vars = BUY_VARS[buyId] || [];
+let ORD_PICK = {};   // itemId → {群組: 選項}
+let ORD_EDIT = {};   // itemId → 正在改的那一筆 order id
+function pickVar(itemId, grp, label, btn){
+  (ORD_PICK[itemId] ??= {})[grp] = label;
+  btn.parentElement.querySelectorAll(".pill").forEach(x => x.classList.remove("on"));
+  btn.classList.add("on");
+}
+function editOrder(itemId, orderId){
+  const o = MY_ORDERS.find(x => x.id === orderId); if(!o) return;
+  ORD_EDIT[itemId] = orderId;
+  ORD_PICK[itemId] = Object.assign({}, o.choices || {});
+  const q = el("q_" + itemId); if(q) q.value = o.qty;
+  // 把原本的選擇亮起來
+  Object.entries(o.choices || {}).forEach(([g, v]) => {
+    const box = document.getElementById(`v_${itemId}_${g}`); if(!box) return;
+    box.querySelectorAll(".pill").forEach(p => p.classList.toggle("on", p.textContent.trim() === v));
+  });
+  const box = el("ord_" + itemId); if(box) box.scrollIntoView({behavior:"smooth", block:"center"});
+}
+async function addOrder(itemId, btn){
+  const vars = BUY_VARS[itemId] || [];
+  const grps = [...new Set(vars.map(v => v.grp))];
+  const pick = ORD_PICK[itemId] || {};
+  const missing = grps.filter(g => !pick[g]);
+  if(missing.length){ alert("還沒選：" + missing.join("、")); return; }
+  const qty = Number(el("q_" + itemId).value) || 0;
+  if(qty <= 0){ alert("數量要大於 0"); return; }
   btn.disabled = true; btn.textContent = "送出中…";
-  const note = el("q_note") ? el("q_note").value : "";
-  let okAll = true, msg = "";
-  if(vars.length){
-    for(const v of vars){
-      const qty = Number(el("q_" + v.id).value) || 0;
-      const had = BUY_QTY[v.id] || 0;
-      if(qty === had) continue;   // 沒改的就不送，免得白打一趟
-      const r = await buyApi("order", {buy_id: buyId, variant_id: v.id, qty, note});
-      if(!r || !r.ok){ okAll = false; msg = (r && r.message) || "訂購失敗"; }
-    }
-  }else{
-    const qty = Number(el("q_none").value) || 0;
-    const r = await buyApi("order", {buy_id: buyId, qty, note});
-    if(!r || !r.ok){ okAll = false; msg = (r && r.message) || "訂購失敗"; }
-  }
-  await reloadBuys();
-  btn.disabled = false; btn.textContent = "送出訂購";
-  if(okAll){ go("home"); renderHome(); alert("已送出"); } else alert(msg);
+  const r = await buyApi("order", {
+    item_id: itemId, qty, choices: grps.length ? pick : undefined,
+    order_id: ORD_EDIT[itemId] || undefined,
+  });
+  btn.disabled = false;
+  if(!r || !r.ok){ alert((r && r.message) || "訂購失敗"); return; }
+  delete ORD_EDIT[itemId]; delete ORD_PICK[itemId];
+  const buyId = (BUYS.find(b => (BUY_ITEMS[b.id]||[]).some(i => i.id === itemId)) || {}).id;
+  await reloadBuys(); openBuy(buyId);
+}
+async function removeOrder(orderId){
+  const o = MY_ORDERS.find(x => x.id === orderId); if(!o) return;
+  if(!confirm("確定要取消這一筆訂購嗎？")) return;
+  const r = await buyApi("order", {item_id: o.item_id, order_id: orderId, qty: 0});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  const buyId = o.buy_id;
+  await reloadBuys(); openBuy(buyId);
 }
 
+// ── 開單／改單：單層只填「誰開的、截止日」，商品各自設定 ──
 function openBuyForm(buyId){
   if(!ME){ go("me"); return; }
   const b = buyId ? BUYS.find(x => x.id === buyId) : null;
   const v = k => b && b[k] != null ? esc(b[k]) : "";
-  el("v-form").innerHTML = `
-    ${backBar('取消')}
+  const items = buyId ? (BUY_ITEMS[buyId] || []) : [];
+  el("v-form").innerHTML = `${backBar('取消')}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${b ? "改我的團購" : "開一個團購"}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.8">
-        開好之後要幹部核可才會出現在首頁。<br>
-        <b>最小訂購量</b>＝要累積到幾件你才願意製作。截止時沒達到，系統會自動取消並通知大家。
+        一張單可以放<b>好幾樣商品</b>，每一樣各自設定價格、數量下限、規格（顏色／尺寸）與照片。<br>
+        開好之後要幹部核可才會出現在首頁。
       </div>
-      <div class="field" style="margin-top:16px"><label>商品名稱 *</label>
+      <div class="field" style="margin-top:16px"><label>這次團購的名稱 *</label>
+        <div class="help">例如「秋季服飾團」「手工皮件開團」</div>
         <input type="text" id="gb_title" maxlength="80" value="${v("title")}"></div>
-      <div class="field"><label>說明</label>
-        <div class="help">材質、尺寸對照、交貨方式、怎麼付錢</div>
+      <div class="field"><label>整體說明</label>
+        <div class="help">交貨方式、怎麼付錢、共同注意事項</div>
         <textarea id="gb_body" maxlength="2000">${v("body")}</textarea></div>
-      <div class="field"><label>每件價格</label>
-        <input type="number" id="gb_price" min="0" value="${b ? b.unit_price : 0}"></div>
-      <div class="field"><label>最小訂購量（成團門檻）*</label>
-        <input type="number" id="gb_min" min="1" value="${b ? b.min_qty : 10}"></div>
       <div class="field"><label>截止日 *</label>
         <input type="date" id="gb_deadline" value="${v("deadline")}"></div>
-      ${b ? `<div class="field" style="margin-top:18px"><label>規格（尺寸、顏色…）</label>
-        <div class="help">沒有規格的商品就不用填，訂購的人直接填數量</div>
-        ${(BUY_VARS[b.id]||[]).map(x => `<div class="mrow" style="grid-template-columns:1fr 1fr auto">
-          <input value="${esc(x.grp)}" disabled><input value="${esc(x.label)}" disabled>
-          <button class="mbtn" onclick="delVariant(${x.id}, ${b.id})">停用</button></div>`).join("")}
-        <button class="mbtn add" onclick="addVariant(${b.id})">＋ 加一個規格</button></div>` : ""}
+
+      ${b ? `<div class="sec" style="margin-top:24px"><h2>商品（${items.length} 樣）</h2>
+        <span class="more" onclick="openItemForm(${b.id})">＋ 加一樣商品</span></div>
+      ${items.length ? items.map(it => `<div class="card" style="padding:12px 14px;margin-top:10px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          ${(it.photos||[]).length ? `<img src="${esc(it.photos[0])}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex:none">` : ""}
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700">${esc(it.name)}</div>
+            <div class="buymeta">$${it.unit_price}　｜　門檻 ${it.min_qty} 件　｜　${
+              (BUY_VARS[it.id]||[]).length ? [...new Set((BUY_VARS[it.id]||[]).map(x => x.grp))].map(g =>
+                `${esc(g)}：${(BUY_VARS[it.id]||[]).filter(x => x.grp === g).map(x => esc(x.label)).join("/")}`).join("　")
+              : "沒有規格"}</div>
+          </div>
+          <button class="mbtn" style="flex:none" onclick="openItemForm(${b.id}, ${it.id})">編輯</button>
+        </div></div>`).join("")
+        : `<div class="card"><div class="empty">還沒有商品，按上面「＋ 加一樣商品」</div></div>`}`
+      : `<div class="mnote" style="margin-top:18px">先把這張單存起來，才能加商品</div>`}
+
       <div class="formbar">
-        <button class="btn btn-primary" onclick="saveBuy(${buyId || "null"}, this)">${b ? "存起來" : "送出給幹部審核"}</button>
+        <button class="btn btn-primary" onclick="saveBuy(${buyId || "null"}, this)">${b ? "存起來" : "建立，接著加商品"}</button>
       </div>
     </div>`;
   go("form");
 }
 async function saveBuy(buyId, btn){
   const title = el("gb_title").value.trim(), deadline = el("gb_deadline").value;
-  if(!title){ alert("請填商品名稱"); return; }
+  if(!title){ alert("請填團購名稱"); return; }
   if(!deadline){ alert("請填截止日"); return; }
   btn.disabled = true; btn.textContent = "送出中…";
   const r = await buyApi(buyId ? "update" : "create", {
-    id: buyId || undefined, title, body: el("gb_body").value,
-    unit_price: Number(el("gb_price").value) || 0,
-    min_qty: Number(el("gb_min").value) || 1, deadline,
+    id: buyId || undefined, title, body: el("gb_body").value, deadline,
   });
-  btn.disabled = false; btn.textContent = buyId ? "存起來" : "送出給幹部審核";
+  btn.disabled = false;
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
   await reloadBuys();
-  if(buyId){ go("home"); renderHome(); alert("已更新"); }
-  else { alert("已送出，等幹部核可就會出現在首頁"); openBuyForm(r.id); }
+  if(buyId){ alert("已更新"); openBuyForm(buyId); }
+  else { alert("建立完成，接下來加商品"); openBuyForm(r.id); }
 }
-async function addVariant(buyId){
-  const grp = prompt("規格類別（例如：尺寸、顏色）", "尺寸"); if(!grp) return;
-  const label = prompt(`「${grp}」的選項（例如：M）`); if(!label) return;
-  const r = await buyApi("variant_save", {buy_id: buyId, grp, label, sort: (BUY_VARS[buyId]||[]).length * 10 + 10});
+
+// ── 一樣商品的設定：名稱、價格、數量下限、規格、照片（最多 2 張）──
+let ITEM_PHOTOS = [];
+function openItemForm(buyId, itemId){
+  const it = itemId ? (BUY_ITEMS[buyId]||[]).find(x => x.id === itemId) : null;
+  ITEM_PHOTOS = it ? (it.photos || []).slice(0, 2) : [];
+  const vars = itemId ? (BUY_VARS[itemId] || []) : [];
+  const grps = [...new Set(vars.map(x => x.grp))];
+  el("v-form").innerHTML = `${backBar('取消')}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">${it ? "改商品" : "加一樣商品"}</div>
+      <div class="field" style="margin-top:16px"><label>商品名稱 *</label>
+        <input type="text" id="it_name" maxlength="80" value="${it ? esc(it.name) : ""}"></div>
+      <div class="field"><label>商品說明</label>
+        <div class="help">材質、尺寸對照表、注意事項</div>
+        <textarea id="it_body" maxlength="1000">${it ? esc(it.body || "") : ""}</textarea></div>
+      <div class="field"><label>每件價格</label>
+        <input type="number" id="it_price" min="0" value="${it ? it.unit_price : 0}"></div>
+      <div class="field"><label>數量下限（這一樣的成團門檻）*</label>
+        <div class="help">累積到這個數量你才願意製作。截止時沒達到，系統會通知訂購的人</div>
+        <input type="number" id="it_min" min="1" value="${it ? it.min_qty : 10}"></div>
+
+      <div class="field"><label>照片（最多 2 張）</label>
+        <div id="it_photos" class="album"></div></div>
+
+      ${it ? `<div class="field" style="margin-top:18px"><label>規格</label>
+        <div class="help">例如「顏色：紅、藍」「尺寸：M、L、XL」。
+          訂購的人每一組都要選一個。沒有規格的商品就不用加</div>
+        ${grps.map(g => `<div class="vargrp">
+          <div class="vargrpname">${esc(g)}</div>
+          <div class="pills">${vars.filter(x => x.grp === g).map(x =>
+            `<span class="pill">${esc(x.label)}
+              <button class="varx" onclick="delVariant(${x.id}, ${buyId}, ${it.id})">×</button></span>`).join("")}
+            <button type="button" class="pill dashed" onclick="addVariant(${buyId}, ${it.id}, '${esc(g)}')">＋</button>
+          </div></div>`).join("")}
+        <button class="mbtn add" onclick="addVariant(${buyId}, ${it.id})">＋ 加一組規格（顏色、尺寸…）</button>
+      </div>` : `<div class="mnote" style="margin-top:16px">先存起來，才能設定規格</div>`}
+
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="saveItem(${buyId}, ${itemId || "null"}, this)">${it ? "存起來" : "新增"}</button>
+        ${it ? `<button class="btn btn-ghost" onclick="removeItem(${buyId}, ${it.id})">刪掉這樣商品</button>` : ""}
+      </div>
+    </div>`;
+  go("form");
+  renderItemPhotos();
+}
+function renderItemPhotos(){
+  const box = el("it_photos"); if(!box) return;
+  box.innerHTML = ITEM_PHOTOS.map((u,i) => `<div class="thumb"><img src="${esc(u)}" alt="">
+      <button type="button" class="thumbx" onclick="rmItemPhoto(${i})">×</button></div>`).join("")
+    + (ITEM_PHOTOS.length < 2
+       ? `<button type="button" class="addphoto" onclick="addItemPhoto()">＋<span>加照片</span><small>${ITEM_PHOTOS.length}/2</small></button>`
+       : `<div class="addphoto" style="opacity:.5;cursor:default"><small>已達 2 張</small></div>`);
+}
+function addItemPhoto(){
+  pickPhoto("event", st => {
+    if(st.loading) return;
+    if(st.error){ alert(st.error); return; }
+    ITEM_PHOTOS.push(st.url); ITEM_PHOTOS = ITEM_PHOTOS.slice(0,2); renderItemPhotos();
+  }, 1200);
+}
+function rmItemPhoto(i){ ITEM_PHOTOS.splice(i,1); renderItemPhotos(); }
+
+async function saveItem(buyId, itemId, btn){
+  const name = el("it_name").value.trim();
+  if(!name){ alert("請填商品名稱"); return; }
+  btn.disabled = true; btn.textContent = "儲存中…";
+  const r = await buyApi("item_save", {
+    id: itemId || undefined, buy_id: buyId, name,
+    body: el("it_body").value,
+    unit_price: Number(el("it_price").value) || 0,
+    min_qty: Number(el("it_min").value) || 1,
+    photos: ITEM_PHOTOS,
+    sort: itemId ? undefined : ((BUY_ITEMS[buyId]||[]).length + 1) * 10,
+  });
+  btn.disabled = false;
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
-  await reloadBuys(); openBuyForm(buyId);
+  await reloadBuys();
+  openItemForm(buyId, r.id);   // 留在同一頁，接著設規格
 }
-async function delVariant(id, buyId){
-  const r = await buyApi("variant_save", {id, buy_id: buyId, active: false,
-    grp: "規格", label: "已停用"});
+async function removeItem(buyId, itemId){
+  if(!confirm("確定要刪掉這樣商品嗎？已經訂購的紀錄也會一起消失。")) return;
+  const r = await buyApi("item_save", {id: itemId, buy_id: buyId, name: "已刪除", active: false});
   if(!r || !r.ok){ alert("失敗"); return; }
   await reloadBuys(); openBuyForm(buyId);
 }
+async function addVariant(buyId, itemId, presetGrp){
+  const grp = presetGrp || prompt("規格類別（例如：顏色、尺寸）", "尺寸"); if(!grp) return;
+  const label = prompt(`「${grp}」的選項（例如：M）`); if(!label) return;
+  const same = (BUY_VARS[itemId]||[]).filter(x => x.grp === grp);
+  const r = await buyApi("variant_save", {item_id: itemId, grp, label,
+    sort: (same.length ? Math.max(...same.map(x => x.sort)) : 0) + 10});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await reloadBuys(); openItemForm(buyId, itemId);
+}
+async function delVariant(id, buyId, itemId){
+  const r = await buyApi("variant_save", {id, item_id: itemId, active: false, grp: "規格", label: "－"});
+  if(!r || !r.ok){ alert("失敗"); return; }
+  await reloadBuys(); openItemForm(buyId, itemId);
+}
+
 async function openBuyDetail(buyId){
   const r = await buyApi("detail", {buy_id: buyId});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
-  el("v-form").innerHTML = `
-    <button class="back" onclick="openBuy(${buyId})"><svg width="17" height="17"><use href="#i-back"/></svg>回上一頁</button>
+  el("v-form").innerHTML = `${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">訂購名單　${esc(r.buy.title)}</div>
-      <div class="bstat" style="grid-template-columns:repeat(3,1fr)">
-        <div><b>${r.total}</b><span>總件數</span></div>
-        <div><b>${r.buy.min_qty}</b><span>成團門檻</span></div>
-        <div><b>$${r.amount}</b><span>總金額</span></div>
-      </div>
-      <div class="mnote" style="margin-top:10px">${r.reached ? "✅ 已達成團門檻" : "⚠️ 還沒達到門檻，截止時會自動取消"}</div>
-      <div class="field" style="margin-top:18px"><label>各規格數量</label>
-        <div class="tally">${Object.entries(r.tally).map(([k,v]) =>
-          `<div class="tallyrow"><span>${esc(k)}</span><b>${v}</b></div>`).join("")}</div></div>
-      <div class="field" style="margin-top:18px"><label>完整名單</label>
-        <div class="rosterwrap"><table class="roster">
-          <thead><tr><th>#</th><th>姓名</th><th>規格</th><th>數量</th><th>備註</th></tr></thead>
-          <tbody>${r.list.map((x,i) => `<tr><td>${i+1}</td><td>${esc(x.name)}</td>
-            <td>${esc(x.variant||"—")}</td><td>${x.qty}</td><td>${esc(x.note)}</td></tr>`).join("")}</tbody>
-        </table></div></div>
+      <div class="buymeta" style="margin-top:6px">截止 ${esc(r.buy.deadline)}　｜　
+        全部總金額 <b>$${r.grand_amount}</b></div>
+      ${r.items.map(it => `
+        <div class="itemcard">
+          <div class="itemname">${esc(it.name)}${it.reached ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>
+          <div class="buymeta">${it.qty} / ${it.min_qty} 件　｜　$${it.unit_price} × ${it.qty} = <b>$${it.amount}</b></div>
+          ${Object.keys(it.tally).length ? `<div class="tally" style="margin-top:8px">
+            ${Object.entries(it.tally).sort((a,b2) => b2[1]-a[1]).map(([k,v]) =>
+              `<div class="tallyrow"><span>${esc(k)}</span><b>${v}</b></div>`).join("")}
+            <div class="tallyrow sum"><span>小計</span><b>${it.qty}</b></div>
+          </div>` : `<div class="mnote" style="margin-top:6px">還沒有人訂</div>`}
+          ${it.list.length ? `<div class="rosterwrap" style="margin-top:10px"><table class="roster">
+            <thead><tr><th>#</th><th>姓名</th><th>規格</th><th>數量</th><th>備註</th></tr></thead>
+            <tbody>${it.list.map((x,i2) => `<tr><td>${i2+1}</td><td>${esc(x.name)}</td>
+              <td>${esc(x.spec||"—")}</td><td>${x.qty}</td><td>${esc(x.note)}</td></tr>`).join("")}</tbody>
+          </table></div>` : ""}
+        </div>`).join("")}
     </div>`;
   go("form");
 }
+
 async function openBuyPending(){
   if(!isOfficer()) return;
   const r = await buyApi("pending", {});
@@ -944,8 +1110,7 @@ async function openBuyPending(){
       </div>
       ${r.list.length ? r.list.map(b => `<div class="card" style="padding:14px;margin-top:12px">
         <div style="font-weight:700">${esc(b.title)}</div>
-        <div class="buymeta">${esc((b.members&&b.members.name)||"")}　｜　每件 $${b.unit_price}　｜　
-          成團 ${b.min_qty} 件　｜　截止 ${esc(b.deadline)}</div>
+        <div class="buymeta">${esc((b.members&&b.members.name)||"")}　｜　截止 ${esc(b.deadline)}</div>
         ${b.body ? `<div class="mdesc" style="white-space:pre-wrap;margin-top:8px">${esc(b.body)}</div>` : ""}
         <div class="actions" style="margin-top:12px">
           <button class="btn btn-primary" onclick="approveBuy(${b.id}, false)">核可上架</button>
