@@ -648,7 +648,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:33</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:44</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2713,7 +2713,7 @@ function render(v){
     el("v-cases").innerHTML = `
       <div class="tools" style="padding-bottom:0"><div class="chips">
         <button class="chip on">AI 案例 ${CASES.length}</button>
-        <button class="chip" onclick="go('needs')">Q&amp;A ${NEEDS.filter(n=>!n.closed_at).length}</button>
+        <button class="chip" onclick="go('needs')">Q&amp;A ${NEEDS.length}</button>
       </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
@@ -2734,7 +2734,7 @@ function render(v){
     el("v-needs").innerHTML = `
       <div class="tools" style="padding-bottom:0"><div class="chips">
         <button class="chip" onclick="go('cases')">AI 案例 ${CASES.length}</button>
-        <button class="chip on">Q&amp;A ${NEEDS.filter(n=>!n.closed_at).length}</button>
+        <button class="chip on">Q&amp;A ${NEEDS.length}</button>
       </div></div>
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
