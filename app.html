@@ -648,7 +648,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:44</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1671,37 +1671,6 @@ async function openMemberAdmin(tab){
 }
 
 // 幹部：誰綁了、綁在哪個名字上、綁錯了在這裡解除
-async function openBindList(){
-  if(!isOfficer()) return;
-  el("v-form").innerHTML = `${backBar()}<div class="form"><div class="busy">載入中…</div></div>`;
-  go("form");
-  const r = await fn("bind_list");
-  if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
-  el("v-form").innerHTML = `${backBar()}
-    <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">夥伴綁定狀況</div>
-      <div class="bstat" style="margin-top:12px">
-        <div><b>${r.bound}</b><span>已綁定</span></div>
-        <div class="${r.unbound ? "warn" : ""}"><b>${r.unbound}</b><span>還沒綁</span></div>
-        <div><b>${r.total}</b><span>名冊人數</span></div>
-      </div>
-      <div class="mnote" style="margin-top:10px">
-        解除之後，那個人下次打開 App 會回到「你是哪一位？」重新選一次。<br>
-        每一次綁定與解除都會留下紀錄（誰在什麼時候幫誰解的）。</div>
-
-      <div class="sec" style="margin-top:22px"><h2>已綁定</h2><span class="more">${r.bound}</span></div>
-      <div class="card admincard">${r.list.length ? r.list.map(m => `<div class="arow">
-        <span style="flex:1">${esc(m.name)}<br><span class="mnote">${esc(m.company||"")}　${(m.bound_at||"").slice(0,10)} 綁定</span></span>
-        <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-          onclick="unbindMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">解除</button>
-      </div>`).join("") : `<div class="empty">還沒有人綁定</div>`}</div>
-
-      <div class="sec" style="margin-top:22px"><h2>還沒綁定</h2><span class="more">${r.unbound}</span></div>
-      <div class="card admincard">${r.waiting.length ? r.waiting.map(m => `<div class="arow">
-        <span style="flex:1">${esc(m.name)}<span class="mnote">　${esc(m.company||"")}</span></span>
-        <span class="tagw">未綁</span></div>`).join("") : `<div class="empty">全部都綁好了</div>`}</div>
-    </div>`;
-}
 
 async function unbindMember(id, name){
   if(!confirm(`確定要解除「${name}」的 LINE 綁定嗎？\n\n解除後他下次打開 App 會回到「你是哪一位？」重新選。\n他目前的登入也會失效。`)) return;
@@ -4319,22 +4288,6 @@ async function reloadMembers(){
 }
 
 // 幹部：已退出的名單，可以加回來
-async function openRetired(){
-  if(!isOfficer()) return;
-  el("v-form").innerHTML = `${backBar()}<div class="form"><div class="busy">載入中…</div></div>`;
-  go("form");
-  const r = await fn("retired_list");
-  if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
-  el("v-form").innerHTML = `${backBar()}
-    <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">已退出的夥伴</div>
-      <div class="mnote" style="margin-top:6px">他們不會出現在名片牆，但分享過的案例與需求都還在。按「加回來」就會恢復。</div>
-      <div class="card admincard" style="margin-top:14px">${r.list.length ? r.list.map(m => `<div class="arow">
-        <span style="flex:1">${esc(m.name)}<br><span class="mnote">${esc(m.company||"")}　${m.exit_date||""} 退出</span></span>
-        <button class="mbtn" onclick="unretireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">加回來</button>
-      </div>`).join("") : `<div class="empty">目前沒有已退出的夥伴</div>`}</div>
-    </div>`;
-}
 async function unretireMember(id, name){
   if(!confirm(`要把「${name}」加回名冊嗎？`)) return;
   const r = await fn("unretire", {member_id: id});

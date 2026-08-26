@@ -4,264 +4,35 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CXO TC8｜台中第 8 分會 成員儀表板</title>
+<title>CXO TC8｜已搬家</title>
+<!-- 舊版成員儀表板（Apps Script + Google 試算表）已於 2026-08-26 退場。
+     舊的後端 API 已失效（實測 404），留著這頁只會讓夥伴看到一份載入失敗的空名單。
+     ⛔ 不並存：兩份真實來源必然不同步，總務會對到兩份名單。
+     舊版原始碼在 git 歷史裡（這個檔案的上一版），資料仍在原本的 Google 試算表。 -->
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Arial', 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: #f0f4f8; color: #222; }
-
-  /* HEADER */
-  .header { background: linear-gradient(135deg, #15296B 0%, #1E40A0 58%, #2B57C4 100%); color: white; padding: 30px 44px; display: flex; justify-content: space-between; align-items: center; gap: 30px; flex-wrap: wrap; }
-  .header-left { display: flex; align-items: center; gap: 26px; }
-  .logo { width: 122px; height: 122px; border-radius: 22px; flex-shrink: 0; box-shadow: 0 4px 18px rgba(0,0,0,.32); }
-  .header h1 { font-size: 4.6rem; font-weight: 900; letter-spacing: 7px; line-height: 1;
-    background: linear-gradient(170deg, #ffffff 0%, #ffffff 45%, #c2d4f5 100%);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 3px 9px rgba(0,0,0,.34)); }
-  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 13px; }
-  .slogan { font-size: 1.08rem; opacity: .92; white-space: nowrap; }
-  .stats { display: flex; gap: 30px; }
-  .edit-link { margin-left: auto; background: #E76318; color: #fff; padding: 8px 17px; border-radius: 18px; font-weight: 700; font-size: .85rem; text-decoration: none; white-space: nowrap; transition: background .2s; }
-  .edit-link:hover { background: #cf5413; }
-  .stat { text-align: center; }
-  .stat .num { font-size: 2rem; font-weight: 700; }
-  .stat .lbl { font-size: .75rem; opacity: .7; margin-top: 2px; }
-
-  /* SEARCH / FILTER */
-  .toolbar { background: white; padding: 16px 40px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
-             box-shadow: 0 2px 8px rgba(0,0,0,.08); position: sticky; top: 0; z-index: 100; }
-  .toolbar input { flex: 1; min-width: 200px; padding: 10px 16px; border: 1.5px solid #d0d8e4; border-radius: 8px; font-size: .95rem; outline: none; }
-  .toolbar input:focus { border-color: #2B57C4; }
-  .industry-select { padding: 10px 34px 10px 14px; border: 1.5px solid #d0d8e4; border-radius: 8px; background: white; cursor: pointer;
-    font-size: .9rem; color: #333; outline: none; font-family: inherit; white-space: nowrap;
-    appearance: none; -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23555' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center; }
-  .industry-select:focus { border-color: #2B57C4; }
-  .industry-select.active { background-color: #1E40A0; color: white; border-color: #1E40A0;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23fff' d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); }
-  .count-badge { margin-left: auto; background: #15296B; color: white; padding: 6px 14px; border-radius: 16px; font-size: .85rem; white-space: nowrap; }
-
-  /* GRID */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; padding: 28px 40px; }
-
-  /* MOBILE (手機直向：頭部改為置中堆疊，標語允許換行，避免右側溢出被裁切) */
-  @media (max-width: 640px) {
-    .header { flex-direction: column; align-items: center; text-align: center; padding: 26px 20px; gap: 18px; }
-    .header-left { flex-direction: column; align-items: center; gap: 14px; }
-    .logo { width: 92px; height: 92px; }
-    .header h1 { font-size: 3rem; letter-spacing: 4px; }
-    .header-right { align-items: center; width: 100%; gap: 12px; }
-    .stats { justify-content: center; gap: 48px; }
-    .slogan { white-space: normal; line-height: 1.5; font-size: .95rem; }
-    .toolbar { padding-left: 18px; padding-right: 18px; }
-    .grid { padding: 22px 18px; }
-  }
-
-  /* CARD */
-  .card { background: white; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.07); overflow: hidden; position: relative; transition: transform .2s, box-shadow .2s; display: flex; flex-direction: column; }
-  .officer { position: absolute; top: 12px; right: 12px; background: #E76318; color: #fff; font-weight: 700; font-size: .74rem; padding: 3px 11px; border-radius: 11px; box-shadow: 0 1px 5px rgba(0,0,0,.18); z-index: 2; white-space: nowrap; }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-  .card.hidden { display: none; }
-
-  .card-top { padding: 20px 20px 14px; border-bottom: 1px solid #f0f4f8; display: flex; gap: 14px; align-items: flex-start; }
-  .avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-             font-size: 1.3rem; font-weight: 700; color: white; flex-shrink: 0; }
-  .name-block { flex: 1; }
-  .name-block .name { font-size: 1.1rem; font-weight: 700; color: #15296B; margin-bottom: 3px; }
-  .name-block .role { font-size: .82rem; color: #888; }
-  .industry-tag { font-size: .72rem; padding: 3px 10px; border-radius: 12px; color: white; font-weight: 600; white-space: nowrap; margin-top: 2px; display: inline-block; }
-
-  .card-company { padding: 12px 20px; background: #f7f9fc; border-bottom: 1px solid #f0f4f8; }
-  .card-company .co-name { font-size: .95rem; font-weight: 600; color: #1E40A0; margin-bottom: 2px; }
-  .card-company .co-title { font-size: .82rem; color: #666; }
-
-  .card-desc { padding: 14px 20px 8px; font-size: .85rem; line-height: 1.65; color: #444; }
-  .card-intro { padding: 0 20px 8px; font-size: .86rem; font-style: italic; color: #1E40A0; line-height: 1.55; }
-  .card-extra { padding: 0 20px 8px; font-size: .8rem; color: #555; line-height: 1.55; }
-  .card-extra b { color: #E76318; font-weight: 700; }
-
-  .card-footer { padding: 12px 20px; border-top: 1px solid #f0f4f8; display: flex; align-items: center; gap: 10px; margin-top: auto; }
-  .web-link { display: flex; align-items: center; gap: 6px; font-size: .82rem; color: #2B57C4; text-decoration: none; font-weight: 600; }
-  .web-link:hover { color: #15296B; text-decoration: underline; }
-  .web-link svg { flex-shrink: 0; }
-  .no-web { font-size: .78rem; color: #bbb; font-style: italic; }
-
-  /* INDUSTRY COLORS */
-  .ind-edu { background: #8E44AD; }
-  .ind-sport { background: #27AE60; }
-  .ind-health { background: #16A085; }
-  .ind-car { background: #2980B9; }
-  .ind-food { background: #E67E22; }
-  .ind-retail { background: #C0392B; }
-  .ind-mfg { background: #5DADE2; }
-  .ind-it { background: #2C3E50; }
-  .ind-re { background: #1ABC9C; }
-  .ind-fin { background: #F39C12; }
-  .ind-media { background: #D35400; }
-  .ind-mkt { background: #8E44AD; }
-  .ind-ag { background: #27AE60; }
-  .ind-trade { background: #2E86AB; }
-  .ind-other { background: #95A5A6; }
-
-  footer { text-align: center; padding: 24px; color: #aaa; font-size: .8rem; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'PingFang TC','Microsoft JhengHei',sans-serif;background:#eef2f9;color:#16233d;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{background:#fff;border-radius:18px;box-shadow:0 12px 40px rgba(16,24,40,.12);
+       max-width:460px;width:100%;padding:34px 30px;text-align:center}
+  .logo{width:84px;height:84px;border-radius:18px;margin:0 auto 18px;display:block}
+  h1{font-size:1.35rem;font-weight:800;letter-spacing:.5px}
+  p{margin-top:12px;line-height:1.75;color:#4a5878;font-size:.96rem}
+  .btn{display:inline-block;margin-top:22px;background:linear-gradient(135deg,#15296B,#2B57C4);
+       color:#fff;text-decoration:none;font-weight:800;padding:14px 30px;border-radius:99px;font-size:1rem}
+  .hint{margin-top:16px;font-size:.82rem;color:#8a94ad}
+  .url{margin-top:6px;font-size:.8rem;color:#6b7a99;word-break:break-all}
 </style>
 </head>
 <body>
-
-<div class="header">
-  <div class="header-left">
-    <img class="logo" src="logo.jpg" alt="CXO TC8 Logo">
-    <h1>CXO TC8</h1>
+  <div class="box">
+    <img class="logo" src="logo.jpg" alt="CXO TC8" onerror="this.style.display='none'">
+    <h1>這個網址已經搬家了</h1>
+    <p>成員儀表板已升級成 <b>AI 案例與活動中心</b>：<br>
+       夥伴名冊、月例會報名與訂餐、現場報到、AI 案例與 Q&amp;A、團購，全部在同一個地方。</p>
+    <a class="btn" href="app.html">前往新網站</a>
+    <p class="hint">3 秒後自動前往。請把新網址存進書籤或加到主畫面。</p>
   </div>
-  <div class="header-right">
-    <div class="stats">
-      <div class="stat"><div class="num" id="totalCount">—</div><div class="lbl">總成員數</div></div>
-      <div class="stat"><div class="num" id="industryCount">—</div><div class="lbl">不同產業</div></div>
-    </div>
-    <span class="slogan">No Warrior Left Behind　我們不拋下任何一位夥伴</span>
-  </div>
-</div>
-
-<div class="toolbar">
-  <input type="text" id="searchBox" placeholder="🔍 搜尋姓名、公司、產業..." oninput="filterCards()">
-  <select class="industry-select" id="industrySelect" onchange="setFilter(this.value)"></select>
-  <a class="edit-link" href="edit.html">✏️ 更新我的資料</a>
-</div>
-
-<div class="grid" id="cardGrid"></div>
-<footer>CXO TC8 台中第 8 分會　·　2026 年度成員資料　·　資料來源：分會名單</footer>
-
-<script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxda24yHBLXrum3p3CTiLkUTh3ZIE-4XOvAW06Ovy3oAdnx0Xmr-mmBfeRmGmCp5V2VsA/exec';
-let members = [];
-async function loadMembers() {
-  const grid = document.getElementById('cardGrid');
-  try {
-    const res = await fetch(API_URL + '?action=members');
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    members = data.members;
-    buildCards();
-  } catch (err) {
-    grid.innerHTML = '<p style="padding:50px;color:#888;text-align:center">資料載入中或暫時無法取得，請稍後重整頁面。</p>';
-  }
-}
-
-const avatarColors = {
-  edu:"#8E44AD", sport:"#27AE60", health:"#16A085", car:"#2980B9",
-  food:"#E67E22", retail:"#C0392B", mfg:"#5DADE2", it:"#2C3E50",
-  re:"#1ABC9C", fin:"#F39C12", media:"#D35400", mkt:"#8E44AD",
-  ag:"#27AE60", trade:"#2E86AB", other:"#95A5A6"
-};
-
-// 產業代碼 → 顯示名稱。選單只會列出「實際有人」的產業，所以這裡多列幾個備用不影響畫面
-const industryNames = {
-  edu:"教育", health:"醫療保健", food:"餐飲", it:"資訊科技", mfg:"製造業",
-  re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
-  media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
-};
-
-let currentFilter = 'all';
-
-function buildCards() {
-  const grid = document.getElementById('cardGrid');
-  grid.innerHTML = '';
-  members.forEach((m, i) => {
-    const color = avatarColors[m.industry] || '#95A5A6';
-    const initial = m.name.charAt(0);
-    const webHtml = m.web
-      ? `<a class="web-link" href="${m.web}" target="_blank">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          ${m.web.replace(/https?:\/\//, '').replace(/\/$/, '')}
-        </a>`
-      : `<span class="no-web">尚無官方網站資料</span>`;
-
-    const officerHtml = m.officer ? `<div class="officer">${m.officer}</div>` : '';
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.industry = m.industry;
-    card.dataset.name = m.name;
-    card.dataset.company = m.company;
-    card.dataset.tag = m.tag;
-    card.dataset.hasWeb = m.web ? 'yes' : 'no';
-    card.innerHTML = `
-      ${officerHtml}
-      <div class="card-top">
-        <div class="avatar" style="background:${color}">${initial}</div>
-        <div class="name-block">
-          <div class="name">${m.name}</div>
-          <div class="role">${m.title}</div>
-          <span class="industry-tag" style="background:${color}">${m.tag}</span>
-        </div>
-      </div>
-      <div class="card-company">
-        <div class="co-name">${m.company}</div>
-        <div class="co-title">${m.title}</div>
-      </div>
-      <div class="card-desc">${m.desc}</div>
-      ${m.intro ? `<div class="card-intro">「${m.intro}」</div>` : ''}
-      ${m.resource ? `<div class="card-extra"><b>可提供</b>：${m.resource}</div>` : ''}
-      ${m.wish ? `<div class="card-extra"><b>想找</b>：${m.wish}</div>` : ''}
-      ${m.topic ? `<div class="card-extra"><b>關注</b>：${m.topic}</div>` : ''}
-      <div class="card-footer">${webHtml}</div>`;
-    grid.appendChild(card);
-  });
-  updateStats();
-  buildIndustryOptions();
-  updateCount();
-}
-
-function updateStats() {
-  document.getElementById('totalCount').textContent = members.length;
-  const inds = new Set(members.map(m => m.industry).filter(Boolean));
-  document.getElementById('industryCount').textContent = inds.size;
-}
-
-// 選項照人數多寡排，「其他」永遠押底
-function buildIndustryOptions() {
-  const count = {};
-  members.forEach(m => { if (m.industry) count[m.industry] = (count[m.industry] || 0) + 1; });
-  const codes = Object.keys(count).sort((a, b) => {
-    if (a === 'other') return 1;
-    if (b === 'other') return -1;
-    return count[b] - count[a];
-  });
-  document.getElementById('industrySelect').innerHTML =
-    `<option value="all">全部產業（${members.length} 人）</option>`
-    + codes.map(c => `<option value="${c}">${industryNames[c] || c}（${count[c]} 人）</option>`).join('');
-}
-
-function filterCards() {
-  const q = document.getElementById('searchBox').value.toLowerCase();
-  document.querySelectorAll('.card').forEach(card => {
-    const matchSearch = !q
-      || card.dataset.name.includes(q)
-      || card.dataset.company.toLowerCase().includes(q)
-      || card.dataset.tag.toLowerCase().includes(q)
-      || card.querySelector('.card-desc').textContent.toLowerCase().includes(q);
-    const matchFilter = currentFilter === 'all'
-      || (currentFilter === 'has-web' && card.dataset.hasWeb === 'yes')
-      || card.dataset.industry === currentFilter;
-    card.classList.toggle('hidden', !(matchSearch && matchFilter));
-  });
-  updateCount();
-}
-
-function setFilter(f) {
-  currentFilter = f;
-  document.getElementById('industrySelect').classList.toggle('active', f !== 'all');
-  filterCards();
-}
-
-function updateCount() {
-  const el = document.getElementById('visibleCount');
-  if (!el) return;
-  const visible = document.querySelectorAll('.card:not(.hidden)').length;
-  el.textContent = `顯示 ${visible} 人`;
-}
-
-loadMembers();
-</script>
+  <script>setTimeout(function(){ location.replace("app.html"); }, 3000);</script>
 </body>
 </html>

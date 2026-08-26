@@ -4,205 +4,35 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CXO TC8 審核台</title>
+<title>CXO TC8｜已搬家</title>
+<!-- 舊版成員儀表板（Apps Script + Google 試算表）已於 2026-08-26 退場。
+     舊的後端 API 已失效（實測 404），留著這頁只會讓夥伴看到一份載入失敗的空名單。
+     ⛔ 不並存：兩份真實來源必然不同步，總務會對到兩份名單。
+     舊版原始碼在 git 歷史裡（這個檔案的上一版），資料仍在原本的 Google 試算表。 -->
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Arial','PingFang TC','Microsoft JhengHei',sans-serif; background: #f0f4f8; color: #222; padding: 0 0 40px; }
-  .header { background: linear-gradient(135deg,#15296B 0%,#1E40A0 58%,#2B57C4 100%); color: #fff; padding: 26px 22px; }
-  .header h1 { font-size: 1.4rem; letter-spacing: 1px; }
-  .header p { font-size: .85rem; opacity: .85; margin-top: 4px; }
-  .wrap { max-width: 680px; margin: 22px auto; padding: 0 18px; }
-  .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 22px; margin-bottom: 18px; }
-  label { display: block; font-size: .82rem; font-weight: 600; color: #15296B; margin: 12px 0 5px; }
-  input, select, textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #d0d8e4; border-radius: 8px; font-size: .92rem; outline: none; font-family: inherit; }
-  input:focus, textarea:focus { border-color: #2B57C4; }
-  textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
-  button { padding: 11px 18px; border: none; border-radius: 8px; font-size: .95rem; font-weight: 700; cursor: pointer; }
-  .pw-row { display: flex; gap: 10px; }
-  .pw-row input { flex: 1; }
-  .btn-primary { background: #1E40A0; color: #fff; }
-  .btn-approve { background: #1a7a3f; color: #fff; flex: 1; }
-  .btn-reject { background: #c0392b; color: #fff; flex: 1; }
-  .rev h3 { color: #15296B; font-size: 1.05rem; margin-bottom: 6px; }
-  .rev .sub { font-size: .76rem; color: #999; margin-bottom: 8px; }
-  .old { font-size: .78rem; color: #888; background: #f7f9fc; padding: 2px 8px; border-radius: 6px; margin-top: 3px; }
-  .actions { display: flex; gap: 10px; margin-top: 16px; }
-  .msg { padding: 12px; border-radius: 8px; font-size: .9rem; text-align: center; margin-top: 12px; }
-  .msg.ok { background: #e6f6ec; color: #1a7a3f; }
-  .msg.err { background: #fdecea; color: #c0392b; }
-  .hidden { display: none; }
-  .empty { text-align: center; color: #888; padding: 30px; }
-  .mgr h3 { color: #15296B; font-size: 1.05rem; }
-  .mgr .hint { font-size: .78rem; color: #888; margin: 6px 0 12px; line-height: 1.6; }
-  .mrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef2f7; }
-  .mrow .info { flex: 1; min-width: 0; }
-  .mrow .info b { font-size: .92rem; color: #15296B; }
-  .mrow .info span { display: block; font-size: .76rem; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .btn-remove { background: #fdecea; color: #c0392b; font-size: .82rem; padding: 7px 12px; white-space: nowrap; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'PingFang TC','Microsoft JhengHei',sans-serif;background:#eef2f9;color:#16233d;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{background:#fff;border-radius:18px;box-shadow:0 12px 40px rgba(16,24,40,.12);
+       max-width:460px;width:100%;padding:34px 30px;text-align:center}
+  .logo{width:84px;height:84px;border-radius:18px;margin:0 auto 18px;display:block}
+  h1{font-size:1.35rem;font-weight:800;letter-spacing:.5px}
+  p{margin-top:12px;line-height:1.75;color:#4a5878;font-size:.96rem}
+  .btn{display:inline-block;margin-top:22px;background:linear-gradient(135deg,#15296B,#2B57C4);
+       color:#fff;text-decoration:none;font-weight:800;padding:14px 30px;border-radius:99px;font-size:1rem}
+  .hint{margin-top:16px;font-size:.82rem;color:#8a94ad}
+  .url{margin-top:6px;font-size:.8rem;color:#6b7a99;word-break:break-all}
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>CXO TC8 審核台</h1>
-  <p>會長專用 · 審核成員送出的資料更新</p>
-</div>
-<div class="wrap">
-  <div class="card" id="login">
-    <label>會長密碼</label>
-    <div class="pw-row">
-      <input type="password" id="pw" placeholder="輸入審核密碼">
-      <button class="btn-primary" onclick="login()">登入</button>
-    </div>
-    <div id="loginMsg"></div>
+  <div class="box">
+    <img class="logo" src="logo.jpg" alt="CXO TC8" onerror="this.style.display='none'">
+    <h1>這個網址已經搬家了</h1>
+    <p>成員儀表板已升級成 <b>AI 案例與活動中心</b>：<br>
+       夥伴名冊、月例會報名與訂餐、現場報到、AI 案例與 Q&amp;A、團購，全部在同一個地方。</p>
+    <a class="btn" href="app.html">前往新網站</a>
+    <p class="hint">3 秒後自動前往。請把新網址存進書籤或加到主畫面。</p>
   </div>
-  <div id="list"></div>
-  <div id="manage"></div>
-</div>
-<script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbxda24yHBLXrum3p3CTiLkUTh3ZIE-4XOvAW06Ovy3oAdnx0Xmr-mmBfeRmGmCp5V2VsA/exec';
-let password = '', pending = [], membersById = {}, allMembers = [];
-
-async function post(body) {
-  const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
-  return res.json();
-}
-
-async function login() {
-  password = document.getElementById('pw').value;
-  // 取現有資料做新舊對照
-  try {
-    const md = await (await fetch(API_URL + '?action=members')).json();
-    allMembers = md.members || [];
-    membersById = {};
-    allMembers.forEach(m => membersById[m.id] = m);
-  } catch (e) {}
-  const data = await post({ action: 'list_pending', password });
-  if (!data.ok) {
-    const m = document.getElementById('loginMsg');
-    m.className = 'msg err';
-    m.textContent = data.error === 'bad password' ? '密碼錯誤' : ('登入失敗：' + data.error);
-    return;
-  }
-  pending = data.pending;
-  render();
-  renderManage();
-}
-
-function fld(label, id, oldVal, newVal, isArea) {
-  const changed = (oldVal || '') !== (newVal || '');
-  const oldLine = changed ? `<div class="old">原本：${escapeHtml(oldVal || '（空白）')}</div>` : '';
-  const input = isArea
-    ? `<textarea id="${id}">${escapeHtml(newVal || '')}</textarea>`
-    : `<input id="${id}" value="${escapeHtml(newVal || '')}">`;
-  return `<label>${label}${changed ? ' ✏️' : ''}</label>${input}${oldLine}`;
-}
-
-function render() {
-  const box = document.getElementById('list');
-  if (!pending.length) { box.innerHTML = '<div class="card empty">目前沒有待審核項目 🎉</div>'; return; }
-  box.innerHTML = pending.map((p, i) => {
-    const o = membersById[p.id] || {};
-    return `<div class="card rev">
-      <h3>${p.id ? '' : '🆕 新成員申請：'}${escapeHtml(p.name)}</h3>
-      <div class="sub">提交於 ${new Date(p.submit_time).toLocaleString('zh-TW')}</div>
-      ${fld('顯示名','n'+i,o.name,p.name)}
-      ${fld('公司名稱','c'+i,o.company,p.company)}
-      ${fld('職稱','t'+i,o.title,p.title)}
-      ${fld('產業類別','ind'+i,o.industry,p.industry)}
-      ${fld('產業標籤','tag'+i,o.tag,p.tag)}
-      ${fld('自我介紹','d'+i,o.desc,p.desc,true)}
-      ${fld('一句話自介','intro'+i,o.intro,p.intro)}
-      ${fld('可提供資源','res'+i,o.resource,p.resource,true)}
-      ${fld('希望在TC8獲得','wish'+i,o.wish,p.wish,true)}
-      ${fld('關注主題','topic'+i,o.topic,p.topic)}
-      ${fld('官方網站','w'+i,o.web,p.web)}
-      <div class="actions">
-        <button class="btn-approve" onclick="approve(${i})">核可上線</button>
-        <button class="btn-reject" onclick="reject(${i})">退回</button>
-      </div>
-      <div id="m${i}"></div>
-    </div>`;
-  }).join('');
-}
-
-async function approve(i, mergeId) {
-  const p = pending[i];
-  const edited = {
-    name: val('n'+i), company: val('c'+i), title: val('t'+i),
-    industry: val('ind'+i), tag: val('tag'+i), desc: val('d'+i), web: val('w'+i),
-    intro: val('intro'+i), resource: val('res'+i), wish: val('wish'+i), topic: val('topic'+i)
-  };
-  const body = { action: 'approve', password, row: p.row, edited };
-  if (mergeId) body.mergeId = mergeId;
-  const data = await post(body);
-
-  if (data.error === 'DUPLICATE') {
-    const co = data.existingCompany ? `（${data.existingCompany}）` : '';
-    const was = data.wasRemoved ? '\n\n※ 這個人先前被標記為已退出，確定的話會一併讓他重新上線。' : '';
-    const ok = confirm(
-      `名單上已經有「${data.existingName}」${co}了，編號 ${data.existingId}。${was}\n\n` +
-      `是同一個人嗎？\n\n` +
-      `按「確定」→ 更新既有那筆，不會產生重複\n` +
-      `按「取消」→ 先不處理，你再自己確認`);
-    if (ok) return approve(i, data.existingId);
-    msg(i, '已取消，沒有做任何變更', false);
-    return;
-  }
-
-  if (data.ok) { msg(i, mergeId ? '已更新既有資料 ✓' : '已核可上線 ✓', true); setTimeout(login, 700); }
-  else msg(i, '失敗：' + data.error, false);
-}
-
-async function reject(i) {
-  if (!confirm('確定退回這筆？（成員的修改不會套用）')) return;
-  const data = await post({ action: 'reject', password, row: pending[i].row });
-  if (data.ok) { msg(i, '已退回', true); setTimeout(login, 700); }
-  else msg(i, '失敗：' + data.error, false);
-}
-
-function renderManage() {
-  document.getElementById('manage').innerHTML = `<div class="card mgr">
-    <h3>成員管理（現任 ${allMembers.length} 人）</h3>
-    <div class="hint">標記退出後，該成員會立刻從公開頁消失，也無法再更新自己的資料。<br>要復原：到 Google 試算表把他那一列 status 欄的「已退出」刪掉即可。</div>
-    <input id="mSearch" placeholder="搜尋姓名或公司…" oninput="filterManage()">
-    <div id="mList"></div>
-    <div id="mMsg"></div>
-  </div>`;
-  filterManage();
-}
-
-function filterManage() {
-  const kw = document.getElementById('mSearch').value.trim().toLowerCase();
-  const hit = allMembers.filter(m => !kw
-    || String(m.name || '').toLowerCase().includes(kw)
-    || String(m.company || '').toLowerCase().includes(kw));
-  const box = document.getElementById('mList');
-  if (!hit.length) { box.innerHTML = '<div class="empty">找不到符合的成員</div>'; return; }
-  box.innerHTML = hit.map(m => `<div class="mrow">
-      <div class="info"><b>${escapeHtml(m.name)}</b><span>${escapeHtml(m.company || '（未填公司）')}</span></div>
-      <button class="btn-remove" onclick="removeMember('${m.id}')">標記退出</button>
-    </div>`).join('');
-}
-
-async function removeMember(id) {
-  const m = allMembers.find(x => String(x.id) === String(id));
-  if (!m) return;
-  if (!confirm('確定將「' + m.name + '」標記為已退出？\n\n他會立刻從公開頁消失，也不能再更新自己的資料。')) return;
-  const data = await post({ action: 'remove', password, id });
-  const box = document.getElementById('mMsg');
-  if (data.ok) {
-    box.className = 'msg ok';
-    box.textContent = '已將「' + m.name + '」標記為退出 ✓';
-    setTimeout(login, 900);
-  } else {
-    box.className = 'msg err';
-    box.textContent = '失敗：' + data.error;
-  }
-}
-
-function val(id){ return document.getElementById(id).value; }
-function msg(i, t, ok){ const m=document.getElementById('m'+i); m.className='msg '+(ok?'ok':'err'); m.textContent=t; }
-function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-</script>
+  <script>setTimeout(function(){ location.replace("app.html"); }, 3000);</script>
 </body>
 </html>
