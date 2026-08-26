@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:47</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1090,7 +1090,7 @@ function openBuy(buyId){
       }).join("")}
 
       ${ME && (b.owner_id === ME.id || isOfficer()) ? `<div class="field" style="margin-top:20px">
-        <button class="mbtn add" onclick="openBuyDetail(${buyId})">📋 看訂購名單與統計</button>
+        <button class="mbtn add" onclick="openBuyDetail(${buyId}, '')">📋 看訂購名單與統計</button>
         <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購與商品</button></div>` : ""}
     </div>`;
   go("form");
@@ -1150,11 +1150,7 @@ function openBuyForm(buyId){
   const items = buyId ? (BUY_ITEMS[buyId] || []) : [];
   // ⚠️「團購詳情」跟「改團購」是同一個 v-form 容器，backBar() 的自動判斷認不出來，
   //    會退回更早的團購列表。編輯模式直接指定回原本那一團。
-  const bar = buyId
-    ? `<div class="backbar"><button class="back" onclick="openBuy(${buyId})">
-         <svg width="17" height="17"><use href="#i-back"/></svg>回上一頁</button>
-       <button class="back back2" onclick="go('home')">回首頁</button></div>`
-    : backBar('取消');
+  const bar = buyId ? backTo(`openBuy(${buyId})`) : backBar('取消');
   el("v-form").innerHTML = `${bar}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${b ? "改我的團購" : "開一個團購"}</div>
@@ -1238,7 +1234,7 @@ function openItemForm(buyId, itemId){
   ITEM_PHOTOS = it ? (it.photos || []).slice(0, 2) : [];
   const vars = itemId ? (BUY_VARS[itemId] || []) : [];
   const grps = [...new Set(vars.map(x => x.grp))];
-  el("v-form").innerHTML = `${backBar('取消')}
+  el("v-form").innerHTML = `${backTo(`openBuyForm(${buyId})`)}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${it ? "改商品" : "加一樣商品"}</div>
       <div class="field" style="margin-top:16px"><label>商品名稱 *</label>
@@ -1339,6 +1335,15 @@ async function removeItem(buyId, itemId){
   if(!r || !r.ok){ alert("失敗"); return; }
   await reloadBuys(); openBuyForm(buyId);
 }
+// ⚠️ 團購詳情／改團購／訂購名單／改商品 全都住在同一個 v-form 容器裡，
+//    backBar() 靠「現在哪個 .view 是 on」判斷上一頁，認不出來就會退回更早的畫面。
+//    這幾頁一律自己指定回哪裡。
+function backTo(js, label){
+  return `<div class="backbar">
+    <button class="back" onclick="${js}"><svg width="17" height="17"><use href="#i-back"/></svg>${label || "回上一頁"}</button>
+    <button class="back back2" onclick="go('home')">回首頁</button></div>`;
+}
+
 // 收款對帳：錢統一交給財務長，所以按「人」收、按「人」勾
 function payBlock(r){
   const ppl = r.people || [];
@@ -1396,11 +1401,16 @@ async function togglePay(buyId, memberId, paid){
   else await openBuyDetail(buyId);
 }
 
-async function openBuyDetail(buyId){
+let BUY_DETAIL_FROM = null;   // "overview" = 從幹部後台「所有團購」進來的
+async function openBuyDetail(buyId, from){
   const r = await buyApi("detail", {buy_id: buyId});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
   BUY_DETAIL = r;
-  el("v-form").innerHTML = `${backBar()}
+  if(from !== undefined) BUY_DETAIL_FROM = from;
+  const bar = BUY_DETAIL_FROM === "overview"
+    ? backTo("openBuyOverview()", "回所有團購")
+    : backTo(`openBuy(${buyId})`);
+  el("v-form").innerHTML = `${bar}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">訂購名單　${esc(r.buy.title)}</div>
       <div class="buymeta" style="margin-top:6px">截止 ${esc(r.buy.deadline)}　｜　
@@ -1449,12 +1459,12 @@ async function openBuyOverview(){
               ? `　｜　未收 <b style="color:var(--orange-dark)">$${b.amount - b.paid_total}</b>`
               : `　<span class="okmark">✓ 收齊</span>`}</div>` : ""}
           ${b.items.length ? `<div class="tally" style="margin-top:8px">
-            ${b.items.map(i => `<div class="tallyrow" style="cursor:pointer" onclick="openBuyDetail(${b.id})">
+            ${b.items.map(i => `<div class="tallyrow" style="cursor:pointer" onclick="openBuyDetail(${b.id}, 'overview')">
               <span>${esc(i.name)}　<span class="mnote">$${i.unit_price}</span></span>
               <b class="${i.reached ? "okmark" : ""}">${i.qty} / ${i.min_qty}${i.reached ? " ✓" : ""}</b>
             </div>`).join("")}</div>`
             : `<div class="mnote" style="margin-top:6px">這團還沒放商品</div>`}
-          <button class="mbtn add" onclick="openBuyDetail(${b.id})">📋 完整訂購名單</button>
+          <button class="mbtn add" onclick="openBuyDetail(${b.id}, 'overview')">📋 完整訂購名單</button>
         </div>`).join("")
         : `<div class="mnote" style="margin-top:16px">還沒有任何團購</div>`}
     </div>`;
