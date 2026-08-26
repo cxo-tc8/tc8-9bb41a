@@ -105,6 +105,11 @@ a{color:inherit;text-decoration:none}
 .arow:hover{background:var(--chip)}
 .arow>span:first-child{flex:1}
 .ago{color:var(--muted);font-size:1.2rem}
+/* 幹部功能跟一般分頁之間隔一條線——它們是不同性質的東西 */
+.navsep{display:none}
+@media (min-width:1024px){
+  .navsep{display:block;height:1px;background:var(--line);margin:8px 16px}
+}
 .backbar{display:flex;align-items:center;gap:4px}
 .back2{color:var(--muted)!important}
 .back2::before{content:"·";margin-right:4px;color:var(--line)}
@@ -502,6 +507,7 @@ a.btn{text-decoration:none}
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
   <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
+  <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
 </nav>
 
@@ -1650,6 +1656,11 @@ let FORM_FROM = "home", PDETAIL_FROM = "home";
 const VIEW_NAME = {home:"首頁", members:"夥伴", cases:"案例", needs:"需求", me:"我的", admin:"分會管理"};
 // 兩顆返回鍵：左邊回剛才那一頁，右邊直接回首頁（在首頁進來的就只有一顆，不重複）
 function backBar(label){
+  // ⚠️ 自己在這一刻判斷「現在在哪一頁」，不能靠 go() 事先設定——
+  //    所有畫面都是「先組好 HTML 字串，再呼叫 go('form')」，
+  //    等 go() 執行時這個字串早就組完了，會拿到過期的值。
+  const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+  if(cur && cur.id !== "v-form") FORM_FROM = cur.id.slice(2);
   const from = FORM_FROM;
   const first = `<button class="back" onclick="go('${from}')"><svg width="17" height="17"><use href="#i-back"/></svg>${
     label || ("回" + (VIEW_NAME[from] || "上一頁"))}</button>`;
@@ -1660,8 +1671,10 @@ function backBar(label){
 
 // 幹部才看得到「分會管理」這個分頁入口
 function syncAdminNav(){
-  const b = el("nav-admin"); if(!b) return;
-  b.style.display = isOfficer() ? "" : "none";
+  const b = el("nav-admin"), sep = el("nav-sep"); if(!b) return;
+  const show = isOfficer() ? "" : "none";
+  b.style.display = show;
+  if(sep) sep.style.display = show;
 }
 function go(v, btn){
   // 進表單之前先記下現在在哪
@@ -2097,8 +2110,8 @@ function openPostDetail(id){
   const p = POSTS.find(x=>x.id===id); if(!p) return;
   const canEdit = ME && (p.author_id===ME.id || isOfficer());
   // 這頁也是共用的，一樣要記住從哪裡點進來
-  const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
-  if(cur && cur.id !== "v-pdetail") PDETAIL_FROM = cur.id.slice(2);
+  const cur0 = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+  if(cur0 && cur0.id !== "v-pdetail") PDETAIL_FROM = cur0.id.slice(2);
   const row = (l,v) => v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
   el("v-pdetail").innerHTML = `
     <div class="backbar">
