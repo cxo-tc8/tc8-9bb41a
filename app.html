@@ -472,6 +472,24 @@ a.btn{text-decoration:none}
 /* 點讚不做成「跟報名區一樣重的框」：它只有一顆小按鈕，
    重要性也低一階。改成一條輕量橫列，靠按鈕自己的邊框就夠。 */
 .likebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 4px 12px}
+/* 使用說明：內容由 md 產生，這裡只負責讓它讀起來舒服 */
+.helpdoc h1{font-size:1.3rem;font-weight:800;margin-bottom:4px}
+.helpdoc h2{font-size:1.06rem;font-weight:800;margin:22px 0 8px;padding-left:9px;border-left:4px solid var(--blue-500)}
+.helpdoc h3{font-size:.97rem;font-weight:800;margin:16px 0 6px;color:var(--blue-700)}
+.helpdoc p{margin:8px 0;line-height:1.8}
+.helpdoc ul,.helpdoc ol{margin:8px 0 8px 20px;line-height:1.8}
+.helpdoc li{margin:3px 0}
+.helpdoc blockquote{margin:10px 0;padding:10px 13px;background:var(--chip);border-radius:var(--r-sm);
+  color:var(--muted);font-size:.9rem;line-height:1.75}
+.helpdoc blockquote p{margin:0}
+.helpdoc hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+.helpdoc code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:.86rem}
+.helpdoc a{color:var(--blue-700);word-break:break-all}
+/* 表格在窄螢幕要自己橫向捲，不能讓整頁跟著捲 */
+.helpdoc table{width:100%;border-collapse:collapse;font-size:.88rem;margin:10px 0}
+.helpdoc th,.helpdoc td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+.helpdoc th{background:var(--chip);font-weight:700}
+.helpdoc .tablewrap{overflow-x:auto}
 .stag{display:inline-block;font-size:.74rem;font-weight:800;padding:2px 8px;border-radius:99px;margin-top:4px}
 .stag.red{background:#fdecea;color:#b4261a}
 .stag.amber{background:#fff4e0;color:#8a5a00}
@@ -647,8 +665,9 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
+<main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:59</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 18:07</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2562,6 +2581,7 @@ const DRAWER_ITEMS = [
   ["needs",   "i-need",   "Q&A",   false],
   ["members", "i-people", "夥伴",   false],
   ["me",      "i-me",     "我的",   false],
+  ["help",    "i-form",   "使用說明", false],
   ["admin",   "i-shield", "分會管理", true],
 ];
 function openDrawer(){
@@ -2656,6 +2676,7 @@ function render(v){
   if(v==="buys") renderBuys();
   if(v==="acts") renderActs();
   if(v==="notices") renderNotices();
+  if(v==="help") renderHelp();
 
   if(v==="members"){
     el("v-members").innerHTML = `
@@ -2863,6 +2884,299 @@ const byKind = k => {
 };
 const fmtDate = iso => { if(!iso) return ""; const d=new Date(iso);
   return `${d.getMonth()+1}/${d.getDate()}（${"日一二三四五六"[d.getDay()]}）${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+
+/* HELP_START —— ⛔ 這一段是機器產生的，不要手改。
+   真實來源是 4_tc8-docs/使用說明_夥伴版.md 與 使用說明_幹部版.md，
+   改完跑 `python3 產生說明頁.py` 再上線。手改這裡＝多一份會過期的真實來源。 */
+const HELP_MEMBER = `<h1>TC8 網站 使用說明（夥伴版）</h1>
+<blockquote>
+<p>網址 <a href="https://cxo-tc8.github.io/tc8-9bb41a/app.html">https://cxo-tc8.github.io/tc8-9bb41a/app.html</a>
+建議按手機瀏覽器的「加到主畫面」，之後像 App 一樣打開。</p>
+</blockquote>
+<hr />
+<h2>1　第一次進來，做這三件事</h2>
+<p><strong>① 用 LINE 登入</strong>
+右上角按「登入」，會跳到 LINE 授權，按同意就回來了。不用記帳號密碼。</p>
+<p><strong>② 找到你自己，按下去</strong>
+登入後會出現全分會名單，找到你的名字點一下，確認就完成了。
+這一步叫「認領」——<strong>做過一次就不用再做</strong>，之後打開網站就直接是你。</p>
+<blockquote>
+<p>找不到自己的名字？按最下面的「我不在名單上」填基本資料，四位幹部任何一位核可就會出現。</p>
+</blockquote>
+<p><strong>③ 補一下自己的資料</strong>
+右下角「我的」→「改我的基本資料」。公司、專業別、可以提供什麼、想找什麼——
+<strong>這些是別人用來找到你的關鍵字</strong>，填了才配得起來。存檔立刻生效，不用等審核。</p>
+<hr />
+<h2>2　首頁有什麼</h2>
+<p>由上而下：<strong>下一場月例會 → 公告與問卷 → 近期活動 → 夥伴的近期活動 → 夥伴團購 → 最新案例</strong>。
+每一區只放最近幾則，想看全部就按右邊的「全部 n」。</p>
+<hr />
+<h2>3　月例會：報名、訂餐、報到</h2>
+<h3>報名</h3>
+<p>首頁月例會那塊會顯示「還剩 n 個位子」，按 <strong>「我要報名」</strong>。
+如果那場有訂餐，會跳出餐點讓你選；吃素或有過敏，寫在「飲食備註」。</p>
+<h3>改餐點</h3>
+<p>已經報名了還想改，按 <strong>「改我的餐點」</strong>。改餐點不會佔掉新的位子。</p>
+<h3>帶來賓</h3>
+<p>月例會那塊有「我要帶來賓」，填來賓姓名、公司、電話。
+每人每場的名額由幹部設定（預設 5 位）。</p>
+<h3>當天報到</h3>
+<p><strong>例會當天</strong>首頁才會出現 <strong>「📍 報到」</strong>（平常不佔版面）。
+按下去輸入現場螢幕上的報到碼就完成了。<strong>輸入碼就算報到，不用再找幹部打勾。</strong></p>
+<h3>不能來，一定要取消</h3>
+<p>按「取消報名」。<strong>餐是提前訂的，越早說越好</strong>——太晚取消，那份便當就浪費了。
+系統會記下你取消的時間，也會自動把位子讓給候補的夥伴。</p>
+<hr />
+<h2>4　任何活動都能報名、按讚、留言</h2>
+<p>不只月例會。CXO 的活動、其他夥伴辦的活動，點進去下面都有：</p>
+<ul>
+<li><strong>報名</strong>：轉貼的活動是輕量的「我要參加」，沒有名額也沒有訂餐，就是讓大家知道你會去</li>
+<li><strong>📋 誰報名了</strong>：看得到有哪些夥伴要去（要登入）</li>
+<li><strong>👍 讚</strong>：按了會顯示你的名字</li>
+<li><strong>討論</strong>：任何想法、要不要一起去、要不要併車，寫在下面</li>
+</ul>
+<hr />
+<h2>5　AI 案例：把你做過的事寫下來</h2>
+<p>「AI 案例」分頁 →「＋ 分享我的案例」。四個欄位：
+<strong>解決什麼問題／用什麼工具／怎麼做的／補充細節</strong>，再選分類標籤。</p>
+<blockquote>
+<p>不用寫得很厲害。「我用 AI 幫我把 LINE 群訊息整理成客戶名單」就是很好的案例。
+別人是照「問題」在搜尋的，不是照工具。</p>
+</blockquote>
+<hr />
+<h2>6　Q&amp;A：卡住了就問</h2>
+<p>「Q&amp;A」分頁 →「我要提問」。寫你卡在哪、已經試過什麼。
+有人在下面留言給建議，<strong>解決之後記得回來按「已經找到了」</strong>，
+並選出幫上忙的夥伴（最多 5 位）。</p>
+<blockquote>
+<p>這一步不要跳過。一年後這份紀錄就是分會互助的證據：誰卡住 → 誰幫了他 → 解掉了。</p>
+</blockquote>
+<hr />
+<h2>7　團購</h2>
+<p>「團購」分頁看得到現在開的團。點進去選規格、填數量就下訂。
+<strong>改單或取消</strong>：在同一頁按「改我的訂購」。
+<strong>繳費</strong>：轉帳或現場給財務長，<strong>由幹部登記</strong>，你在訂購頁看得到自己收了沒。</p>
+<p>想自己開團：按「＋ 開一個團購」，填完送審，幹部核可後才會公開。</p>
+<hr />
+<h2>8　「我的」這一頁</h2>
+<ul>
+<li>改我的基本資料</li>
+<li>我報名了哪些場</li>
+<li><strong>我的出席信用</strong>：報名了卻沒到、太晚取消會扣分</li>
+<li>登出</li>
+</ul>
+<hr />
+<h2>9　常見問題</h2>
+<p><strong>Q：看不到報名按鈕？</strong>
+那一場還沒開放報名，幹部開了才會出現。</p>
+<p><strong>Q：名字顯示成我的 LINE 暱稱？</strong>
+名冊上的名字以分會名冊為準。LINE 暱稱只是額外顯示，方便大家對得起來
+（在 LINE 群看到不認識的暱稱，把它打進搜尋框就查得到是誰）。</p>
+<p><strong>Q：為什麼有些東西要登入才看得到？</strong>
+誰報名、誰按讚、留言內容——這些是分會內部的事，不開放給外面的人看。
+名冊與活動資訊則是公開的。</p>
+<p><strong>Q：在 LINE 裡面點連結，下載檔案沒反應？</strong>
+LINE 的瀏覽器會擋下載。請先用 Chrome 或 Safari 開這個網站再下載。</p>`;
+const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
+<blockquote>
+<p>這一份是<strong>夥伴版之外</strong>多出來的管理功能。夥伴怎麼用請看夥伴版。
+權限綁「角色」不綁「人」：交接、換屆只要把新幹部的身分設成幹部，不必改程式。</p>
+</blockquote>
+<hr />
+<h2>1　發布月例會</h2>
+<p>首頁「下一場月例會」旁的 <strong>＋ 發布</strong>（或在既有那場按「✏️ 編輯這場」）。</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>欄位</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>講者一／二</td>
+<td>可以指定名冊上的哪一位，<strong>指定後他本人就能自己更新講題與照片</strong></td>
+</tr>
+<tr>
+<td>活動照片</td>
+<td><strong>海報放這裡</strong>。放了之後活動頁上方的橫幅就會換成海報</td>
+</tr>
+<tr>
+<td>名額</td>
+<td>空白＝不限。<strong>保留席</strong>是講者與工作人員，不佔報名名額</td>
+</tr>
+<tr>
+<td>開放報名</td>
+<td>⚠️ <strong>預設是關的</strong>。沒打開夥伴看不到報名按鈕</td>
+</tr>
+<tr>
+<td>候補</td>
+<td>開了之後額滿還能登記候補，有人取消會自動遞補</td>
+</tr>
+<tr>
+<td>來賓名額</td>
+<td>每人每場可以帶幾位，空白＝5，填 0＝這場不開放帶來賓</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>月例會的報名要幹部手動打開，是刻意的——那一場牽涉名額與訂餐，要總務備妥再開。
+<strong>CXO 轉貼與夥伴自己辦的活動不需要開</strong>，一律可以「我要參加」。</p>
+</blockquote>
+<hr />
+<h2>2　餐點選項</h2>
+<p>月例會那塊 →「🍱 餐點選項」。用「群組」分類（例如 主餐／飲品），
+每個選項可以設價格與數量上限。</p>
+<p>⛔ <strong>選項只能停用不能刪除</strong>——刪掉之後，過去報名的人點了什麼就查不到了。</p>
+<hr />
+<h2>3　報名名單與訂餐統計</h2>
+<p>月例會那塊 →「📋 報名名單」。</p>
+<ul>
+<li><strong>餐點統計</strong>：各群組各幾份，總務直接照這個訂便當（只有幹部看得到）</li>
+<li><strong>飲食備註</strong>：過敏、素食（只有幹部看得到）</li>
+<li><strong>已取消</strong>：誰在什麼時候縮手的。<strong>餐是提前訂的，看時間才知道那份便當有沒有白訂</strong></li>
+<li><strong>⬇︎ 下載 CSV</strong>：Excel 打得開。⚠️ 在 LINE 裡面下載會失敗，要用 Chrome 或 Safari</li>
+</ul>
+<hr />
+<h2>4　現場報到</h2>
+<p>月例會那塊 →「✅ 報到」。</p>
+<p><strong>流程</strong>：按「開始報到，產生一組碼」→ 把碼投影在螢幕上或寫在報到台的牌子
+→ <strong>夥伴自己在首頁按「報到」輸入碼就完成了</strong>。</p>
+<p>報到台的打勾<strong>只給兩種人用</strong>：①來賓（沒有 LINE 帳號）②手機沒電或不會操作的夥伴。</p>
+<p><strong>可以設定的</strong>（按「⚙︎ 時間窗與會場座標」）：
+- 報到開始／結束時間：擋掉事後補簽
+- 會場座標：記錄每個人報到時離會場多遠。<strong>不會擋人</strong>，
+  但有人在家輸入轉傳出去的碼，你在名單上看得到距離</p>
+<p><strong>名單分三段</strong>（由上而下）：
+1. 🔴 <strong>報名了，還沒到</strong> ← 這一段就是要抓的人
+2. ✓ 報名了，已報到
+3. 沒報名（現場出現就直接打勾，會記成現場加入）</p>
+<p>沒到的人可以在他那一列選缺席原因，系統據此扣分。</p>
+<hr />
+<h2>5　出席與退社：兩套不同的東西</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>看什麼</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>出席信用</strong></td>
+<td>報名了卻沒到、太晚取消 → 扣分</td>
+<td>100 分起扣，臨時取消或沒到各 12.5，生病一會期免責 2 次</td>
+</tr>
+<tr>
+<td><strong>連續缺席燈</strong></td>
+<td><strong>連續三場月例會都沒出現</strong></td>
+<td>🔴 亮燈＝可以談退社了</td>
+</tr>
+</tbody>
+</table></div>
+<p>燈號出現在<strong>夥伴管理</strong>與<strong>名冊卡片</strong>上（只有登入的夥伴看得到）。</p>
+<p>規則：<strong>只算月例會</strong>、<strong>只有生病中斷連續</strong>（公出可以提早請，不中斷）。
+⚠️ 只計算「真的開過報到」的場次——某場沒開報到，不會害全分會一起亮紅燈。
+⚠️ 累積不到三場可數時一律不亮，<strong>現在看不到燈是正常的</strong>。</p>
+<hr />
+<h2>6　公告、問卷、活動</h2>
+<ul>
+<li><strong>公告</strong>：可以標「重要」（置頂＋紅字）</li>
+<li><strong>問卷</strong>：可以標必填／選填；完成率的分子<strong>要幹部手動填</strong>
+  （系統刻意不記錄誰填了誰沒填）</li>
+<li><strong>活動</strong>：分 TC8 自己辦的與 CXO 轉貼，發布時選「誰辦的」</li>
+<li><strong>草稿</strong>：存成「只有幹部看得到」，討論定案再公開。未公開的內容一般身分連 API 都撈不到</li>
+</ul>
+<hr />
+<h2>7　團購</h2>
+<p>「團購」→「團購管理」。</p>
+<ul>
+<li><strong>審核</strong>：夥伴開團要幹部核可才會公開</li>
+<li><strong>收款登記</strong>：<strong>只有幹部勾得動</strong>（財務長）。開團的人看得到收了沒，但不能自己勾</li>
+<li><strong>流水帳</strong>：每一筆收款只增不改，記誰收的、什麼時候、經手人。對帳吵起來看這裡</li>
+<li><strong>刪除</strong>：已經有人訂購的團會二次確認，並列出影響範圍</li>
+</ul>
+<blockquote>
+<p>金額存的是「勾選當下」的金額，不會即時重算——
+這樣才看得出「已收 1200 但現在應付 1500」的差額。</p>
+</blockquote>
+<hr />
+<h2>8　夥伴管理</h2>
+<p>側邊欄「分會管理」→「👥 夥伴管理」。五個分類：</p>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>動作</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>審核新申請</strong></td>
+<td>名單上沒有的人自己申請，四位幹部任何一位核可即上線</td>
+</tr>
+<tr>
+<td><strong>解除綁定</strong></td>
+<td>綁錯人時用。解綁後那個身分可以重新被認領</td>
+</tr>
+<tr>
+<td><strong>標記退出</strong></td>
+<td>軟刪除：名冊上不再顯示，但他發過的內容留著</td>
+</tr>
+<tr>
+<td><strong>刪除</strong></td>
+<td>只給重複的空帳號用，會先做 14 項關聯檢查</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2>9　哪些資料是公開的（未登入也看得到）</h2>
+<div class="tablewrap"><table>
+<thead>
+<tr>
+<th>公開</th>
+<th>要登入</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>夥伴名冊（姓名、公司、專業別、LINE 暱稱）</td>
+<td>誰報名了、誰按讚</td>
+</tr>
+<tr>
+<td>活動、公告、問卷、AI 案例、Q&amp;A 的內容</td>
+<td><strong>留言內容</strong>、連續缺席燈號</td>
+</tr>
+<tr>
+<td>「有幾人報名／幾個讚／幾則討論」的<strong>數字</strong></td>
+<td>餐點統計、飲食備註、來賓電話、報到座標</td>
+</tr>
+</tbody>
+</table></div>
+<p>⛔ <strong>不外流</strong>：LINE 帳號 ID、表單後台連結、來賓電話、報到時的定位。</p>
+<hr />
+<h2>10　出事的時候</h2>
+<ul>
+<li><strong>有人說「沒改到」</strong>：先看網頁最下面的「版本 年-月-日 時:分」，
+  對得上就是他的瀏覽器要重新整理；對不上就是還沒部署完（GitHub 大約 10 分鐘）</li>
+<li><strong>名單讀不出來／畫面空白</strong>：先重新整理一次再說；持續發生就找羅伯特</li>
+<li><strong>系統的維運與交接</strong>：在私有倉 <code>cxo-tc8/tc8-docs</code>（CHANGELOG 記錄每一次改動與原因）</li>
+</ul>`;
+/* HELP_END */
+
+let HELP_TAB = "member";
+function renderHelp(){
+  const officer = isOfficer();
+  if(HELP_TAB === "officer" && !officer) HELP_TAB = "member";
+  el("v-help").innerHTML = `
+    <div class="sec"><h2>使用說明</h2></div>
+    ${officer ? `<div class="tools"><div class="chips">
+      <button class="chip${HELP_TAB==="member"?" on":""}" onclick="HELP_TAB='member';renderHelp()">夥伴版</button>
+      <button class="chip${HELP_TAB==="officer"?" on":""}" onclick="HELP_TAB='officer';renderHelp()">幹部版</button>
+    </div></div>` : ""}
+    <article class="card detail helpdoc">${HELP_TAB==="officer" ? HELP_OFFICER : HELP_MEMBER}</article>`;
+}
 
 function homeHTML(){
   const monthly = byKind("monthly")[0];
