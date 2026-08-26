@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:22</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:27</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -908,14 +908,24 @@ function groupByMonth(list){
   return Object.entries(g).sort((a,b) => b[0].localeCompare(a[0]))
     .map(([k, v]) => [k, v.sort((x,y) => String(monthKey(y)+ (y.event_at||"")).localeCompare(String(monthKey(x)+(x.event_at||""))))]);
 }
+// 幹部有兩種活動可以發，展開讓他選；一般夥伴只有一種，直接開表單不要多一層
+function toggleAddAct(){
+  if(!isOfficer()){ openPost("member_event"); return; }
+  const m = el("addactmenu"); if(!m) return;
+  // ⛔ 用 style.display 不用 hidden 屬性：[hidden] 優先度最低，會被別的規則蓋掉
+  m.style.display = getComputedStyle(m).display === "none" ? "block" : "none";
+}
+
 function renderActs(){
   const list = actsOf(ACT_TAB);
   const groups = groupByMonth(list);
   const twNow = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"}).slice(0,7);
   el("v-acts").innerHTML = `
-    <div class="sec"><h2>活動</h2>${
-      ME ? `<span class="more" onclick="openPost('member_event')">＋ 貼我的活動</span>${
-        isOfficer() ? `　<span class="more" onclick="openPost('event')">＋ 發布分會活動</span>` : ""}` : ""}</div>
+    <div class="sec"><h2>活動</h2>${ME ? `<span class="more" onclick="toggleAddAct()">＋ 新增</span>` : ""}</div>
+    ${ME && isOfficer() ? `<div class="card admincard" id="addactmenu" style="display:none;margin-bottom:12px">
+      <div class="arow" onclick="openPost('member_event')"><span>📣 貼我的活動</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openPost('event')"><span>🏛️ 發布分會活動</span><span class="ago">›</span></div>
+    </div>` : ""}
     <div class="tools"><div class="chips" id="acttabs">
       ${ORG_TABS.map(([k, label]) => `<button class="chip${ACT_TAB===k?" on":""}"
         onclick="ACT_TAB='${k}';renderActs()">${label} ${actsOf(k).length}</button>`).join("")}
