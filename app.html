@@ -98,6 +98,15 @@ a{color:inherit;text-decoration:none}
 .adminbar button{min-height:36px;padding:0 11px;border:1px solid var(--line);background:var(--card);
   border-radius:var(--r-sm);font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer}
 .adminbar button:hover{border-color:var(--blue-500);color:var(--blue-500)}
+.admincard{padding:0}
+.arow{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;
+  border-top:1px solid var(--line-soft);font-size:.94rem}
+.arow:first-child{border-top:none}
+.arow:hover{background:var(--chip)}
+.arow>span:first-child{flex:1}
+.ago{color:var(--muted);font-size:1.2rem}
+.abadge{background:var(--orange);color:#fff;font-size:.75rem;font-weight:700;
+  padding:2px 9px;border-radius:999px}
 .guestbox{margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-sm)}
 .guesthead{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.88rem}
 .guesthead b{color:var(--blue-900)}
@@ -473,12 +482,13 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-needs"></main>
 <main class="wrap view" id="v-me"></main>
 <main class="wrap view" id="v-claim"></main>
+<main class="wrap view" id="v-admin"></main>
 <main class="wrap view" id="v-form"></main>
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:23</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:26</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -489,6 +499,7 @@ a.btn{text-decoration:none}
   <button data-v="cases"><svg class="ic" width="21" height="21"><use href="#i-case"/></svg>案例</button>
   <button data-v="needs"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
+  <button data-v="admin" id="nav-admin" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
 </nav>
 
 <script>
@@ -942,6 +953,74 @@ async function approveBuy(id, reject){
   await reloadBuys(); openBuyPending();
 }
 
+// ── 分會管理（幹部專用分頁）──────────────────────────
+// 幹部功能集中在這裡，月例會卡片就不會越積越多按鈕。
+// ⛔ 這裡只是入口，每一項的權限仍由各自的 Edge Function 把關——
+//    藏起來的按鈕擋不住任何人，真正的門在後端。
+let ADMIN_STAT = null;
+async function renderAdmin(){
+  if(!isOfficer()){
+    el("v-admin").innerHTML = `<div class="card"><div class="empty">這一頁只有幹部看得到</div></div>`;
+    return;
+  }
+  el("v-admin").innerHTML = `
+    <div class="sec"><h2>分會管理</h2></div>
+    <div class="card"><div class="empty">載入中…</div></div>`;
+
+  // 先把幾個「需要有人處理」的數字撈出來，讓幹部一眼看到哪裡有事
+  let credit = null, pending = null, applies = 0;
+  try{
+    const [c, gb] = await Promise.all([
+      checkinApi("credit", {all: true}),
+      buyApi("pending", {}),
+    ]);
+    if(c && c.ok) credit = c;
+    if(gb && gb.ok) pending = gb.list || [];
+  }catch(e){ console.error("分會管理讀取失敗", e); }
+  try{ applies = (PENDING || 0); }catch(e){}
+
+  const bad = credit ? credit.list.filter(x => x.light !== "ok") : [];
+  const monthly = POSTS.find(p => p.kind === "monthly");
+
+  el("v-admin").innerHTML = `
+    <div class="sec"><h2>分會管理</h2><span class="more" onclick="renderAdmin()">重新整理</span></div>
+
+    <div class="bstat" style="margin-top:0">
+      <div class="${bad.length ? "warn" : ""}"><b>${bad.length}</b><span>需要關心的夥伴</span></div>
+      <div class="${pending && pending.length ? "warn" : ""}"><b>${pending ? pending.length : "—"}</b><span>待審的團購</span></div>
+      <div class="${applies ? "warn" : ""}"><b>${applies}</b><span>新夥伴申請</span></div>
+    </div>
+
+    ${monthly ? `<div class="sec" style="margin-top:22px"><h2>${esc(monthly.title)}</h2></div>
+    <div class="card admincard">
+      <div class="arow" onclick="openRoster(${monthly.id})"><span>📋 報名名單與餐點統計</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openBoard(${monthly.id})"><span>✅ 報到台</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openCheckinAdmin(${monthly.id})"><span>🔳 報到碼與時間窗</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openMeals(${monthly.id})"><span>🍱 餐點選項</span><span class="ago">›</span></div>
+      <div class="arow" onclick="openPost('monthly',${monthly.id})"><span>✏️ 編輯這場</span><span class="ago">›</span></div>
+    </div>` : `<div class="card"><div class="empty">還沒有排定的月例會</div></div>`}
+
+    <div class="sec" style="margin-top:22px"><h2>分會事務</h2></div>
+    <div class="card admincard">
+      <div class="arow" onclick="openCreditAll()">
+        <span>📊 出席信用</span>
+        ${bad.length ? `<span class="abadge">${bad.length}</span>` : ""}<span class="ago">›</span></div>
+      <div class="arow" onclick="openBuyPending()">
+        <span>🛒 審核團購</span>
+        ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
+      <div class="arow" onclick="go('me')"><span>👤 新夥伴申請</span>
+        ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
+    </div>
+
+    ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
+    <div class="card admincard">
+      ${bad.slice(0,8).map(x => `<div class="arow" style="cursor:default">
+        <span>${x.light === "alert" ? "🔴" : "🟡"}　${esc(x.name)}</span>
+        <span class="mnote">${x.score} 分　臨時取消 ${x.late_count} 次</span></div>`).join("")}
+      ${bad.length > 8 ? `<div class="arow" onclick="openCreditAll()"><span class="mnote">還有 ${bad.length - 8} 位…</span><span class="ago">›</span></div>` : ""}
+    </div>` : ""}`;
+}
+
 // ── 出席信用分數（S8 #21）────────────────────────────
 // ⭐ 分數不存在資料庫裡，每次查詢當場算——規則會變（12.5 可能改成 25、
 //    門檻可能挪），事實（誰在哪一場沒到、原因是什麼）不會變。
@@ -1266,12 +1345,20 @@ async function removeGuest(id, name){
 
 // ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
 async function openRoster(postId){
-  if(!isOfficer()) return;
+  if(!ME){ go("me"); return; }
   const r = await signupApi("summary", {post_id: postId});
-  if(!r || !r.ok){ alert("讀取失敗"); return; }
+  if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
+  // 幹部看名單時一併帶出信用分數，才能當場核對「這個人常不常放鴿子」
+  let credit = {};
+  if(r.officer){
+    try{
+      const c = await checkinApi("credit", {all: true});
+      if(c && c.ok) credit = Object.fromEntries(c.list.map(x => [x.id, x]));
+    }catch(e){ console.error("信用讀取失敗", e); }
+  }
   const p = POSTS.find(x => x.id === postId);
-  const grps = Object.keys(r.tally);
-  const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices)))];
+  const grps = Object.keys(r.tally || {});
+  const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices || {})))];
 
   el("v-form").innerHTML = `
     <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
@@ -1281,7 +1368,7 @@ async function openRoster(postId){
         已確認報名 <b style="color:var(--orange);font-size:1.1rem">${r.total}</b> 人${
           r.no_choice ? `，其中 <b>${r.no_choice}</b> 人沒有訂餐` : ""}
       </div>
-      ${grps.map(g => `
+      ${(r.officer ? grps : []).map(g => `
         <div class="field" style="margin-top:18px">
           <label>${esc(g)}統計</label>
           <div class="tally">${Object.entries(r.tally[g])
@@ -1290,21 +1377,39 @@ async function openRoster(postId){
             <div class="tallyrow sum"><span>小計</span><b>${Object.values(r.tally[g]).reduce((a,b)=>a+b,0)}</b></div>
           </div>
         </div>`).join("")}
+      ${r.guests && r.guests.length ? `<div class="field" style="margin-top:20px">
+        <label>來賓（${r.guests.length} 位）</label>
+        <div class="rosterwrap"><table class="roster">
+          <thead><tr><th>#</th><th>姓名</th><th>公司</th><th>介紹人</th>${
+            r.officer ? `<th>餐點</th>` : ""}</tr></thead>
+          <tbody>${r.guests.map((g,i) => `<tr><td>${i+1}</td><td>${esc(g.name)}</td>
+            <td>${esc(g.company||"")}</td><td>${esc(memberName(g.host_id))}</td>
+            ${r.officer ? `<td>${esc(Object.values(g.choices||{}).join("・")||"—")}</td>` : ""}</tr>`).join("")}</tbody>
+        </table></div></div>` : ""}
+
       <div class="field" style="margin-top:22px">
-        <label>完整名單</label>
+        <label>報名的夥伴（${r.list.length} 位）</label>
+        ${r.officer ? `<div class="help">信用欄可以當場核對：🔴 是本會期臨時取消 3 次以上的人</div>` : ""}
         <div class="rosterwrap"><table class="roster">
           <thead><tr><th>#</th><th>姓名</th><th>專業別</th>${
-            cols.map(c => `<th>${esc(c)}</th>`).join("")}<th>備註</th></tr></thead>
-          <tbody>${r.list.map((x,i) => `<tr>
+            r.officer ? `<th>信用</th>` : ""}${
+            cols.map(c => `<th>${esc(c)}</th>`).join("")}${r.officer ? `<th>備註</th>` : ""}</tr></thead>
+          <tbody>${r.list.map((x,i) => {
+            const c = credit[x.member_id];
+            const L = c ? (LIGHT[c.light] || LIGHT.ok) : null;
+            return `<tr>
             <td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.tag||"")}</td>
-            ${cols.map(c => `<td>${esc(x.choices[c] || "—")}</td>`).join("")}
-            <td>${esc(x.diet_note || "")}</td></tr>`).join("")}</tbody>
+            ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
+            ${cols.map(c2 => `<td>${esc((x.choices||{})[c2] || "—")}</td>`).join("")}
+            ${r.officer ? `<td>${esc(x.diet_note || "")}</td>` : ""}</tr>`;
+          }).join("")}</tbody>
         </table></div>
-        <button class="mbtn add" onclick='downloadRoster(${JSON.stringify(cols)}, ${postId})'>⬇︎ 下載成 Excel 可開的檔（CSV）</button>
+        ${r.officer ? `<button class="mbtn add" onclick='downloadRoster(${JSON.stringify(cols)}, ${postId})'>⬇︎ 下載成 Excel 可開的檔（CSV）</button>
         <div class="help" style="margin-top:6px">
           ⚠️ 在 LINE 裡面開這個網頁下載不會成功（LINE 的瀏覽器擋下載）。
           請先用 Chrome 或 Safari 開啟本站再按下載。
-        </div>
+        </div>` : `<div class="help" style="margin-top:8px">
+          餐點與飲食備註只有幹部看得到。</div>`}
       </div>
     </div>`;
   window.__roster = r;
@@ -1524,11 +1629,17 @@ async function fn(action, body){
 }
 
 /* ── 分頁切換 ───────────────────────────── */
+// 幹部才看得到「分會管理」這個分頁入口
+function syncAdminNav(){
+  const b = el("nav-admin"); if(!b) return;
+  b.style.display = isOfficer() ? "" : "none";
+}
 function go(v, btn){
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-"+v).classList.add("on");
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on", b.dataset.v===v));
   if(btn===undefined) window.scrollTo(0,0);
+  syncAdminNav();
   render(v);
 }
 document.querySelectorAll(".nav button").forEach(b=> b.onclick = ()=> go(b.dataset.v));
@@ -1581,6 +1692,7 @@ function paintMe(){
 
 function render(v){
   if(v==="home") el("v-home").innerHTML = homeHTML();
+  if(v==="admin") renderAdmin();
 
   if(v==="members"){
     el("v-members").innerHTML = `
