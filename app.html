@@ -447,6 +447,23 @@ a.btn{text-decoration:none}
 .filters select{min-height:44px;padding:0 12px;border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);font-size:.9rem;cursor:pointer}
 @media (max-width:640px){ .mgrid{grid-template-columns:1fr} }
 
+/* 活動頁置頂橫幅：月例會與 CXO 各一條。
+   ⛔ 不用 auto-fill：那會在寬螢幕擠成三欄，橫幅就不是橫幅了。
+   桌機固定兩欄並排、窄螢幕自動上下疊。 */
+.featured{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px}
+@media(min-width:820px){.featured{grid-template-columns:1fr 1fr}}
+.fbn{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:box-shadow .18s}
+.fbn:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
+.fbn .fimg{aspect-ratio:16/9;background:var(--line-soft)}
+.fbn .fimg img{width:100%;height:100%;object-fit:cover;display:block}
+/* 還沒放圖的時候不要留一塊灰色空格——用底色橫幅撐住，之後上傳圖片就換掉 */
+.fbn .fband{aspect-ratio:16/9;background:linear-gradient(135deg,var(--blue-900),var(--blue-500));
+  color:#fff;display:flex;flex-direction:column;justify-content:center;padding:18px 20px}
+.fbn .fband .k{font-size:.72rem;letter-spacing:1.5px;font-weight:700;opacity:.85}
+.fbn .fband .t{font-size:1.3rem;font-weight:800;margin-top:6px;line-height:1.35}
+.fbn .fbody{padding:13px 15px}
+.fbn .fbody .t{font-weight:800;font-size:1.02rem;line-height:1.45}
 .evgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .evcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .12s}
@@ -615,7 +632,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:55</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:59</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -925,7 +942,10 @@ function toggleAddAct(){
 }
 
 function renderActs(){
-  const list = actsOf(ACT_TAB);
+  const top = featuredOf(ACT_TAB);
+  const topIds = new Set(top.map(p => p.id));
+  // ⛔ 置頂的就不要再出現在下面的月份列表：重複的東西讓人以為系統沒做完
+  const list = actsOf(ACT_TAB).filter(p => !topIds.has(p.id));
   const groups = groupByMonth(list);
   const twNow = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"}).slice(0,7);
   el("v-acts").innerHTML = `
@@ -938,6 +958,7 @@ function renderActs(){
       ${ORG_TABS.map(([k, label]) => `<button class="chip${ACT_TAB===k?" on":""}"
         onclick="ACT_TAB='${k}';renderActs()">${label} ${actsOf(k).length}</button>`).join("")}
     </div></div>
+    ${top.length ? `<div class="featured">${top.map(featuredBanner).join("")}</div>` : ""}
     ${groups.length ? groups.map(([k, ps]) => `
       <div class="monthsec${k === twNow ? " now" : ""}">
         <div class="monthlbl">${monthLabel(k)}${k === twNow ? "　<span class='nowtag'>本月</span>" : ""}
@@ -2957,6 +2978,33 @@ function surveyCard(p){
     ${rate!=null?`<div class="bar"><i style="width:${rate}%"></i></div>
       <div class="rate"><span>全會完成率</span><span><b>${rate}%</b>　（${p.done_count} / ${MEMBERS.length}）</span></div>`:""}
   </div></div>`;
+}
+
+// 置頂橫幅要放哪幾則：月例會最新一場、CXO 最近一場。
+// 依分頁決定——切到「夥伴的活動」還置頂 CXO 會很怪。
+function featuredOf(tab){
+  const pick = [];
+  const monthly = POSTS.find(p => p.kind === "monthly");
+  const cxo     = POSTS.find(p => p.kind === "event" && p.org === "cxo");
+  if((tab === "all" || tab === "tc8") && monthly) pick.push(monthly);
+  if((tab === "all" || tab === "cxo") && cxo)     pick.push(cxo);
+  return pick;
+}
+// 大橫幅：有圖就用圖，沒圖用底色撐住版面（幹部之後上傳照片就換掉）
+function featuredBanner(p){
+  const img = (p.photos || [])[0];
+  return `<article class="fbn" onclick="openPostDetail(${p.id})">
+    ${img
+      ? `<div class="fimg"><img src="${esc(img)}" alt="" loading="lazy"></div>`
+      : `<div class="fband"><div class="k">${KIND_LABEL[p.kind] || ""}</div>
+           <div class="t">${esc(p.title)}</div></div>`}
+    <div class="fbody">
+      ${img ? `<div class="t">${esc(p.title)}</div>` : ""}
+      <div class="d">${[whenLabel(p), p.time_text ? esc(p.time_text) : "",
+        p.place ? "📍 " + esc(p.place) : ""].filter(Boolean).join("　・　")}</div>
+      ${statLine(p)}
+    </div>
+  </article>`;
 }
 
 // 卡片上的互動：報名幾人・幾個讚・幾則留言。都是 0 就整行不出現，不佔版面。
