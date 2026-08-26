@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:56</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:59</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -965,7 +965,7 @@ function renderBuys(){
       ME ? `<span class="more" onclick="openBuyForm()">＋ 我要開團</span>` : ""}</div>
     ${!ME ? `<div class="card"><div class="empty">用 LINE 登入之後就能訂購與開團</div></div>` : ""}
     ${isOfficer() ? `<div class="card" style="padding:12px 16px">
-      <span class="more" onclick="openBuyPending()">審核待上架的團購 →</span></div>` : ""}
+      <span class="more" onclick="openBuyOverview()">管理團購（審核・名單・收款）→</span></div>` : ""}
 
     ${(() => {
       const S = {draft:"📝 還沒送審", pending:"🕐 等幹部核可", rejected:"⛔ 已退回，可修改後再送"};
@@ -1460,8 +1460,9 @@ async function openBuyOverview(){
       <div style="font-weight:800;font-size:1.15rem">所有團購</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
         每一樣商品各自算門檻。點商品名稱可以看是誰訂的、訂了什麼規格。</div>
-      ${r.list.length ? r.list.map(b => `
-        <div class="itemcard">
+      ${r.list.length ? [...r.list].sort((x,y) =>
+          (x.status === "pending" ? 0 : 1) - (y.status === "pending" ? 0 : 1)).map(b => `
+        <div class="itemcard"${b.status === "pending" ? ' style="border-color:var(--orange)"' : ""}>
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
             <div class="itemname">${esc(b.title)}</div>
             <span class="mnote">${LABEL[b.status] || b.status}</span>
@@ -1477,6 +1478,15 @@ async function openBuyOverview(){
               <b class="${i.reached ? "okmark" : ""}">${i.qty} / ${i.min_qty}${i.reached ? " ✓" : ""}</b>
             </div>`).join("")}</div>`
             : `<div class="mnote" style="margin-top:6px">這團還沒放商品</div>`}
+          ${b.status === "pending" ? `
+            <div class="mnote" style="margin-top:8px">${(b.group_buy_items||b.items||[]).length
+              ? "等你核可才會上架。" : "⚠️ 這團還沒放商品，核可了也沒東西可以訂。"}</div>
+            <div class="actions" style="margin-top:10px">
+              <button class="btn btn-primary btn-sm" onclick="approveBuy(${b.id}, false)">核可上架</button>
+              <button class="btn btn-ghost btn-sm" onclick="approveBuy(${b.id}, true)">退回</button>
+              <button class="btn btn-ghost btn-sm" style="color:#b4261a"
+                onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
+            </div>` : ""}
           <button class="mbtn add" onclick="openBuyDetail(${b.id}, 'overview')">📋 完整訂購名單</button>
         </div>`).join("")
         : `<div class="mnote" style="margin-top:16px">還沒有任何團購</div>`}
@@ -1484,40 +1494,11 @@ async function openBuyOverview(){
   go("form");
 }
 
-async function openBuyPending(){
-  if(!isOfficer()) return;
-  const r = await buyApi("pending", {});
-  if(!r || !r.ok){ alert("讀取失敗"); return; }
-  el("v-form").innerHTML = `
-    ${backBar()}
-    <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">待審的團購</div>
-      <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
-        核可之後才會出現在首頁。四位幹部任何一位核可都算數。
-      </div>
-      ${r.list.length ? r.list.map(b => `<div class="card" style="padding:14px;margin-top:12px">
-        <div style="font-weight:700">${esc(b.title)}</div>
-        <div class="buymeta">${esc((b.members&&b.members.name)||"")}　｜　截止 ${esc(b.deadline)}</div>
-        ${b.body ? `<div class="mdesc" style="white-space:pre-wrap;margin-top:8px">${esc(b.body)}</div>` : ""}
-        ${(b.group_buy_items||[]).length ? `<div class="tally" style="margin-top:8px">
-          ${b.group_buy_items.map(i => `<div class="tallyrow">
-            <span>${esc(i.name)}</span><b>$${i.unit_price}　門檻 ${i.min_qty} 件</b></div>`).join("")}
-        </div>` : `<div class="mnote" style="margin-top:8px">⚠️ 這團還沒放商品，核可了也沒東西可以訂</div>`}
-        <div class="actions" style="margin-top:12px">
-          <button class="btn btn-primary" onclick="approveBuy(${b.id}, false)">核可上架</button>
-          <button class="btn btn-ghost" onclick="approveBuy(${b.id}, true)">退回</button>
-          <button class="btn btn-ghost" style="color:#b4261a"
-            onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
-        </div></div>`).join("")
-        : `<div class="mnote" style="margin-top:16px">目前沒有待審的團購</div>`}
-    </div>`;
-  go("form");
-}
 async function approveBuy(id, reject){
   if(reject && !confirm("確定要退回這個團購嗎？")) return;
   const r = await buyApi("approve", {id, reject});
   if(!r || !r.ok){ alert("失敗"); return; }
-  await reloadBuys(); openBuyPending();
+  await reloadBuys(); openBuyOverview();
 }
 
 // ── 分會管理（幹部專用分頁）──────────────────────────
@@ -1571,11 +1552,9 @@ async function renderAdmin(){
       <div class="arow" onclick="openCreditAll()">
         <span>📊 出席信用</span>
         ${bad.length ? `<span class="abadge">${bad.length}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="openBuyPending()">
-        <span>🛒 審核待上架的團購</span>
-        ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="openBuyOverview()">
-        <span>📦 所有團購與訂購名單</span><span class="ago">›</span></div>
+        <span>📦 團購（審核・訂購名單・收款）</span>
+        ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="go('me')"><span>👤 新夥伴申請</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
     </div>
