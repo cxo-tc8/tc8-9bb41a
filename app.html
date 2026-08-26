@@ -561,7 +561,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:12</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:14</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -573,7 +573,7 @@ a.btn{text-decoration:none}
   <button data-v="needs" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>需求</button>
   <button data-v="acts" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-spark"/></svg>活動</button>
   <button data-v="notices" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bell"/></svg>公告</button>
-  <button data-v="buys" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
+  <button data-v="buys"><svg class="ic" width="21" height="21"><use href="#i-bag"/></svg>團購</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
@@ -3078,10 +3078,15 @@ function openPost(kind, id){
   // ⛔ 不可以用 toISOString()：那是 UTC，塞進去會少 8 小時，
   //    而存檔時又把它當成當地時間轉回 UTC → **每編輯一次就退 8 小時**，
   //    退到跨日就變前一天（9/24 → 9/23 → 9/22）。讀寫要用同一套時區假設。
-  const dtLocal = iso => {
-    if(!iso) return "";
+  // 把資料庫存的時間拆成台灣的「日期」與「時間」兩格。
+  // ⛔ 不用 toISOString()（那是 UTC，會少 8 小時），也不靠瀏覽器時區——
+  //    夥伴出差到日本、或手機時區設錯，看到的時間都必須是台灣時間。
+  const twParts = iso => {
+    if(!iso) return {date:"", time:""};
     const d = new Date(iso);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    const date = d.toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});          // YYYY-MM-DD
+    const time = d.toLocaleTimeString("sv-SE", {timeZone:"Asia/Taipei", hour12:false}).slice(0,5); // HH:MM
+    return {date, time};
   };
 
   el("v-form").innerHTML = `
@@ -3148,7 +3153,12 @@ function openPost(kind, id){
         <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>`:""}
       ${has("photo2")?photoField("p_speaker2_photo","第二位主講者照片", p&&p.speaker2_photo):""}
       ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
-      ${has("event_at")?`<div class="field"><label>時間</label><input type="datetime-local" id="p_event_at" value="${dtLocal(p&&p.event_at)}" class="dateinput" style="width:100%"></div>`:""}
+      ${has("event_at")?`<div class="field"><label>日期與時間</label>
+        <div class="help">分開選比較好按。時間一律以台灣時間為準</div>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="p_event_date" value="${twParts(p&&p.event_at).date}" class="dateinput" style="flex:1;min-width:0">
+          <input type="time" id="p_event_time" value="${twParts(p&&p.event_at).time}" class="dateinput" style="flex:1;min-width:0">
+        </div></div>`:""}
       ${has("capacity")?`<div class="field"><label>人數上限</label>
         <div class="help">空白 = 不限人數。改小到低於已報名人數時系統會擋下來</div>
         <input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：60"></div>`:""}
@@ -3252,7 +3262,10 @@ async function savePost(kind, id){
     done_count:g("done_count"), admin_link:g("admin_link"),
     visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
-    event_at: g("event_at") ? new Date(g("event_at")).toISOString() : null};
+    // 明確寫上 +08:00：不管使用者的裝置在哪個時區，存進去的都是台灣時間
+    event_at: (el("p_event_date") && el("p_event_date").value)
+      ? new Date(`${el("p_event_date").value}T${(el("p_event_time") && el("p_event_time").value) || "00:00"}:00+08:00`).toISOString()
+      : null};
   if(body.start_date && body.deadline && body.deadline < body.start_date){
     el("p_err").innerHTML = '<div class="err">結束日比開始日還早，請檢查一下</div>';
     b.disabled=false; b.textContent=id?"儲存":"發布"; return;
