@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:59</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:06</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1487,7 +1487,12 @@ async function openBuyOverview(){
               <button class="btn btn-ghost btn-sm" style="color:#b4261a"
                 onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
             </div>` : ""}
-          <button class="mbtn add" onclick="openBuyDetail(${b.id}, 'overview')">📋 完整訂購名單</button>
+          <div class="actions" style="margin-top:10px">
+            <button class="mbtn add" onclick="openBuyDetail(${b.id}, 'overview')">📋 完整訂購名單</button>
+            <button class="mbtn" onclick="openBuyForm(${b.id})">✏️ 改內容</button>
+            <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
+              onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
+          </div>
         </div>`).join("")
         : `<div class="mnote" style="margin-top:16px">還沒有任何團購</div>`}
     </div>`;
