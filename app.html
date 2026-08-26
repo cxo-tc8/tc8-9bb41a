@@ -611,7 +611,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:22</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:25</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1596,7 +1596,7 @@ async function openMemberAdmin(tab){
           onclick="openMemberAdmin('${k}')">${label} ${n}</button>`).join("")}
       </div></div>
       <div class="card admincard" style="margin-top:10px">${list.length ? list.map(m => `
-        <div class="arow" style="align-items:flex-start">
+        <div class="arow" style="align-items:center;gap:10px">
           <span style="flex:1;min-width:0">
             <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
             <div class="mnote" style="margin-top:2px">
@@ -1608,7 +1608,7 @@ async function openMemberAdmin(tab){
                 : m.bound_at ? `<span class="okmark">✓ 已綁定 ${String(m.bound_at).slice(0,10)}</span>`
                 : `<span class="tagw">還沒綁</span>`}</div>
           </span>
-          <span class="actions" style="flex:none;flex-direction:column;gap:6px">
+          <span class="actions" style="flex:none;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:230px">
             ${m.status === "pending"
               ? `<button class="mbtn add" onclick="reviewMember(${m.id},'approve','${esc((m.name||"").replace(/'/g,""))}')">核可</button>
                  <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewMember(${m.id},'reject','${esc((m.name||"").replace(/'/g,""))}')">退回</button>`
