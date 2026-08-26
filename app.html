@@ -477,6 +477,7 @@ a.btn{text-decoration:none}
 .photobox{display:flex;align-items:center;gap:11px;min-height:56px}
 .photobox img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+.sptopic{margin-top:4px;font-size:.84rem;color:var(--muted);line-height:1.55;white-space:pre-wrap}
 /* 月例會講者：桌機左右並排、手機上下堆疊 */
 .spgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
 @media (max-width:640px){ .spgrid{grid-template-columns:1fr} }
@@ -609,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 13:28</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 14:12</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -640,7 +641,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
@@ -1507,6 +1508,48 @@ async function openBuyDetail(buyId, from){
 }
 
 // 幹部總覽：一頁看完每一團、每一樣商品訂到幾件，點商品就進去看是誰訂的
+// 講者本人（或幹部）看得到的入口：更新自己的講題與照片
+function myTalkBtn(p){
+  if(!ME || !p) return "";
+  const slot = p.speaker_id === ME.id ? 1 : (p.speaker2_id === ME.id ? 2 : null);
+  if(!slot && !isOfficer()) return "";
+  if(!slot) return "";   // 幹部走「編輯這場」那條路，這裡只給講者本人
+  return `<div class="actions" style="margin-top:12px">
+    <button class="btn btn-primary" onclick="openTalkForm(${p.id},${slot})">✏️ 更新我的講題與照片</button></div>`;
+}
+
+function openTalkForm(postId, slot){
+  const p = POSTS.find(x => x.id === postId); if(!p) return;
+  const name = slot === 1 ? p.speaker : p.speaker2;
+  const photo = (slot === 1 ? p.speaker_photo : p.speaker2_photo) || "";
+  const body = (slot === 1 ? p.speaker_body : p.speaker2_body) || "";
+  el("v-form").innerHTML = `${backTo("go('home'); renderHome()", "回首頁")}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">更新我的講題</div>
+      <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
+        ${esc(p.title)}　｜　${esc(name || "")}<br>
+        改好之後，首頁的月例會卡片與活動詳情頁馬上就會換成新的。</div>
+      <div class="field" style="margin-top:16px"><label>講題與內容簡介</label>
+        <div class="help">這次要講什麼、聽完能帶走什麼。可以分行</div>
+        <textarea id="tk_body" rows="6" maxlength="2000">${esc(body)}</textarea></div>
+      ${photoField("tk_photo", "我的照片", photo)}
+      <div class="formbar">
+        <button class="btn btn-primary" onclick="saveTalk(${postId},${slot},this)">存起來</button>
+      </div>
+    </div>`;
+  go("form");
+}
+async function saveTalk(postId, slot, btn){
+  btn.disabled = true; btn.textContent = "儲存中…";
+  const r = await postApi("speaker_update", {id: postId, slot,
+    body: el("tk_body").value, photo: el("tk_photo") ? el("tk_photo").value : ""});
+  btn.disabled = false; btn.textContent = "存起來";
+  if(r.error){ alert(r.error); return; }
+  await reloadPosts();
+  alert("更新好了，首頁已經換成新的內容");
+  go("home"); renderHome();
+}
+
 // 幹部：誰綁了、綁在哪個名字上、綁錯了在這裡解除
 async function openBindList(){
   if(!isOfficer()) return;
@@ -2710,11 +2753,14 @@ function homeHTML(){
       <div class="body">
         <div class="meta">${monthly.place?`<span>📍 <b>${esc(monthly.place)}</b></span>`:""}
           ${monthly.capacity?`<span>名額 <b>${monthly.capacity}</b></span>`:""}</div>
-        ${(()=>{const sps=[[monthly.speaker,monthly.speaker_photo],[monthly.speaker2,monthly.speaker2_photo]].filter(x=>x[0]);
-          return sps.length?`<div class="spgrid">`+sps.map(([sp,ph])=>`
+        ${(()=>{const sps=[[monthly.speaker,monthly.speaker_photo,monthly.speaker_body],
+                            [monthly.speaker2,monthly.speaker2_photo,monthly.speaker2_body]].filter(x=>x[0]);
+          return sps.length?`<div class="spgrid">`+sps.map(([sp,ph,bd])=>`
             <div class="spcell">
               ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${esc(ph)}')" title="點一下放大">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
-              <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div></div></div>`).join("")+`</div>`:"";})()}
+              <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div>
+                ${bd?`<div class="sptopic">${esc(bd)}</div>`:""}</div></div>`).join("")+`</div>`:"";})()}
+        ${myTalkBtn(monthly)}
         ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
         ${signupBlock(monthly)}
         ${myOrderLine(monthly)}
@@ -2895,10 +2941,12 @@ function openPostDetail(id){
       ${p.fee?`<div class="block"><div class="lbl">費用</div><p style="white-space:pre-wrap">${esc(p.fee)}</p></div>`:""}
       ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).length?
         `<div class="block"><div class="lbl">主講</div>
-          ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).map(([sp,ph])=>`
-            <div class="speaker" style="border:none;padding:6px 0;margin:0">
+          ${[[p.speaker,p.speaker_photo,p.speaker_body],[p.speaker2,p.speaker2_photo,p.speaker2_body]].filter(x=>x[0]).map(([sp,ph,bd])=>`
+            <div class="speaker" style="border:none;padding:6px 0;margin:0;align-items:flex-start">
               ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
-              <div><div class="n">${esc(sp)}</div></div></div>`).join("")}</div>`:""}
+              <div style="flex:1;min-width:0"><div class="n">${esc(sp)}</div>
+                ${bd?`<div class="mdesc" style="margin-top:4px;white-space:pre-wrap">${esc(bd)}</div>`:""}</div></div>`).join("")}</div>`:""}
+      ${myTalkBtn(p)}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
       ${(p.photos||[]).length?`<div class="block"><div class="lbl">照片</div>
         <div class="gallery">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" onclick="window.open('${esc(u)}','_blank')">`).join("")}</div></div>`:""}
@@ -3412,6 +3460,16 @@ function switchMsgType(k){
   el("p_save").textContent = el("p_save").dataset.editing==="1" ? "儲存" : (k==="survey"?"發布問卷":"發布公告");
 }
 
+// 從名冊選一位夥伴（用來指定「講者是誰」，指定後他本人才改得動自己那一段）
+function memberSelect(id, current){
+  const list = [...MEMBERS].sort((a,b) => (a.name||"").localeCompare(b.name||"", "zh-Hant"));
+  return `<select id="${id}" class="dateinput" style="width:100%">
+    <option value="">（不指定／外部講者）</option>
+    ${list.map(m => `<option value="${m.id}"${Number(current)===m.id?" selected":""}>${esc(m.name)}${
+      m.company?`（${esc(m.company)}）`:""}</option>`).join("")}
+  </select>`;
+}
+
 function photoField(id, label, current){
   return `<div class="field"><label>${label}</label>
     <div class="help">選一張就好，會自動縮小再上傳</div>
@@ -3514,7 +3572,13 @@ function openPost(kind, id){
       <div class="field"><label>標題<span class="req">*</span></label>
         <input type="text" id="p_title" maxlength="80" value="${val("title")}"></div>
 
-      ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>`:""}
+      ${has("speaker")?`<div class="field"><label>主講者</label><input type="text" id="p_speaker" value="${val("speaker")}"></div>
+        <div class="field"><label>這位講者是名冊上的誰</label>
+          <div class="help">選了之後，<b>他本人登入就能自己更新講題與照片</b>。外部講者不在名冊上就留空</div>
+          ${memberSelect("p_speaker_id", p&&p.speaker_id)}</div>
+        <div class="field"><label>講題與內容簡介</label>
+          <div class="help">這次要講什麼、聽完能帶走什麼。講者自己也改得動</div>
+          <textarea id="p_speaker_body" rows="4" maxlength="2000">${val("speaker_body")}</textarea></div>`:""}
       ${has("photo1")?photoField("p_speaker_photo","第一位主講者照片", p&&p.speaker_photo):""}
       ${kind==="event"?`<div class="field" style="margin-top:14px"><label>誰辦的</label>
         <div class="help">分開之後，「活動」那一頁才能照 TC8／CXO 分類</div>
@@ -3535,7 +3599,11 @@ function openPost(kind, id){
         <textarea id="p_fee" maxlength="800" placeholder="1 人 NT$2,000\n帶 1 位朋友：2 人 NT$2,500\n帶 2 位朋友：3 人 NT$3,000">${val("fee")}</textarea></div>`:""}
       ${has("speaker2")?`<div class="field"><label>第二位主講者</label>
         <div class="help">只有一位就留空</div>
-        <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>`:""}
+        <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>
+        <div class="field"><label>第二位是名冊上的誰</label>
+          ${memberSelect("p_speaker2_id", p&&p.speaker2_id)}</div>
+        <div class="field"><label>第二位的講題與內容簡介</label>
+          <textarea id="p_speaker2_body" rows="4" maxlength="2000">${val("speaker2_body")}</textarea></div>`:""}
       ${has("photo2")?photoField("p_speaker2_photo","第二位主講者照片", p&&p.speaker2_photo):""}
       ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
       ${has("event_at")?`<div class="field"><label>日期與時間</label>
@@ -3643,6 +3711,8 @@ async function savePost(kind, id){
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
     speaker:g("speaker"), speaker2:g("speaker2"), time_text:g("time_text"), fee:g("fee"),
     speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
+    speaker_body:g("speaker_body"), speaker2_body:g("speaker2_body"),
+    speaker_id:g("speaker_id"), speaker2_id:g("speaker2_id"),
     photos: el("p_photos") ? JSON.parse(el("p_photos").value||"[]") : undefined, start_date:g("start_date")||null, deadline:g("deadline")||null, capacity:g("capacity"),
     reserved_seats: g("reserved"),
     guest_quota: el("p_guestquota") ? el("p_guestquota").value.trim() : undefined,
