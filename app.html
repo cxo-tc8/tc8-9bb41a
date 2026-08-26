@@ -471,7 +471,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 08:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 09:17</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -643,7 +643,7 @@ function checkinButton(p){
   if(!isEventDay(p)) return "";
   if(!ME) return `<button class="btn btn-checkin" onclick="go('me')">登入後報到</button>`;
   if(MY_CHECKINS.has(p.id)) return `<button class="btn btn-done" disabled>✓ 已報到</button>`;
-  return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 現場報到</button>`;
+  return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 報到</button>`;
 }
 // 報到：先拿定位（拿不到也沒關係，GPS 只記錄不擋人），再送報到碼
 async function doCheckin(postId){
@@ -1020,7 +1020,7 @@ function renderBoard(){
   el("v-form").innerHTML = `
     <button class="back" onclick="go('home')"><svg width="17" height="17"><use href="#i-back"/></svg>回首頁</button>
     <div class="form">
-      <div style="font-weight:800;font-size:1.15rem">現場報到　${esc(p ? p.title : "")}</div>
+      <div style="font-weight:800;font-size:1.15rem">報到台　${esc(p ? p.title : "")}</div>
       <div class="bstat">
         <div><b>${r.guests.length}</b><span>來賓</span></div>
         <div><b>${gDone}</b><span>來賓到了</span></div>
@@ -1103,7 +1103,7 @@ async function openCheckinAdmin(postId){
         <b>報到時間窗</b>與<b>會場座標</b>：時間窗擋事後補簽，座標讓遠端報到留下痕跡。
       </div>
       <div class="qrbox">
-        <div class="qrhint">請夥伴在首頁按「現場報到」，輸入這組碼</div>
+        <div class="qrhint">請夥伴在首頁按「報到」，輸入這組碼</div>
         <div class="qrcode">${esc(r.code)}</div>
         <div class="qrhint2">投影在螢幕上，或寫在白板／報到台的牌子上</div>
       </div>
@@ -1811,7 +1811,7 @@ function homeHTML(){
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">編輯這場</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openMeals(${monthly.id})">🍱 餐點選項</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>`:""}
-          ${isOfficer()?`<button class="btn btn-ghost" onclick="openBoard(${monthly.id})">✅ 現場報到台</button>`:""}
+          ${isOfficer()?`<button class="btn btn-ghost" onclick="openBoard(${monthly.id})">✅ 報到台</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openCreditAll()">📊 出席信用</button>`:""}
           ${isOfficer()?`<button class="btn btn-ghost" onclick="openCheckinAdmin(${monthly.id})">🔳 報到碼</button>`:""}
         </div>
