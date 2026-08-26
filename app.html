@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:24</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:25</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3835,13 +3835,14 @@ async function renderClaim(){
       <div style="font-weight:800;font-size:1.1rem;margin-bottom:4px">你是哪一位？</div>
       <div style="color:var(--muted);font-size:.86rem;margin-bottom:14px;line-height:1.7">
         選出自己，之後這個 LINE 就代表你，不用再選。<br>
-        找不到自己、或不小心選錯了，找幹部處理。</div>
+        <b>名單裡沒有你？</b>按最下面的「我不在名單上，幫我建檔」。</div>
       <input class="search" style="width:100%;margin-bottom:10px;padding:0 12px" placeholder="輸入名字快速找" oninput="filterClaim(this.value)">
       <div class="pick" id="picklist"></div>
       <div id="claimErr"></div>
-      <div style="text-align:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
-        <div class="hint" style="margin-bottom:9px">名單裡沒有你？可能是剛入會還沒登記</div>
-        <button class="btn btn-ghost btn-sm" onclick="openApply()">我是新加入的，幫我建檔</button>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="hint" style="margin-bottom:9px;text-align:center">剛入會、還沒登記的夥伴走這裡</div>
+        <button class="btn btn-primary" style="width:100%" onclick="openApply()">＋ 我不在名單上，幫我建檔</button>
+        <div class="hint" style="margin-top:8px;text-align:center">送出後由幹部核可，核可完就能用了</div>
       </div>
     </div>`;
   window.__claimable = r.members;
@@ -3853,7 +3854,11 @@ function filterClaim(q){
   el("picklist").innerHTML = list.map(m=>`<button onclick="doClaim(${m.id},'${esc(m.name).replace(/'/g,"")}')">
     <div class="ava">${esc((m.name||"?").slice(0,1))}</div>
     <div style="flex:1"><div class="n">${esc(m.name)}</div><div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
-    </button>`).join("") || '<div class="empty">沒有可選的名字，請找幹部</div>';
+    </button>`).join("")
+    || `<div class="empty" style="padding:18px 12px">
+         <div>名單裡找不到${q ? `「${esc(q)}」` : "可選的名字"}</div>
+         <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="openApply()">＋ 幫我建檔</button>
+       </div>`;
 }
 async function doClaim(id, name){
   if(!confirm(`確定你是「${name}」嗎？\n綁定後要改需要請幹部解除。`)) return;
