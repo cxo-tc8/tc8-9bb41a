@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:11</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:14</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1772,10 +1772,9 @@ async function renderAdmin(){
       <div class="arow" onclick="openBuyOverview()">
         <span>📦 團購（審核・訂購名單・收款）</span>
         ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="openMemberAdmin('pending')"><span>👤 新夥伴申請（審核）</span>
+      <div class="arow" onclick="openMemberAdmin(${applies ? "'pending'" : "'all'"})">
+        <span>👥 夥伴管理（審核・綁定・退出・刪除）</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="openMemberAdmin()">
-        <span>👥 夥伴管理（綁定・退出・刪除）</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
