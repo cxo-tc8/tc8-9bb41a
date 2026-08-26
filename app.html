@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 10:49</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:27</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1134,6 +1134,7 @@ function openBuyForm(buyId){
         一張單可以放<b>好幾樣商品</b>，每一樣各自設定價格、數量下限、規格（顏色／尺寸）與照片。<br>
         開好之後要幹部核可才會出現在首頁。
       </div>
+      <div id="gb_pay"></div>
       <div class="field" style="margin-top:16px"><label>這次團購的名稱 *</label>
         <div class="help">例如「秋季服飾團」「手工皮件開團」</div>
         <input type="text" id="gb_title" maxlength="80" value="${v("title")}"></div>
@@ -1165,6 +1166,7 @@ function openBuyForm(buyId){
       </div>
     </div>`;
   go("form");
+  if(buyId) loadPayInto("gb_pay", buyId);   // 收款是即時資料，表單畫完再非同步補上
 }
 async function saveBuy(buyId, btn){
   const title = el("gb_title").value.trim(), deadline = el("gb_deadline").value;
@@ -1295,14 +1297,72 @@ async function delVariant(id, buyId, itemId){
   await reloadBuys(); openItemForm(buyId, itemId);
 }
 
+// 收款對帳：錢統一交給財務長，所以按「人」收、按「人」勾
+function payBlock(r){
+  const ppl = r.people || [];
+  if(!ppl.length) return "";
+  const canMark = !!r.can_mark;
+  return `<div class="itemcard">
+    <div class="itemname">收款對帳</div>
+    <div class="tally" style="margin-top:8px">
+      <div class="tallyrow"><span>已收</span><b>$${r.paid_total}</b></div>
+      <div class="tallyrow"><span>未收</span><b style="color:var(--orange-dark)">$${r.unpaid_total}</b></div>
+      <div class="tallyrow sum"><span>應收總額</span><b>$${r.grand_amount}</b></div>
+    </div>
+    ${canMark
+      ? `<div class="mnote" style="margin-top:8px">錢統一交給財務長，在這裡登記。系統會記錄是誰勾的。</div>`
+      : `<div class="mnote" style="margin-top:8px">繳費一律由幹部登記，開單的人只看得到收了沒</div>`}
+    <div class="rosterwrap" style="margin-top:10px"><table class="roster">
+      <thead><tr><th>姓名</th><th>件數</th><th>應付</th><th>收款</th></tr></thead>
+      <tbody>${ppl.map(x => `<tr>
+        <td>${esc(x.name)}</td>
+        <td>${x.qty}</td>
+        <td>$${x.amount}${x.mismatch ? `<span class="tagx">勾選時是 $${x.paid_amount}</span>` : ""}</td>
+        <td>${x.paid
+          ? `<span class="okmark">✓ 已收</span>${canMark
+              ? `<button class="mbtn" style="margin-left:6px" onclick="togglePay(${r.buy.id},${x.member_id},true)">取消</button>` : ""}`
+          : (canMark
+              ? `<button class="mbtn add" onclick="togglePay(${r.buy.id},${x.member_id},false)">標記已收</button>`
+              : `<span class="tagw">未收</span>`)}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+
+let BUY_DETAIL = null;   // 目前開著的那張訂購名單，勾收款時要回查姓名
+
+// 把收款對帳掛到指定的容器（編輯表單頁用）。沒權限就靜靜不顯示，不跳錯誤。
+async function loadPayInto(elId, buyId){
+  const box = el(elId); if(!box) return;
+  const r = await buyApi("detail", {buy_id: buyId});
+  if(!r || !r.ok){ box.innerHTML = ""; return; }
+  BUY_DETAIL = r;
+  box.innerHTML = payBlock(r);
+}
+
+async function togglePay(buyId, memberId, paid){
+  // ⛔ 姓名不塞進 onclick 字串：esc() 不轉單引號，名字裡有 ' 就會把整個屬性打斷
+  const who = ((BUY_DETAIL && BUY_DETAIL.people) || []).find(x => x.member_id === memberId);
+  const name = who ? who.name : "這位夥伴";
+  // 取消已收是會抹掉紀錄的動作，先問一句；標記已收則直接做，不擋人
+  if(paid && !confirm(`確定要取消「${name}」的已收款紀錄嗎？`)) return;
+  const r = await buyApi("pay", {buy_id: buyId, member_id: memberId, paid: !paid});
+  if(!r || !r.ok){ alert((r && r.message) || "操作失敗"); return; }
+  // 收款區塊三個地方都會出現，勾完要回到「原本那一頁」重畫，不能一律跳去訂購名單
+  if(el("gb_pay")) await loadPayInto("gb_pay", buyId);
+  else await openBuyDetail(buyId);
+}
+
 async function openBuyDetail(buyId){
   const r = await buyApi("detail", {buy_id: buyId});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
+  BUY_DETAIL = r;
   el("v-form").innerHTML = `${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">訂購名單　${esc(r.buy.title)}</div>
       <div class="buymeta" style="margin-top:6px">截止 ${esc(r.buy.deadline)}　｜　
         全部總金額 <b>$${r.grand_amount}</b></div>
+      ${payBlock(r)}
       ${r.items.map(it => `
         <div class="itemcard">
           <div class="itemname">${esc(it.name)}${it.reached ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>
@@ -1341,6 +1401,10 @@ async function openBuyOverview(){
             <span class="mnote">${LABEL[b.status] || b.status}</span>
           </div>
           <div class="buymeta">${esc(b.owner)}　｜　截止 ${esc(b.deadline)}</div>
+          ${b.amount ? `<div class="buymeta">應收 <b>$${b.amount}</b>　｜　已收 <b>$${b.paid_total}</b>${
+            b.amount - b.paid_total > 0
+              ? `　｜　未收 <b style="color:var(--orange-dark)">$${b.amount - b.paid_total}</b>`
+              : `　<span class="okmark">✓ 收齊</span>`}</div>` : ""}
           ${b.items.length ? `<div class="tally" style="margin-top:8px">
             ${b.items.map(i => `<div class="tallyrow" style="cursor:pointer" onclick="openBuyDetail(${b.id})">
               <span>${esc(i.name)}　<span class="mnote">$${i.unit_price}</span></span>
