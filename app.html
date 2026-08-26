@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:13</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:16</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1213,7 +1213,17 @@ function openBuyForm(buyId){
 async function removeBuy(buyId, title){
   // ⛔ 刪除是不可逆的，先把要刪的東西講清楚
   if(!confirm(`確定要刪掉「${title}」這個團購嗎？\n\n底下的商品、規格也會一起消失，而且救不回來。`)) return;
-  const r = await buyApi("remove", {id: buyId});
+  let r = await buyApi("remove", {id: buyId});
+  // 有人訂購過：把會連帶消失的東西攤開，再問第二次
+  if(r && r.error === "HAS_ORDER"){
+    const 明細 = `${r.message}\n\n刪掉會一併消失：\n` +
+      `・${r.orders} 筆訂購（${r.buyers} 個人）\n` +
+      (r.payments ? `・${r.payments} 筆收款紀錄，合計 $${r.paid_total}\n` : "") +
+      `\n訂購的人不會收到任何通知，他們只會發現東西不見了。\n` +
+      `如果只是要停掉這一團，請按取消、改用「退回」或讓它到期。\n\n真的要連訂購紀錄一起刪掉嗎？`;
+    if(!confirm(明細)) return;
+    r = await buyApi("remove", {id: buyId, force: true});
+  }
   if(!r || !r.ok){ alert((r && r.message) || "刪除失敗"); return; }
   await reloadBuys();
   alert(`已刪掉「${r.deleted}」`);
