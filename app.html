@@ -606,7 +606,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:36</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 12:42</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3454,7 +3454,7 @@ function openPost(kind, id){
           <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>
         <div class="field"><label>表單後台連結</label>
           <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
-          <input type="text" id="p_admin_link" value="" placeholder="https://docs.google.com/…/edit"></div>
+          <input type="text" id="p_admin_link" value="${val("admin_link")}" placeholder="https://docs.google.com/…/edit"></div>
       </div>`:""}
 
       <div class="field"><label>標題<span class="req">*</span></label>
@@ -3620,7 +3620,17 @@ async function delPost(id){
   if(r.error) return alert(r.error);
   await reloadPosts(); go("home");
 }
-async function reloadPosts(){ POSTS = await rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"); }
+async function reloadPosts(){
+  // ⛔ 幹部要走 manage：公開查詢沒有 visibility／admin_link，
+  //    直接覆蓋會讓「未公開」標籤與後台連結當場消失，幹部以為自己存壞了
+  if(isOfficer()){
+    try{
+      const all = await postApi("manage");
+      if(all && all.posts){ POSTS = all.posts; return; }
+    }catch(e){ console.error("幹部完整貼文讀取失敗，退回公開版", e); }
+  }
+  POSTS = await rest("posts?select=" + POST_FIELDS + "&order=created_at.desc");
+}
 
 function caseRow(c){
   return `<button class="caserow" onclick="openCase(${c.id})">
