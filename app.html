@@ -477,6 +477,7 @@ a.btn{text-decoration:none}
 .photobox{display:flex;align-items:center;gap:11px;min-height:56px}
 .photobox img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line);flex:none}
 .spimg{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)}
+.linenick{font-size:.78rem;color:var(--muted);margin-top:2px}
 .sptopic{margin-top:4px;font-size:.84rem;color:var(--muted);line-height:1.55;white-space:pre-wrap}
 /* 月例會講者：桌機左右並排、手機上下堆疊 */
 .spgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
@@ -610,7 +611,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:14</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:22</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -642,7 +643,7 @@ const industryNames = {
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
 const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
-const MEMBER_FIELDS = "id,sort,name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
+const MEMBER_FIELDS = "id,sort,name,line_name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
@@ -1599,7 +1600,8 @@ async function openMemberAdmin(tab){
           <span style="flex:1;min-width:0">
             <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
             <div class="mnote" style="margin-top:2px">
-              ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}<br>
+              ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}${
+              m.line_name ? `　｜　LINE：${esc(m.line_name)}` : ""}<br>
               ${m.joined_at ? `加入 ${m.joined_at}　｜　` : ""}${
                 m.status === "pending" ? `<span class="tagw">🔔 等待審核</span>${m.intro?`<br>「${esc(m.intro)}」`:""}${m.description?`<br>${esc(m.description)}`:""}`
                 : m.status !== null ? `<span class="tagx">已退出${m.exit_date?" "+m.exit_date:""}</span>`
@@ -2578,6 +2580,7 @@ async function handleCallback(){
     return true;
   }
   if(r.token) localStorage.setItem("tc8_token", r.token);
+  if(r.line_name) window.__lineName = r.line_name;   // 認領時要一起存起來
   if(r.status === "unbound"){ go("claim"); return true; }
   if(r.status === "bound"){ await loadMe(); go("me"); return true; }
   return false;
@@ -2602,7 +2605,7 @@ function render(v){
     el("v-members").innerHTML = `
       <div class="tools">
         <div class="search"><svg class="ic" width="18" height="18"><use href="#i-search"/></svg>
-          <input id="mq" placeholder="搜尋姓名、公司、產業、想找什麼…" oninput="filterMembers()"></div>
+          <input id="mq" placeholder="搜尋姓名、LINE 暱稱、公司、產業…" oninput="filterMembers()"></div>
         <div class="filters">
           <select id="mind" onchange="filterMembers()"></select>
           <span class="hint" id="mcount"></span>
@@ -3981,6 +3984,7 @@ function memberCard(m){
         : avatar(m.name)}
       <div style="flex:1;min-width:0">
         <div class="n">${esc(m.name)}</div>
+        ${m.line_name && m.line_name !== m.name ? `<div class="linenick">LINE：${esc(m.line_name)}</div>` : ""}
         <div class="t">${esc(m.title||"")}</div>
         ${m.tag?`<span class="itag">${esc(m.tag)}</span>`:""}
       </div>
@@ -4002,7 +4006,7 @@ function filterMembers(){
   const hit = MEMBERS.filter(m=>{
     if(ind && (m.industry||"other")!==ind) return false;
     if(!q) return true;
-    return [m.name,m.company,m.tag,m.title,m.description,m.intro,m.resource,m.wish,m.topic]
+    return [m.name,m.line_name,m.company,m.tag,m.title,m.description,m.intro,m.resource,m.wish,m.topic]
       .some(x=>(x||"").toLowerCase().includes(q));
   });
   el("mlist").innerHTML = hit.map(memberCard).join("") || '<div class="empty" style="grid-column:1/-1">找不到符合的夥伴</div>';
@@ -4020,6 +4024,7 @@ function openMember(id){
           ? `<img src="${esc(m.photos[0])}" alt="${esc(m.name)}" style="width:58px;height:58px;border-radius:50%;object-fit:cover;flex:none;border:1px solid var(--line)">`
           : `<div class="ava" style="width:58px;height:58px;font-size:1.2rem">${esc(m.name.slice(0,1))}</div>`}
         <div style="flex:1"><h2 style="font-size:1.2rem">${esc(m.name)}${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}</h2>
+        ${m.line_name && m.line_name !== m.name ? `<div class="linenick">LINE：${esc(m.line_name)}</div>` : ""}
         <div style="font-size:.85rem;color:var(--muted);margin-top:3px">${esc([m.tag,m.company,m.title].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
       </div>
       ${(m.photos||[]).length > 1 ? `<div class="mgal">${
@@ -4145,7 +4150,7 @@ function filterClaim(q){
 }
 async function doClaim(id, name){
   if(!confirm(`請問你是「${name}」嗎？\n\n確定後這個 LINE 就代表你，要更改需要請幹部解除綁定。`)) return;
-  const r = await fn("claim", {member_id:id});
+  const r = await fn("claim", {member_id:id, line_name: window.__lineName || undefined});
   if(r.error){ el("claimErr").innerHTML = `<div class="err">${esc(r.error)}</div>`; return; }
   await loadMe(); go("me");
 }
