@@ -648,7 +648,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:59</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -687,6 +687,8 @@ let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
 // 點讚：REACTS 是公開的數字（未登入也看得到）、MY_REACTS 是我按過哪些。
 // ⛔ 「誰按了讚」不在這裡：那要登入後跟後端要（reactions 整張表對外 revoke）
 let REACTS = {}, MY_REACTS = new Set();
+// 留言則數走公開 view；留言「內容」要登入才拿得到（2026-08-26 改）
+let CMT_COUNTS = {};
 // 連續缺席（退社提醒）：member_id → 連續沒到幾次的月例會。
 // ⚠️ 只有登入才拿得到——名冊是公開頁，「誰快被退社」不給外人看。
 // STREAK_SESSIONS 是母數：目前總共只有幾場「開過報到」的月例會可以數。
@@ -2913,6 +2915,13 @@ function homeHTML(){
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
+  h += `<div class="sec"><h2>公告與問卷</h2>${
+    msgs.length > 3 ? `<span class="more" onclick="go('notices')">全部 ${msgs.length}</span>`
+    : isOfficer() ? `<span class="more" onclick="openPost('notice')">＋ 發布</span>` : ""}</div>`;
+  h += msgs.length ? msgs.slice(0,3).map(p => p.kind==="survey" ? surveyCard(p) : noticeCard(p)).join("")
+    : `<div class="card"><div class="empty">還沒有公告或問卷</div></div>`;
+
+  // 夥伴的近期活動：只放最新 3 則
   h += `<div class="sec"><h2>近期活動</h2>${events.length > 3 ? `<span class="more" onclick="go('acts')">全部 ${events.length}</span>` : ""}${isOfficer()?`<span class="more" onclick="openPost('event')">＋ 發布</span>`:""}</div>`;
   h += events.length ? eventBlock(events.slice(0,3))
     : `<div class="card"><div class="empty">還沒有活動</div></div>`;
@@ -2923,13 +2932,6 @@ function homeHTML(){
     ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
     || (b.important?1:0) - (a.important?1:0)                                        // 再來是重要公告
     || new Date(b.created_at) - new Date(a.created_at));
-  h += `<div class="sec"><h2>公告與問卷</h2>${
-    msgs.length > 3 ? `<span class="more" onclick="go('notices')">全部 ${msgs.length}</span>`
-    : isOfficer() ? `<span class="more" onclick="openPost('notice')">＋ 發布</span>` : ""}</div>`;
-  h += msgs.length ? msgs.slice(0,3).map(p => p.kind==="survey" ? surveyCard(p) : noticeCard(p)).join("")
-    : `<div class="card"><div class="empty">還沒有公告或問卷</div></div>`;
-
-  // 夥伴的近期活動：只放最新 3 則
   h += `<div class="sec"><h2>夥伴的近期活動</h2>${
     mEvents.length > 3 ? `<span class="more" onclick="ACT_TAB='member';go('acts')">全部 ${mEvents.length}</span>`
     : ME ? `<span class="more" onclick="openPost('member_event')">＋ 我要張貼</span>` : ""}</div>`;
@@ -2941,7 +2943,7 @@ function homeHTML(){
 
   // 最新案例
   h += `<div class="sec"><h2>最新案例</h2>${CASES.length?`<span class="more" onclick="go('cases')">全部 ${CASES.length}</span>`:""}</div>`;
-  h += `<div class="card">${CASES.length ? CASES.slice(0,3).map(caseRow).join("")
+  h += `<div class="card">${CASES.length ? CASES.slice(0,5).map(caseRow).join("")
     : `<div class="empty">還沒有人分享 AI 案例<br><span style="font-size:.82rem">${ME?"到「我的」寫下第一個":"用 LINE 登入後就能寫"}</span></div>`}</div>`;
   return h;
 }
@@ -3445,9 +3447,14 @@ function commentBlock(kind, targetId){
     </div>`;
   }).join("");
 
-  return `<div class="sec"><h2>討論</h2>${list.length?`<span class="more">${list.length}</span>`:""}</div>
+  const total = cmtCount(kind, targetId);
+  return `<div class="sec"><h2>討論</h2>${total?`<span class="more">${total}</span>`:""}</div>
     <div class="card" id="cmtlist">
-      ${rows || `<div class="empty" style="padding:26px 20px">還沒有人留言${ME?"<br><span style=\"font-size:.82rem\">有想法、有人選、有做法，都可以寫在下面</span>":""}</div>`}
+      ${!ME
+        ? `<div class="empty" style="padding:26px 20px">${total
+            ? `這裡有 <b>${total}</b> 則討論<br><span style="font-size:.82rem">用 LINE 登入後就看得到內容</span>`
+            : "還沒有人留言"}</div>`
+        : (rows || `<div class="empty" style="padding:26px 20px">還沒有人留言<br><span style="font-size:.82rem">有想法、有人選、有做法，都可以寫在下面</span></div>`)}
     </div>
     ${ME ? `<div class="cmtbox">
       <textarea id="cmtinput" rows="2" placeholder="寫下你的想法或建議…" maxlength="1000"></textarea>
@@ -3520,7 +3527,7 @@ function streakTag(memberId){
     : `<span class="stag amber">🟡 連續 2 次沒到</span>`;
 }
 const likeCount = (kind, id) => REACTS[kind + ":" + id] || 0;
-const cmtCount  = (kind, id) => COMMENTS.filter(c => c.kind===kind && c.target_id===id).length;
+const cmtCount  = (kind, id) => CMT_COUNTS[kind + ":" + id] || 0;
 
 // 點讚列：未登入看得到數字、看不到名字（羅伯特 2026-08-26 決定）
 function likeBar(kind, id){
@@ -3557,7 +3564,18 @@ async function loadLikers(kind, id){
 }
 
 async function reloadComments(){
-  COMMENTS = await rest("comments?select=id,kind,target_id,member_id,body,created_at&order=created_at.asc");
+  // 數字：公開，未登入也看得到「有幾則」
+  try{
+    const rows = await rest("v_comment_counts?select=kind,target_id,cnt");
+    CMT_COUNTS = Object.fromEntries(rows.map(r => [r.kind + ":" + r.target_id, r.cnt]));
+  }catch(e){ CMT_COUNTS = {}; console.error("留言則數讀取失敗", e); }
+  // 內容：comments 整張表已對外 revoke，只能驗身分後取得
+  COMMENTS = [];
+  if(!token()) return;
+  try{
+    const r = await api("comment_list", {});
+    if(r && r.ok) COMMENTS = r.comments || [];
+  }catch(e){ console.error("留言讀取失敗", e); }
 }
 
 function openNeedDetail(id){
@@ -4367,8 +4385,7 @@ async function loadMe(){
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
       rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,helpers,created_at&order=created_at.desc"),
-      rest("comments?select=id,kind,target_id,member_id,body,created_at&order=created_at.asc"),
-    ]).then(r => { POSTS = r[3]; NEEDS = r[4]; COMMENTS = r[5]; return r; });
+    ]).then(r => { POSTS = r[3]; NEEDS = r[4]; return r; });
   }
   catch(e){
     MEMBERS = []; window.__tc8err = String(e); console.error("載入夥伴失敗", e);
@@ -4384,6 +4401,7 @@ async function loadMe(){
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
   await reloadReacts();  // 同理：MY_REACTS 需要通行證才知道我按過哪些
   await reloadStreak();  // 連續缺席也要通行證
+  await reloadComments();// 留言內容要通行證；則數是公開的
   await reloadBuys();
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
