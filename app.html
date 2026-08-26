@@ -464,6 +464,10 @@ a.btn{text-decoration:none}
 .fbn .fband .t{font-size:1.3rem;font-weight:800;margin-top:6px;line-height:1.35}
 .fbn .fbody{padding:13px 15px}
 .fbn .fbody .t{font-weight:800;font-size:1.02rem;line-height:1.45}
+/* 連續缺席的燈：要看得見才有用——淡淡的灰字等於沒做 */
+.stag{display:inline-block;font-size:.74rem;font-weight:800;padding:2px 8px;border-radius:99px;margin-top:4px}
+.stag.red{background:#fdecea;color:#b4261a}
+.stag.amber{background:#fff4e0;color:#8a5a00}
 .evgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
 .evcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .12s}
@@ -637,7 +641,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:03</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 17:16</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -676,6 +680,10 @@ let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
 // 點讚：REACTS 是公開的數字（未登入也看得到）、MY_REACTS 是我按過哪些。
 // ⛔ 「誰按了讚」不在這裡：那要登入後跟後端要（reactions 整張表對外 revoke）
 let REACTS = {}, MY_REACTS = new Set();
+// 連續缺席（退社提醒）：member_id → 連續沒到幾次的月例會。
+// ⚠️ 只有登入才拿得到——名冊是公開頁，「誰快被退社」不給外人看。
+// STREAK_SESSIONS 是母數：目前總共只有幾場「開過報到」的月例會可以數。
+let STREAK = {}, STREAK_SESSIONS = 0;
 let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
 let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
@@ -1631,7 +1639,7 @@ async function openMemberAdmin(tab){
       <div class="card admincard" style="margin-top:10px">${list.length ? list.map(m => `
         <div class="arow" style="align-items:center;gap:10px">
           <span style="flex:1;min-width:0">
-            <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
+            <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}${streakTag(m.id)}
             <div class="mnote" style="margin-top:2px">
               ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}${
               m.line_name ? `　｜　LINE：${esc(m.line_name)}` : ""}<br>
@@ -1902,6 +1910,9 @@ function renderBoard(){
   const mDone = r.members.filter(m => m.checked);
   const walkin = mDone.filter(m => !m.signed);
   const noShow = mSigned.filter(m => !m.checked);
+  // 沒報名的排在最後，其中「已經打過勾的」再排到這一段的最前面
+  const unsigned = r.members.filter(m => !m.signed)
+    .sort((a, b) => (b.checked === true) - (a.checked === true));
 
   el("v-form").innerHTML = `
     ${backBar()}
@@ -1975,7 +1986,31 @@ function renderBoard(){
       <div class="field" style="margin-top:22px">
         <label>夥伴（${mDone.length}/${mSigned.length} 已報名的人到了）</label>
         <div class="help">沒報名卻出現的人也可以直接打勾，系統會記成現場加入</div>
-        ${r.members.map(m => `
+        ${boardSection("🔴 報名了，還沒到", noShow,
+            "這一段就是要抓的人：報名了、餐訂了，人沒出現", "還沒到")}
+        ${boardSection("✓ 報名了，已報到", mSigned.filter(m => m.checked), "", "")}
+        ${boardSection("沒報名", unsigned,
+            "現場出現就直接打勾，系統會記成現場加入（已經來的排在最前面）", "")}
+      </div>
+    </div>`;
+}
+
+// 報到台的一段名單。空的就不出現，不佔版面。
+function boardSection(title, list, help, emptyText){
+  if(!list.length){
+    // 「報名了還沒到」是 0 的時候要講出來——那是好消息，不是沒東西可顯示
+    return emptyText
+      ? `<div style="margin:16px 0 4px;font-weight:800">${title}　<span class="mnote">0</span></div>
+         <div class="mnote" style="padding:8px 0">✅ 報名的夥伴都到齊了</div>`
+      : "";
+  }
+  return `<div style="margin:16px 0 4px;font-weight:800">${title}　<span class="mnote">${list.length} 人</span></div>
+    ${help ? `<div class="help" style="margin-bottom:6px">${help}</div>` : ""}
+    ${list.map(boardRow).join("")}`;
+}
+
+function boardRow(m){
+  return `
           <div class="ckrow${m.checked ? " done" : ""}${!m.signed ? " nosign" : ""}">
             <div class="ckinfo">
               <b>${esc(m.name)}</b>${m.tag ? `　<span class="mnote">${esc(m.tag)}</span>` : ""}
@@ -1995,9 +2030,7 @@ function renderBoard(){
             </div>
             <button class="ckbtn${m.checked ? " on" : ""}" onclick="markCheck(${m.id}, null, ${m.checked})">${
               m.checked ? "✓ 到了" : "打勾"}</button>
-          </div>`).join("")}
-      </div>
-    </div>`;
+          </div>`;
 }
 // datetime-local 要「當地時間」的字串；直接 toISOString 會變成 UTC，畫面上會少 8 小時
 function toLocalInput(iso){
@@ -2225,6 +2258,18 @@ async function openRoster(postId, backJs){
         </div>` : `<div class="help" style="margin-top:8px">
           餐點與飲食備註只有幹部看得到。</div>`}
       </div>
+
+      ${r.officer && (r.cancelled || []).length ? `
+      <div class="field" style="margin-top:22px">
+        <label>已取消（${r.cancelled.length} 位）</label>
+        <div class="help">餐是提前訂的——看得到「什麼時候縮手的」才知道那一份便當有沒有白訂</div>
+        <div class="rosterwrap"><table class="roster">
+          <thead><tr><th>#</th><th>姓名</th><th>取消時間</th></tr></thead>
+          <tbody>${r.cancelled.map((c, i) => `<tr>
+            <td>${i+1}</td><td>${esc(c.name)}</td>
+            <td>${esc(payTime(c.cancelled_at))}</td></tr>`).join("")}</tbody>
+        </table></div>
+      </div>` : ""}
     </div>`;
   window.__roster = r;
   go("form");
@@ -3477,6 +3522,27 @@ async function reloadReacts(){
     }catch(e){ console.error("我的點讚讀取失敗", e); }
   }
 }
+async function reloadStreak(){
+  STREAK = {}; STREAK_SESSIONS = 0;
+  if(!token()) return;
+  try{
+    const r = await checkinApi("streak", {});
+    if(r && r.ok){
+      STREAK_SESSIONS = r.sessions || 0;
+      STREAK = Object.fromEntries((r.list||[]).map(x => [x.member_id, x.streak]));
+    }
+  }catch(e){ console.error("連續缺席讀取失敗", e); }
+}
+// 退社提醒的燈：連續 3 次沒到就是要談的對象，2 次先預警。
+// ⛔ 母數不足時一律不亮——系統才上線、只數得到 1 場的時候，
+//    每個沒來過的人都會是「連續 1 次」，那不是資訊，是雜訊。
+function streakTag(memberId){
+  const n = STREAK[memberId] || 0;
+  if(STREAK_SESSIONS < 3 || n < 2) return "";
+  return n >= 3
+    ? `<span class="stag red">🔴 連續 ${n} 次沒到</span>`
+    : `<span class="stag amber">🟡 連續 2 次沒到</span>`;
+}
 const likeCount = (kind, id) => REACTS[kind + ":" + id] || 0;
 const cmtCount  = (kind, id) => COMMENTS.filter(c => c.kind===kind && c.target_id===id).length;
 
@@ -4144,6 +4210,7 @@ function memberCard(m){
         ${m.line_name && m.line_name !== m.name ? `<div class="linenick">LINE：${esc(m.line_name)}</div>` : ""}
         <div class="t">${esc(m.title||"")}</div>
         ${m.tag?`<span class="itag">${esc(m.tag)}</span>`:""}
+        ${streakTag(m.id)}
       </div>
       ${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}
     </div>
@@ -4356,6 +4423,7 @@ async function loadMe(){
   const st = await loadMe();
   await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
   await reloadReacts();  // 同理：MY_REACTS 需要通行證才知道我按過哪些
+  await reloadStreak();  // 連續缺席也要通行證
   await reloadBuys();
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
