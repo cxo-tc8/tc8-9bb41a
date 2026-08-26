@@ -601,7 +601,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 11:56</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1191,6 +1191,9 @@ function openBuyForm(buyId){
         ${b && (b.status === "draft" || b.status === "rejected") ? `
           <button class="btn btn-primary" onclick="submitBuy(${b.id}, this)"
             ${items.length ? "" : "disabled style='opacity:.45'"}>送出給幹部審核</button>` : ""}
+        ${b && (b.status === "draft" || b.status === "rejected" || isOfficer()) ? `
+          <button class="btn btn-ghost" style="color:#b4261a"
+            onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button>` : ""}
       </div>
       ${b && (b.status === "draft" || b.status === "rejected") ? `<div class="mnote" style="margin-top:8px">${
         items.length
@@ -1200,6 +1203,16 @@ function openBuyForm(buyId){
   go("form");
   if(buyId) loadPayInto("gb_pay", buyId);   // 收款是即時資料，表單畫完再非同步補上
 }
+async function removeBuy(buyId, title){
+  // ⛔ 刪除是不可逆的，先把要刪的東西講清楚
+  if(!confirm(`確定要刪掉「${title}」這個團購嗎？\n\n底下的商品、規格也會一起消失，而且救不回來。`)) return;
+  const r = await buyApi("remove", {id: buyId});
+  if(!r || !r.ok){ alert((r && r.message) || "刪除失敗"); return; }
+  await reloadBuys();
+  alert(`已刪掉「${r.deleted}」`);
+  go("buys"); renderBuys();
+}
+
 async function submitBuy(buyId, btn){
   btn.disabled = true; btn.textContent = "送出中…";
   const r = await buyApi("submit", {id: buyId});
@@ -1493,6 +1506,8 @@ async function openBuyPending(){
         <div class="actions" style="margin-top:12px">
           <button class="btn btn-primary" onclick="approveBuy(${b.id}, false)">核可上架</button>
           <button class="btn btn-ghost" onclick="approveBuy(${b.id}, true)">退回</button>
+          <button class="btn btn-ghost" style="color:#b4261a"
+            onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
         </div></div>`).join("")
         : `<div class="mnote" style="margin-top:16px">目前沒有待審的團購</div>`}
     </div>`;
@@ -3193,7 +3208,7 @@ function openNeed(id){
   if(!ME){ go("me"); return; }
   const n = id ? NEEDS.find(x=>x.id===id) : null;
   el("v-form").innerHTML = `
-    <button class="back" onclick="go('needs')"><svg width="17" height="17"><use href="#i-back"/></svg>取消</button>
+    ${id ? backTo(`openNeedDetail(${id})`) : `<button class="back" onclick="go('needs')"><svg width="17" height="17"><use href="#i-back"/></svg>回需求</button>`}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${n?"修改我的問題":"我要提問"}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
