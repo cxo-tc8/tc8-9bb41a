@@ -610,7 +610,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:06</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 16:07</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2479,16 +2479,19 @@ function newItems(v){
   return [];
 }
 const NEW_VIEWS = ["notices","acts","cases","needs","buys"];
-function syncNewBadges(){
-  NEW_VIEWS.forEach(v => {
-    const n = newItems(v).length;
-    document.querySelectorAll(`.nav button[data-v="${v}"]`).forEach(b => {
-      let dot = b.querySelector(".newdot");
-      if(!n){ if(dot) dot.remove(); return; }
-      if(!dot){ dot = document.createElement("span"); dot.className = "newdot"; b.appendChild(dot); }
-      dot.textContent = n > 9 ? "9+" : n;
-    });
+function paintDot(v, n){
+  document.querySelectorAll(`.nav button[data-v="${v}"]`).forEach(b => {
+    let dot = b.querySelector(".newdot");
+    if(!n){ if(dot) dot.remove(); return; }
+    if(!dot){ dot = document.createElement("span"); dot.className = "newdot"; b.appendChild(dot); }
+    dot.textContent = n > 9 ? "9+" : n;
   });
+}
+function syncNewBadges(){
+  NEW_VIEWS.forEach(v => paintDot(v, newItems(v).length));
+  // ⭐ 分會管理是「有事情等你處理」，不是「有新內容」——
+  //    待辦不能因為看過就消失，沒處理完就該一直亮著。
+  paintDot("admin", isOfficer() ? (PENDING || 0) : 0);
 }
 
 // 手機的完整選單。⚠️ 一般夥伴看不到「分會管理」——它不只是藏起來，
@@ -3145,6 +3148,7 @@ async function reviewMember(id, act, name){
   const r = await fn(act, {id});
   if(r.error) return alert(r.error);
   MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  PENDING = Math.max(0, (PENDING || 0) - 1); syncNewBadges();   // 待辦少一件，紅點跟著改
   // 從夥伴管理進來的就回夥伴管理，從「我的 → 新夥伴審核」進來的才回舊頁
   if(MADMIN){ MADMIN = null; await openMemberAdmin(); } else openReview();
 }
@@ -4161,6 +4165,7 @@ async function loadMe(){
     if(all.posts) POSTS = all.posts;
     const pend = await fn("pending_list");
     PENDING = (pend.members||[]).length;
+    syncNewBadges();   // 撈到才知道有幾件待辦，畫上去
   }
   return r.status;
 }
