@@ -710,7 +710,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 08:31</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:26</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -951,7 +951,7 @@ async function sendCheckin(){
   if(pos){ body.lat = pos.coords.latitude; body.lng = pos.coords.longitude; body.accuracy = pos.coords.accuracy; }
   const r = await checkinApi("checkin", body);
   if(r && r.ok){
-    MY_CHECKINS.add(postId); renderHome();
+    MY_CHECKINS.add(postId); refreshCurrent();
     ciMsg(r.already ? "你已經報到過了" : "報到完成，" + r.name + "！", "ok");
     setTimeout(ciClose, 1400);
   }else{
@@ -1010,7 +1010,7 @@ async function doCancel(postId){
   if(!confirm(`確定要取消「${p ? p.title : ""}」的報名嗎？\n\n如果已經訂了餐，請盡早取消，
 餐點是提前訂的，太晚說會造成浪費。`)) return;
   const r = await signupApi("cancel", {post_id: postId});
-  await reloadSeats(); renderHome();
+  await reloadSeats(); refreshCurrent();
   if(r && r.ok){
     alert(r.already ? "你先前已經取消過了" : "已取消報名"
       + (r.promoted_member_id ? "，你的位子已經自動遞補給候補的夥伴" : ""));
@@ -1703,7 +1703,7 @@ async function saveTalk(postId, slot, btn){
   if(r.error){ alert(r.error); return; }
   await reloadPosts();
   alert("更新好了，首頁已經換成新的內容");
-  go("home"); renderHome();
+  go(FORM_FROM); refreshCurrent();
 }
 
 // 幹部：一張清單看完所有夥伴，綁定／退出／刪除都在這裡做
@@ -2253,13 +2253,13 @@ async function submitGuest(postId, guestId, btn){
   };
   const r = await guestApi(guestId ? "update" : "add", body);
   btn.disabled = false; btn.textContent = guestId ? "存起來" : "登記";
-  if(r && r.ok){ await reloadSeats(); go("home"); renderHome(); alert(guestId ? "已更新" : `已登記來賓：${name}`); }
+  if(r && r.ok){ await reloadSeats(); go(FORM_FROM); refreshCurrent(); alert(guestId ? "已更新" : `已登記來賓：${name}`); }
   else alert((r && r.message) || "登記失敗");
 }
 async function removeGuest(id, name){
   if(!confirm(`確定要取消來賓「${name}」嗎？`)) return;
   const r = await guestApi("remove", {id});
-  await reloadSeats(); renderHome();
+  await reloadSeats(); refreshCurrent();
   alert(r && r.ok ? `已取消來賓：${r.removed}` : ((r && r.message) || "取消失敗"));
 }
 
@@ -2520,7 +2520,7 @@ async function submitSignup(postId, btn){
   });
   await reloadSeats();
   if(r && r.ok){
-    go("home"); renderHome();
+    go(FORM_FROM); refreshCurrent();
     alert(r.already ? "已更新你的餐點" : "報名完成！");
   }else{
     // 餐點被搶走時後端會告訴我們還剩哪些可選，直接講給他聽，不要只說「失敗」
@@ -2538,12 +2538,12 @@ async function doSignup(postId, btn){
   const r = await signupApi("register", {post_id: postId});
   if(r && r.ok){
     await reloadSeats();
-    renderHome();
+    refreshCurrent();
     alert(r.already ? "你已經報名過這一場了" : "報名完成！");
   }else{
     // 席次是搶的，失敗要讓畫面立刻反映真實數字，不能停在舊的「剩 1 位」
     await reloadSeats();
-    renderHome();
+    refreshCurrent();
     alert((r && r.message) || "報名失敗，請再試一次");
   }
 }
@@ -2563,6 +2563,16 @@ async function fn(action, body){
 /* ── 分頁切換 ───────────────────────────── */
 // 表單頁是共用的，所以要記住「是從哪一頁點進來的」，返回才不會一律掉回首頁
 let FORM_FROM = "home", PDETAIL_FROM = "home";
+let PDETAIL_ID = null;
+// 資料改完要重畫「現在看得到的那一頁」，不是永遠重畫首頁。
+// ⛔ 寫死 renderHome()：在詳情頁報名或登記來賓，畫面不會變，
+//    使用者會以為沒生效（詳情頁本來就有報名鈕，這是既有問題）。
+function refreshCurrent(){
+  const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+  const v = cur ? cur.id.slice(2) : "home";
+  if(v === "pdetail" && PDETAIL_ID) return openPostDetail(PDETAIL_ID);
+  render(v);
+}
 const VIEW_NAME = {home:"首頁", members:"夥伴", cases:"案例", needs:"需求", me:"我的", admin:"分會管理"};
 // 兩顆返回鍵：左邊回剛才那一頁，右邊直接回首頁（在首頁進來的就只有一顆，不重複）
 function backBar(label){
@@ -3273,44 +3283,28 @@ function homeHTML(){
     <svg class="go" width="17" height="17"><use href="#i-go"/></svg>
   </button>`;
 
-  // 月例會
-  h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
-  h += monthly ? `<section class="hero">
-      <div class="band">
-        <div class="kicker">${monthly.visibility==="officer"?"未公開　・　":""}${monthly.event_at && new Date(monthly.event_at) < Date.now() ? "已結束　・　" : ""}${esc(fmtDate(monthly.event_at)) || "時間待定"}</div>
-        <div class="t">${esc(monthly.title)}</div>
+  // 月例會：首頁只放精簡卡片（藍底標題＋日期地點＋報名人數）＋報名/報到兩顆鈕。
+  // 講者、內容、來賓、報名名單一律點進去看——首頁一年後才不會變成捲不完的長河。
+  // ⚠️ 卡片整張可點（進詳情），所以按鈕區要 stopPropagation，
+  //    否則按「報名」會連帶把詳情頁也打開。
+  const mBtns = monthly ? `
+      <div class="actions compact" style="margin-top:12px" onclick="event.stopPropagation()">
+        ${monthly.signup_open
+            ? signupButton(monthly)
+            : (isOfficer()
+                ? `<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">尚未開放報名（去打開）</button>`
+                : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
+        ${checkinButton(monthly)}
       </div>
-      <div class="body">
-        <div class="meta">${monthly.place?`<span>📍 <b>${esc(monthly.place)}</b></span>`:""}
-          ${monthly.capacity?`<span>名額 <b>${monthly.capacity}</b></span>`:""}</div>
-        ${(()=>{const sps=[[monthly.speaker,monthly.speaker_photo,monthly.speaker_body],
-                            [monthly.speaker2,monthly.speaker2_photo,monthly.speaker2_body]].filter(x=>x[0]);
-          return sps.length?`<div class="spgrid">`+sps.map(([sp,ph,bd])=>`
-            <div class="spcell">
-              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${escAttr(ph)}')" title="點一下放大">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
-              <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div>
-                ${bd?`<div class="sptopic">${esc(bd)}</div>`:""}</div></div>`).join("")+`</div>`:"";})()}
-        ${myTalkBtn(monthly)}
-        ${monthly.body?`<div class="mdesc">${esc(monthly.body)}</div>`:""}
-        ${signupBlock(monthly)}
-        ${myOrderLine(monthly)}
-        ${guestBlock(monthly)}
-        <div class="actions">
-          ${monthly.signup_open
-              ? signupButton(monthly)
-              : (isOfficer()
-                  ? `<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">尚未開放報名（去打開）</button>`
-                  : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
-          ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${monthly.id})">📋 報名名單</button>` : ""}
-          ${checkinButton(monthly)}
-          ${isOfficer() ? `<button class="btn btn-checkin" onclick="openBoard(${monthly.id})">✅ 報到</button>` : ""}
-        </div>
-        ${isOfficer() ? `<div class="adminbar">
-          <span class="adminlbl">幹部</span>
-          <button onclick="openPost('monthly',${monthly.id})">✏️ 編輯這場（內文、餐點）</button>
-          <button onclick="openCreditAll()">📊 出席信用</button>
-        </div>` : ""}
-      </div></section>`
+      ${isOfficer() ? `<div class="adminbar" onclick="event.stopPropagation()">
+        <span class="adminlbl">幹部</span>
+        <button onclick="openPost('monthly',${monthly.id})">✏️ 編輯這場（內文、餐點）</button>
+        <button onclick="openBoard(${monthly.id})">✅ 報到板</button>
+        <button onclick="openCreditAll()">📊 出席信用</button>
+      </div>` : ""}` : "";
+  h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
+  h += monthly
+    ? `<div class="featured">${featuredBanner(monthly, mBtns)}</div>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
@@ -3418,7 +3412,7 @@ function featuredOf(tab){
   return pick;
 }
 // 大橫幅：有圖就用圖，沒圖用底色撐住版面（幹部之後上傳照片就換掉）
-function featuredBanner(p){
+function featuredBanner(p, extra){
   const img = (p.photos || [])[0];
   return `<article class="fbn" onclick="openPostDetail(${p.id})">
     ${img
@@ -3430,6 +3424,7 @@ function featuredBanner(p){
       <div class="d">${[whenLabel(p) || fmtDate(p.event_at), p.time_text ? esc(p.time_text) : "",
         p.place ? "📍 " + esc(p.place) : ""].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
+      ${extra || ""}
     </div>
   </article>`;
 }
@@ -3500,12 +3495,14 @@ function signupArea(p){
       ${signupButton(p)}
       ${ME ? `<button class="btn btn-ghost" onclick="openRoster(${p.id}, 'openPostDetail(${p.id})')">📋 誰報名了</button>` : ""}
     </div>
+    ${guestBlock(p)}
   </div>`;
 }
 
 // 活動／公告的完整內容（跟案例一樣的第二層，有自己的網址可以轉給人）
 function openPostDetail(id){
   const p = POSTS.find(x=>x.id===id); if(!p) return;
+  PDETAIL_ID = id;
   const canEdit = ME && (p.author_id===ME.id || isOfficer());
   // 這頁也是共用的，一樣要記住從哪裡點進來
   const cur0 = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
