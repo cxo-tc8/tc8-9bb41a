@@ -437,6 +437,14 @@ a.btn{text-decoration:none}
   .top{padding-left:20px}
   .wrap{padding-top:22px}
   .tools{top:calc(54px)}
+  /* ⛔ 別在空間大的地方省空間：側欄佔掉 212px 之後還有一千多 px，
+     內容卻卡在 760px，右邊整片空白。桌機把內容區放寬。 */
+  .wrap{max-width:1240px}
+  /* 首頁只有月例會一條橫幅，不能跟活動頁一樣切兩欄——右邊會空一半 */
+  .featured.solo{grid-template-columns:1fr}
+  /* 但單欄拉到 1240px 寬時，16:9 會變成 700px 高的巨幅色塊，
+     所以 solo 的色塊改成由內容撐高、不吃比例 */
+  .featured.solo .fband{aspect-ratio:auto;min-height:190px}
 }
 .proto{max-width:760px;margin:0 auto;padding:0 14px 18px}
 .proto .b{background:#fff8e6;border:1px solid #f0dda8;color:#6b5518;border-radius:var(--r-sm);padding:10px 13px;font-size:.8rem;line-height:1.6}
@@ -710,7 +718,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:26</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:31</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -912,7 +920,11 @@ function isEventDay(p){
 }
 // 現場報到：只在例會當天出現，平常完全不佔版面
 function checkinButton(p){
-  if(!isEventDay(p)) return "";
+  if(!p.event_at) return "";        // 連日期都還沒訂，就沒有報到這回事
+  // ⛔ 非例會當天也要把這顆留著（只是按不下去）。
+  //    原本是整顆不顯示，結果首頁只剩一顆孤零零的「報名」，
+  //    看的人會問「報到在哪」——按鈕消失比按鈕變灰更難懂。
+  if(!isEventDay(p)) return `<button class="btn btn-done" disabled>📍 報到（當天開放）</button>`;
   if(!ME) return `<button class="btn btn-checkin" onclick="go('me')">登入後報到</button>`;
   if(MY_CHECKINS.has(p.id)) return `<button class="btn btn-done" disabled>✓ 已報到</button>`;
   return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 報到</button>`;
@@ -3304,7 +3316,7 @@ function homeHTML(){
       </div>` : ""}` : "";
   h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
   h += monthly
-    ? `<div class="featured">${featuredBanner(monthly, mBtns)}</div>`
+    ? `<div class="featured solo">${featuredBanner(monthly, mBtns)}</div>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
