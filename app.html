@@ -505,19 +505,27 @@ a.btn{text-decoration:none}
 /* 點讚不做成「跟報名區一樣重的框」：它只有一顆小按鈕，
    重要性也低一階。改成一條輕量橫列，靠按鈕自己的邊框就夠。 */
 .likebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 4px 12px}
-/* 使用說明的首頁入口：⚠️ 只掛在漢堡選單裡等於沒放——夥伴不會為了找說明去翻選單
-   （2026-08-27 羅伯特回報「怎麼沒放到網頁上」，其實有，只是找不到）。
-   左邊界用橘色：首頁其他區塊都是藍系，橘色才跳得出來。 */
-.helpbar{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--orange);
-  border-radius:var(--r);box-shadow:var(--shadow);padding:13px 15px;margin:4px 0 2px;
-  color:var(--text);cursor:pointer;min-height:56px;font-family:inherit;font-size:.94rem}
-.helpbar .ic{font-size:1.2rem;flex:none}
-.helpbar .sub2{display:block;font-size:.81rem;color:var(--muted);margin-top:2px}
-.helpbar .go{margin-left:auto;color:var(--muted);flex:none}
+/* 使用說明：一段一張卡，開頭 emoji 當圖示。
+   ⛔ 內容由 md 產生（4_tc8-docs/使用說明_*.md），這裡只負責長相。 */
+.hcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:16px 18px 18px;margin-bottom:12px}
+.hcard > *:last-child{margin-bottom:0}
+.helpdoc .hico{display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:9px;background:var(--chip);
+  font-size:1.05rem;margin-right:10px;flex:none}
+/* 步驟用大圓圈數字，一眼看得出「第幾步」 */
+.hcard ol{list-style:none;margin:10px 0 0;counter-reset:step}
+.hcard ol li{counter-increment:step;position:relative;padding-left:38px;margin:0 0 11px;line-height:1.72}
+.hcard ol li::before{content:counter(step);position:absolute;left:0;top:1px;
+  width:26px;height:26px;border-radius:50%;background:var(--blue-500);color:#fff;
+  display:grid;place-items:center;font-size:.82rem;font-weight:800}
+.hcard ul{list-style:none;margin:10px 0 0 2px}
+.hcard ul li{position:relative;padding-left:20px;margin:0 0 8px;line-height:1.72}
+.hcard ul li::before{content:"";position:absolute;left:4px;top:.68em;
+  width:6px;height:6px;border-radius:50%;background:var(--blue-500)}
 /* 使用說明：內容由 md 產生，這裡只負責讓它讀起來舒服 */
 .helpdoc h1{font-size:1.3rem;font-weight:800;margin-bottom:4px}
-.helpdoc h2{font-size:1.06rem;font-weight:800;margin:22px 0 8px;padding-left:9px;border-left:4px solid var(--blue-500)}
+.helpdoc h2{display:flex;align-items:center;font-size:1.06rem;font-weight:800;margin:0 0 10px}
 .helpdoc h3{font-size:.97rem;font-weight:800;margin:16px 0 6px;color:var(--blue-700)}
 .helpdoc p{margin:8px 0;line-height:1.8}
 .helpdoc ul,.helpdoc ol{margin:8px 0 8px 20px;line-height:1.8}
@@ -723,7 +731,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 18:27</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 19:39</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -737,6 +745,7 @@ a.btn{text-decoration:none}
   <button data-v="needs" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-need"/></svg>Q&amp;A</button>
   <button data-v="members" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-people"/></svg>夥伴</button>
   <button data-v="me"><svg class="ic" width="21" height="21"><use href="#i-me"/></svg>我的</button>
+  <button data-v="help" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-form"/></svg>使用說明</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
 </nav>
@@ -2991,107 +3000,97 @@ const fmtDate = iso => { if(!iso) return ""; const d=new Date(iso);
 /* HELP_START —— ⛔ 這一段是機器產生的，不要手改。
    真實來源是 4_tc8-docs/使用說明_夥伴版.md 與 使用說明_幹部版.md，
    改完跑 `python3 產生說明頁.py` 再上線。手改這裡＝多一份會過期的真實來源。 */
-const HELP_MEMBER = `<h1>TC8 網站 使用說明（夥伴版）</h1>
+const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <blockquote>
-<p>網址 <a href="https://cxo-tc8.github.io/tc8-9bb41a/app.html">https://cxo-tc8.github.io/tc8-9bb41a/app.html</a>
-建議按手機瀏覽器的「加到主畫面」，之後像 App 一樣打開。</p>
+<p>建議按手機瀏覽器的「加到主畫面」，之後像 App 一樣打開。</p>
 </blockquote>
 <hr />
-<h2>1　第一次進來，做這三件事</h2>
-<p><strong>① 用 LINE 登入</strong>
-右上角按「登入」，會跳到 LINE 授權，按同意就回來了。不用記帳號密碼。</p>
-<p><strong>② 找到你自己，按下去</strong>
-登入後會出現全分會名單，找到你的名字點一下，確認就完成了。
-這一步叫「認領」——<strong>做過一次就不用再做</strong>，之後打開網站就直接是你。</p>
+<section class="hcard"><h2><span class="hico">🚀</span>第一次進來，三步驟</h2>
+<ol>
+<li><strong>用 LINE 登入</strong>——右上角按「登入」，跳到 LINE 按同意就回來了。不用記帳號密碼。</li>
+<li><strong>找到你自己，點下去</strong>——出現全分會名單，點你的名字確認。這叫「認領」，<strong>做一次就好</strong>。</li>
+<li><strong>補自己的資料</strong>——「我的」→「改我的基本資料」。</li>
+</ol>
 <blockquote>
-<p>找不到自己的名字？按最下面的「我不在名單上」填基本資料，四位幹部任何一位核可就會出現。</p>
+<p>找不到自己的名字？按最下面「我不在名單上」填資料，幹部核可就會出現。
+公司、專業別、可以提供什麼、想找什麼——<strong>這些是別人用來找到你的關鍵字</strong>，填了才配得起來。</p>
 </blockquote>
-<p><strong>③ 補一下自己的資料</strong>
-右下角「我的」→「改我的基本資料」。公司、專業別、可以提供什麼、想找什麼——
-<strong>這些是別人用來找到你的關鍵字</strong>，填了才配得起來。存檔立刻生效，不用等審核。</p>
-<hr />
-<h2>2　首頁有什麼</h2>
-<p>由上而下：<strong>下一場月例會 → 公告與問卷 → 近期活動 → 夥伴的近期活動 → 夥伴團購 → 最新案例</strong>。
-每一區只放最近幾則，想看全部就按右邊的「全部 n」。</p>
-<hr />
-<h2>3　月例會：報名、訂餐、報到</h2>
-<h3>報名</h3>
-<p>首頁月例會那塊會顯示「還剩 n 個位子」，按 <strong>「我要報名」</strong>。
-如果那場有訂餐，會跳出餐點讓你選；吃素或有過敏，寫在「飲食備註」。</p>
-<p>報名成功後，月例會那張藍色卡片的<strong>右上角會變成綠色的「已報名」</strong>，
-沒報名時是白色的「未報名」——不用點進去也知道自己報了沒。</p>
-<h3>改餐點 / 取消</h3>
-<p>報名之後，原本「我要報名」的位置會換成 <strong>「取消報名」</strong> 和 <strong>「改餐點」</strong> 兩顆。
-改餐點不會佔掉新的位子。</p>
-<h3>看講者是誰、看詳細內容</h3>
-<p>首頁那張卡片<strong>點下去</strong>就會看到主講者、活動內容、誰報名了，以及「我要帶來賓」。</p>
-<h3>帶來賓</h3>
-<p>月例會那塊有「我要帶來賓」，填來賓姓名、公司、電話。
-每人每場的名額由幹部設定（預設 5 位）。</p>
-<h3>當天報到</h3>
-<p><strong>例會當天</strong>首頁才會出現 <strong>「📍 報到」</strong>（平常不佔版面）。
-按下去輸入現場螢幕上的報到碼就完成了。<strong>輸入碼就算報到，不用再找幹部打勾。</strong></p>
-<h3>不能來，一定要取消</h3>
-<p>按「取消報名」。<strong>餐是提前訂的，越早說越好</strong>——太晚取消，那份便當就浪費了。
-系統會記下你取消的時間，也會自動把位子讓給候補的夥伴。</p>
-<hr />
-<h2>4　任何活動都能報名、按讚、留言</h2>
-<p>不只月例會。CXO 的活動、其他夥伴辦的活動，點進去下面都有：</p>
+
+</section><section class="hcard"><h2><span class="hico">📅</span>月例會：報名</h2>
+<p>首頁最上面那張藍色卡片就是下一場月例會。</p>
+<ol>
+<li>按 <strong>「我要報名」</strong>（有訂餐會跳出餐點讓你選）</li>
+<li>右上角變成綠色 <strong>「已報名」</strong> 就成功了</li>
+<li>想改？按鈕會變成 <strong>「取消報名」</strong> 和 <strong>「改餐點」</strong></li>
+</ol>
+<blockquote>
+<p><strong>右上角的徽章</strong>：白色「未報名」／綠色「已報名」／米色「候補中」。
+不用點進去，一眼就知道自己報了沒。</p>
+</blockquote>
+
+</section><section class="hcard"><h2><span class="hico">🎤</span>看講者、帶來賓</h2>
+<p><strong>藍色卡片點下去</strong>，裡面才有：</p>
 <ul>
-<li><strong>報名</strong>：轉貼的活動是輕量的「我要參加」，沒有名額也沒有訂餐，就是讓大家知道你會去</li>
-<li><strong>📋 誰報名了</strong>：看得到有哪些夥伴要去（要登入）</li>
-<li><strong>👍 讚</strong>：按了會顯示你的名字</li>
-<li><strong>討論</strong>：任何想法、要不要一起去、要不要併車，寫在下面</li>
+<li>主講者的宣傳照與講題</li>
+<li>活動詳細內容與照片</li>
+<li><strong>📋 誰報名了</strong></li>
+<li><strong>我要帶來賓</strong>（填姓名、公司、電話，每人每場預設 5 位）</li>
 </ul>
-<hr />
-<h2>5　AI 案例：把你做過的事寫下來</h2>
-<p>「AI 案例」分頁 →「＋ 分享我的案例」。四個欄位：
-<strong>解決什麼問題／用什麼工具／怎麼做的／補充細節</strong>，再選分類標籤。</p>
+
+</section><section class="hcard"><h2><span class="hico">📍</span>當天報到</h2>
+<p>例會當天，首頁那顆「📍 報到」就會亮起來（平常是灰的）。</p>
+<p>按下去 → 輸入現場螢幕上的<strong>報到碼</strong> → 完成。</p>
 <blockquote>
-<p>不用寫得很厲害。「我用 AI 幫我把 LINE 群訊息整理成客戶名單」就是很好的案例。
+<p><strong>輸入碼就算報到，不用再找幹部打勾。</strong></p>
+</blockquote>
+
+</section><section class="hcard"><h2><span class="hico">⚠️</span>不能來，一定要取消</h2>
+<p>按 <strong>「取消報名」</strong>。</p>
+<blockquote>
+<p><strong>餐是提前訂的，越早說越好</strong>——太晚取消那份便當就浪費了。
+系統會記下取消時間，也會自動把位子讓給候補的夥伴。
+報名了沒到、太晚取消，會扣「出席信用」（在「我的」裡看得到）。</p>
+</blockquote>
+
+</section><section class="hcard"><h2><span class="hico">💡</span>AI 案例：把你做過的事寫下來</h2>
+<p>「AI 案例」→「＋ 分享我的案例」。四個欄位：
+<strong>解決什麼問題／用什麼工具／怎麼做的／補充細節</strong>。</p>
+<blockquote>
+<p>不用寫得很厲害。「我用 AI 把 LINE 群訊息整理成客戶名單」就是很好的案例。
 別人是照「問題」在搜尋的，不是照工具。</p>
 </blockquote>
-<hr />
-<h2>6　Q&amp;A：卡住了就問</h2>
-<p>「Q&amp;A」分頁 →「我要提問」。寫你卡在哪、已經試過什麼。
-有人在下面留言給建議，<strong>解決之後記得回來按「已經找到了」</strong>，
-並選出幫上忙的夥伴（最多 5 位）。</p>
+
+</section><section class="hcard"><h2><span class="hico">🙋</span>Q&amp;A：卡住了就問</h2>
+<p>「Q&amp;A」→「我要提問」。寫你卡在哪、已經試過什麼。</p>
+<p>解決之後<strong>記得回來按「已經找到了」</strong>，並選出幫上忙的夥伴。</p>
 <blockquote>
-<p>這一步不要跳過。一年後這份紀錄就是分會互助的證據：誰卡住 → 誰幫了他 → 解掉了。</p>
+<p>這一步不要跳過。一年後這份紀錄就是分會互助的證據。</p>
 </blockquote>
-<hr />
-<h2>7　團購</h2>
-<p>「團購」分頁看得到現在開的團。點進去選規格、填數量就下訂。
-<strong>改單或取消</strong>：在同一頁按「改我的訂購」。
-<strong>繳費</strong>：轉帳或現場給財務長，<strong>由幹部登記</strong>，你在訂購頁看得到自己收了沒。</p>
-<p>想自己開團：按「＋ 開一個團購」，填完送審，幹部核可後才會公開。</p>
-<hr />
-<h2>8　「我的」這一頁</h2>
+
+</section><section class="hcard"><h2><span class="hico">🛒</span>團購</h2>
+<p>「團購」分頁看得到現在開的團，點進去選規格、填數量就下訂。</p>
 <ul>
-<li>改我的基本資料</li>
-<li>我報名了哪些場</li>
-<li><strong>我的出席信用</strong>：報名了卻沒到、太晚取消會扣分</li>
-<li>登出</li>
+<li><strong>改單或取消</strong>：同一頁按「改我的訂購」</li>
+<li><strong>繳費</strong>：轉帳或現場給財務長，由幹部登記，你在訂購頁看得到收了沒</li>
+<li><strong>想自己開團</strong>：按「＋ 開一個團購」，幹部核可後才公開</li>
 </ul>
-<hr />
-<h2>9　常見問題</h2>
-<p><strong>Q：看不到報名按鈕？</strong>
+
+</section><section class="hcard"><h2><span class="hico">❓</span>常見問題</h2>
+<p><strong>看不到報名按鈕？</strong>
 那一場還沒開放報名，幹部開了才會出現。</p>
-<p><strong>Q：名字顯示成我的 LINE 暱稱？</strong>
-名冊上的名字以分會名冊為準。LINE 暱稱只是額外顯示，方便大家對得起來
-（在 LINE 群看到不認識的暱稱，把它打進搜尋框就查得到是誰）。</p>
-<p><strong>Q：為什麼有些東西要登入才看得到？</strong>
-誰報名、誰按讚、留言內容——這些是分會內部的事，不開放給外面的人看。
-名冊與活動資訊則是公開的。</p>
-<p><strong>Q：在 LINE 裡面點連結，下載檔案沒反應？</strong>
-LINE 的瀏覽器會擋下載。請先用 Chrome 或 Safari 開這個網站再下載。</p>`;
+<p><strong>名字顯示成我的 LINE 暱稱？</strong>
+名冊上的名字以分會名冊為準。在 LINE 群看到不認識的暱稱，打進搜尋框就查得到是誰。</p>
+<p><strong>為什麼有些東西要登入才看得到？</strong>
+誰報名、誰按讚、留言內容是分會內部的事。名冊與活動資訊則是公開的。</p>
+<p><strong>在 LINE 裡點連結，下載檔案沒反應？</strong>
+LINE 的瀏覽器會擋下載。請先用 Chrome 或 Safari 開這個網站再下載。</p></section>`;
 const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <blockquote>
 <p>這一份是<strong>夥伴版之外</strong>多出來的管理功能。夥伴怎麼用請看夥伴版。
 權限綁「角色」不綁「人」：交接、換屆只要把新幹部的身分設成幹部，不必改程式。</p>
 </blockquote>
 <hr />
-<h2>1　發布月例會</h2>
+<section class="hcard"><h2>1　發布月例會</h2>
 <p>首頁「下一場月例會」旁的 <strong>＋ 發布</strong>（或在既有那場按「✏️ 編輯這場」）。</p>
 <div class="tablewrap"><table>
 <thead>
@@ -3131,13 +3130,13 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <p>月例會的報名要幹部手動打開，是刻意的——那一場牽涉名額與訂餐，要總務備妥再開。
 <strong>CXO 轉貼與夥伴自己辦的活動不需要開</strong>，一律可以「我要參加」。</p>
 </blockquote>
-<hr />
-<h2>2　餐點選項</h2>
+
+</section><section class="hcard"><h2>2　餐點選項</h2>
 <p>月例會那塊 →「🍱 餐點選項」。用「群組」分類（例如 主餐／飲品），
 每個選項可以設價格與數量上限。</p>
 <p>⛔ <strong>選項只能停用不能刪除</strong>——刪掉之後，過去報名的人點了什麼就查不到了。</p>
-<hr />
-<h2>3　報名名單與訂餐統計</h2>
+
+</section><section class="hcard"><h2>3　報名名單與訂餐統計</h2>
 <p>月例會那塊 →「📋 報名名單」。</p>
 <ul>
 <li><strong>餐點統計</strong>：各群組各幾份，總務直接照這個訂便當（只有幹部看得到）</li>
@@ -3145,8 +3144,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <li><strong>已取消</strong>：誰在什麼時候縮手的。<strong>餐是提前訂的，看時間才知道那份便當有沒有白訂</strong></li>
 <li><strong>⬇︎ 下載 CSV</strong>：Excel 打得開。⚠️ 在 LINE 裡面下載會失敗，要用 Chrome 或 Safari</li>
 </ul>
-<hr />
-<h2>4　現場報到</h2>
+
+</section><section class="hcard"><h2>4　現場報到</h2>
 <p>月例會那塊 →「✅ 報到」。</p>
 <p><strong>流程</strong>：按「開始報到，產生一組碼」→ 把碼投影在螢幕上或寫在報到台的牌子
 → <strong>夥伴自己在首頁按「報到」輸入碼就完成了</strong>。</p>
@@ -3160,8 +3159,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 2. ✓ 報名了，已報到
 3. 沒報名（現場出現就直接打勾，會記成現場加入）</p>
 <p>沒到的人可以在他那一列選缺席原因，系統據此扣分。</p>
-<hr />
-<h2>5　出席與退社：兩套不同的東西</h2>
+
+</section><section class="hcard"><h2>5　出席與退社：兩套不同的東西</h2>
 <div class="tablewrap"><table>
 <thead>
 <tr>
@@ -3187,8 +3186,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <p>規則：<strong>只算月例會</strong>、<strong>只有生病中斷連續</strong>（公出可以提早請，不中斷）。
 ⚠️ 只計算「真的開過報到」的場次——某場沒開報到，不會害全分會一起亮紅燈。
 ⚠️ 累積不到三場可數時一律不亮，<strong>現在看不到燈是正常的</strong>。</p>
-<hr />
-<h2>6　公告、問卷、活動</h2>
+
+</section><section class="hcard"><h2>6　公告、問卷、活動</h2>
 <ul>
 <li><strong>公告</strong>：可以標「重要」（置頂＋紅字）</li>
 <li><strong>問卷</strong>：可以標必填／選填；完成率的分子<strong>要幹部手動填</strong>
@@ -3196,8 +3195,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <li><strong>活動</strong>：分 TC8 自己辦的與 CXO 轉貼，發布時選「誰辦的」</li>
 <li><strong>草稿</strong>：存成「只有幹部看得到」，討論定案再公開。未公開的內容一般身分連 API 都撈不到</li>
 </ul>
-<hr />
-<h2>7　團購</h2>
+
+</section><section class="hcard"><h2>7　團購</h2>
 <p>「團購」→「團購管理」。</p>
 <ul>
 <li><strong>審核</strong>：夥伴開團要幹部核可才會公開</li>
@@ -3209,8 +3208,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <p>金額存的是「勾選當下」的金額，不會即時重算——
 這樣才看得出「已收 1200 但現在應付 1500」的差額。</p>
 </blockquote>
-<hr />
-<h2>8　夥伴管理</h2>
+
+</section><section class="hcard"><h2>8　夥伴管理</h2>
 <p>側邊欄「分會管理」→「👥 夥伴管理」。五個分類：</p>
 <div class="tablewrap"><table>
 <thead>
@@ -3238,8 +3237,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 </tr>
 </tbody>
 </table></div>
-<hr />
-<h2>9　哪些資料是公開的（未登入也看得到）</h2>
+
+</section><section class="hcard"><h2>9　哪些資料是公開的（未登入也看得到）</h2>
 <div class="tablewrap"><table>
 <thead>
 <tr>
@@ -3263,14 +3262,14 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 </tbody>
 </table></div>
 <p>⛔ <strong>不外流</strong>：LINE 帳號 ID、表單後台連結、來賓電話、報到時的定位。</p>
-<hr />
-<h2>10　出事的時候</h2>
+
+</section><section class="hcard"><h2>10　出事的時候</h2>
 <ul>
 <li><strong>有人說「沒改到」</strong>：先看網頁最下面的「版本 年-月-日 時:分」，
   對得上就是他的瀏覽器要重新整理；對不上就是還沒部署完（GitHub 大約 10 分鐘）</li>
 <li><strong>名單讀不出來／畫面空白</strong>：先重新整理一次再說；持續發生就找羅伯特</li>
 <li><strong>系統的維運與交接</strong>：在私有倉 <code>cxo-tc8/tc8-docs</code>（CHANGELOG 記錄每一次改動與原因）</li>
-</ul>`;
+</ul></section>`;
 /* HELP_END */
 
 let HELP_TAB = "member";
@@ -3295,15 +3294,6 @@ function homeHTML(){
   const edit = (p) => isOfficer() ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>` : "";
 
   let h = "";
-
-  // 使用說明擺第一個：新夥伴最需要，而且只掛在漢堡選單裡他們根本不會去翻。
-  // 只佔一行，不跟下面的月例會搶版面。
-  h += `<button class="helpbar" onclick="go('help')">
-    <span class="ic">📖</span>
-    <span>第一次用？<b>看使用說明</b>
-      <span class="sub2">報名、訂餐、帶來賓、開團購怎麼操作</span></span>
-    <svg class="go" width="17" height="17"><use href="#i-go"/></svg>
-  </button>`;
 
   // 月例會：首頁只放精簡卡片（藍底標題＋日期地點＋報名人數）＋報名/報到兩顆鈕。
   // 講者、內容、來賓、報名名單一律點進去看——首頁一年後才不會變成捲不完的長河。

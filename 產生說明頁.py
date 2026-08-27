@@ -23,8 +23,27 @@ def to_html(md_path):
                              extensions=["tables", "sane_lists"])
     # 表格要能自己橫向捲，否則整頁會跟著捲（窄螢幕實測過的坑）
     html = html.replace("<table>", '<div class="tablewrap"><table>').replace("</table>", "</table></div>")
+    # 每個 ## 段落包成一張卡片，開頭的 emoji 抽成大圖示。
+    # ⛔ 這一步一定要在產生器做，不能改成手刻 HTML——
+    #    md 是唯一真實來源，手刻等於多一份會過期的說明書。
+    html = cardify(html)
     # 這段字串會被放進 JS 的反引號樣板裡，反引號與 ${ 一定要跳脫
     return html.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+
+def cardify(html):
+    """把 <h2>…直到下一個 <h2> 為止 包成一張卡片；h2 開頭的 emoji 變成大圖示。"""
+    parts = re.split(r"(?=<h2>)", html)
+    out = []
+    for seg in parts:
+        if not seg.startswith("<h2>"):
+            out.append(seg)          # 第一段（大標與前言）維持原樣
+            continue
+        # <h2>🚀　第一次進來</h2> → 圖示 + 標題
+        seg = re.sub(r"<h2>([^\w\s　]{1,3})[　\s]*(.*?)</h2>",
+                     r'<h2><span class="hico">\1</span>\2</h2>', seg, count=1)
+        seg = seg.replace("<hr />", "")   # 卡片自己有邊界，不需要分隔線
+        out.append('<section class="hcard">' + seg + '</section>')
+    return "".join(out)
 
 s = io.open(APP, encoding="utf-8").read()
 start, end = s.index("/* HELP_START"), s.index("/* HELP_END */")
