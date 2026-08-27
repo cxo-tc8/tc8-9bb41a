@@ -723,7 +723,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:39</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 18:22</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3558,13 +3558,18 @@ function openPostDetail(id){
       ${row("時間", p.time_text)}
       ${row("地點", p.place)}
       ${p.fee?`<div class="block"><div class="lbl">費用</div><p style="white-space:pre-wrap">${esc(p.fee)}</p></div>`:""}
-      ${[[p.speaker,p.speaker_photo],[p.speaker2,p.speaker2_photo]].filter(x=>x[0]).length?
-        `<div class="block"><div class="lbl">主講</div>
-          ${[[p.speaker,p.speaker_photo,p.speaker_body],[p.speaker2,p.speaker2_photo,p.speaker2_body]].filter(x=>x[0]).map(([sp,ph,bd])=>`
-            <div class="speaker" style="border:none;padding:6px 0;margin:0;align-items:flex-start">
-              ${ph?`<img class="spimg" src="${esc(ph)}" alt="${esc(sp)}">`:avatar(sp)}
-              <div style="flex:1;min-width:0"><div class="n">${esc(sp)}</div>
-                ${bd?`<div class="mdesc" style="margin-top:4px;white-space:pre-wrap">${esc(bd)}</div>`:""}</div></div>`).join("")}</div>`:""}
+      ${(()=>{const sps=[[p.speaker,p.speaker_photo,p.speaker_body],
+                          [p.speaker2,p.speaker2_photo,p.speaker2_body]].filter(x=>x[0]);
+        // ⛔ 講者這裡不能用 .spimg（38px 圓形裁切）——那是留言區的小頭像。
+        //    講者放的是「整張直式宣傳照」，裁成圓的等於把海報毀掉。
+        //    用 .spcell（方形、object-fit:contain 完整顯示、可點擊放大）。
+        return sps.length?`<div class="block"><div class="lbl">主講</div>
+          <div class="spgrid">`+sps.map(([sp,ph,bd])=>`
+            <div class="spcell">
+              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${escAttr(ph)}')" title="點一下放大">`
+                  :`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
+              <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div>
+                ${bd?`<div class="sptopic">${esc(bd)}</div>`:""}</div></div>`).join("")+`</div></div>`:"";})()}
       ${myTalkBtn(p)}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
       ${(p.photos||[]).length?`<div class="block"><div class="lbl">照片</div>
