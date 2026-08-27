@@ -480,12 +480,17 @@ a.btn{text-decoration:none}
    桌機固定兩欄並排、窄螢幕自動上下疊。 */
 .featured{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px}
 @media(min-width:820px){.featured{grid-template-columns:1fr 1fr}}
-.fbn{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
+.fbn{position:relative;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
   border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:box-shadow .18s}
 .fbn:hover{box-shadow:0 2px 6px rgba(16,24,40,.08),0 10px 24px rgba(16,24,40,.10)}
 .fbn .fimg{aspect-ratio:16/9;min-height:0;overflow:hidden;background:var(--line-soft)}
 .fbn .fimg img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 /* 還沒放圖的時候不要留一塊灰色空格——用底色橫幅撐住，之後上傳圖片就換掉 */
+.fbadge{position:absolute;top:12px;right:12px;z-index:2;font-size:.72rem;font-weight:800;
+  padding:5px 11px;border-radius:999px;letter-spacing:.5px;box-shadow:0 1px 4px rgba(8,14,28,.18)}
+.fbadge.no{background:#fff;color:var(--blue-900)}
+.fbadge.yes{background:var(--ok);color:#fff}
+.fbadge.wait{background:#fff3d6;color:#8a5a12}
 .fbn .fband{aspect-ratio:16/9;background:linear-gradient(135deg,var(--blue-900),var(--blue-500));
   color:#fff;display:flex;flex-direction:column;justify-content:center;padding:18px 20px}
 .fbn .fband .k{font-size:.72rem;letter-spacing:1.5px;font-weight:700;opacity:.85}
@@ -718,7 +723,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:31</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 11:39</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -985,10 +990,11 @@ function signupButton(p){
   const hasMeals = mealGroups(p.id).length > 0;
   const mine = MY_SIGNUPS.get(p.id);
   if(mine){
-    // 已報名的人還是要能改餐點（改餐點不會再佔一個新位子，後端有處理）
-    return hasMeals
-      ? `<button class="btn btn-ghost" onclick="openSignup(${p.id})">改我的餐點</button>`
-      : `<button class="btn btn-done" disabled>${mine.status==="waitlist"?"候補中":"✓ 已報名"}</button>`;
+    // 已經報名的人，這個位置要能「退出」而不是只顯示一顆按不動的「已報名」——
+    // 狀態改看藍色橫幅右上角的徽章，按鈕留給真正能做的動作。
+    // 改餐點不會再佔一個新位子（後端有處理）。
+    return `<button class="btn btn-ghost" onclick="doCancel(${p.id})">取消報名</button>` +
+      (hasMeals ? `<button class="btn btn-ghost" onclick="openSignup(${p.id})">改餐點</button>` : "");
   }
   const left = seatsLeft(p.id);
   if(left === 0){
@@ -1011,7 +1017,6 @@ function myOrderLine(p){
     <div class="myorder-top">
       <span>${waiting ? "🕐 你在候補名單上，有人取消就會自動遞補給你" : "✓ 你已報名"}${
         items.length ? "　　" + items.join("　") : ""}</span>
-      <button class="cancelbtn" onclick="doCancel(${p.id})">取消報名</button>
     </div>
     ${mine.diet_note ? `<div class="dietnote">備註：${esc(mine.diet_note)}</div>` : ""}</div>`;
 }
@@ -1691,7 +1696,7 @@ function openTalkForm(postId, slot){
   const name = slot === 1 ? p.speaker : p.speaker2;
   const photo = (slot === 1 ? p.speaker_photo : p.speaker2_photo) || "";
   const body = (slot === 1 ? p.speaker_body : p.speaker2_body) || "";
-  el("v-form").innerHTML = `${backTo("go('home'); renderHome()", "回首頁")}
+  el("v-form").innerHTML = `${backTo("go('home')", "回首頁")}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">更新我的講題</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
@@ -3013,8 +3018,13 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明（夥伴版）</h1>
 <h3>報名</h3>
 <p>首頁月例會那塊會顯示「還剩 n 個位子」，按 <strong>「我要報名」</strong>。
 如果那場有訂餐，會跳出餐點讓你選；吃素或有過敏，寫在「飲食備註」。</p>
-<h3>改餐點</h3>
-<p>已經報名了還想改，按 <strong>「改我的餐點」</strong>。改餐點不會佔掉新的位子。</p>
+<p>報名成功後，月例會那張藍色卡片的<strong>右上角會變成綠色的「已報名」</strong>，
+沒報名時是白色的「未報名」——不用點進去也知道自己報了沒。</p>
+<h3>改餐點 / 取消</h3>
+<p>報名之後，原本「我要報名」的位置會換成 <strong>「取消報名」</strong> 和 <strong>「改餐點」</strong> 兩顆。
+改餐點不會佔掉新的位子。</p>
+<h3>看講者是誰、看詳細內容</h3>
+<p>首頁那張卡片<strong>點下去</strong>就會看到主講者、活動內容、誰報名了，以及「我要帶來賓」。</p>
 <h3>帶來賓</h3>
 <p>月例會那塊有「我要帶來賓」，填來賓姓名、公司、電話。
 每人每場的名額由幹部設定（預設 5 位）。</p>
@@ -3426,7 +3436,15 @@ function featuredOf(tab){
 // 大橫幅：有圖就用圖，沒圖用底色撐住版面（幹部之後上傳照片就換掉）
 function featuredBanner(p, extra){
   const img = (p.photos || [])[0];
+  // 右上角一眼看出自己報了沒。⚠️ 沒登入不顯示——那時候我們根本不知道他報了沒，
+  //    顯示「未報名」會變成在騙人。
+  const mine = MY_SIGNUPS.get(p.id);
+  const badge = (ME && p.signup_open)
+    ? `<span class="fbadge ${mine ? (mine.status==="waitlist" ? "wait" : "yes") : "no"}">${
+        mine ? (mine.status==="waitlist" ? "候補中" : "已報名") : "未報名"}</span>`
+    : "";
   return `<article class="fbn" onclick="openPostDetail(${p.id})">
+    ${badge}
     ${img
       ? `<div class="fimg"><img src="${esc(img)}" alt="" loading="lazy"></div>`
       : `<div class="fband"><div class="k">${KIND_LABEL[p.kind] || ""}</div>
