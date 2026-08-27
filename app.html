@@ -723,7 +723,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 18:22</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 18:27</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3326,7 +3326,7 @@ function homeHTML(){
       </div>` : ""}` : "";
   h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
   h += monthly
-    ? `<div class="featured solo">${featuredBanner(monthly, mBtns)}</div>`
+    ? `<div class="featured solo">${featuredBanner(monthly, mBtns, true)}</div>`
     : `<div class="card"><div class="empty">還沒有排定的月例會${isOfficer()?'<br><span style="font-size:.82rem">按上面「＋ 發布」就能建立</span>':""}</div></div>`;
 
   // CXO & TC8 活動（緊接月例會）
@@ -3434,8 +3434,11 @@ function featuredOf(tab){
   return pick;
 }
 // 大橫幅：有圖就用圖，沒圖用底色撐住版面（幹部之後上傳照片就換掉）
-function featuredBanner(p, extra){
-  const img = (p.photos || [])[0];
+function featuredBanner(p, extra, bandOnly){
+  // ⛔ bandOnly：首頁的月例會一律用藍底標題，不要拿活動照片當封面。
+  //    活動照片是「點進去看細節」才該出現的東西，擺在首頁會把版面吃掉一大塊。
+  //    （活動分頁不傳這個參數，維持原本會顯示照片的行為。）
+  const img = bandOnly ? null : (p.photos || [])[0];
   // 右上角一眼看出自己報了沒。⚠️ 沒登入不顯示——那時候我們根本不知道他報了沒，
   //    顯示「未報名」會變成在騙人。
   const mine = MY_SIGNUPS.get(p.id);
