@@ -140,6 +140,26 @@ a{color:inherit;text-decoration:none}
   background:rgba(255,255,255,.16);color:#fff;font-size:1.5rem;line-height:1;cursor:pointer}
 .spcell .ph{cursor:zoom-in}
 .itemphotos img{cursor:zoom-in}
+/* 會場報到的輸入框。⛔ 不能用 prompt()——LINE 內建瀏覽器（iOS WKWebView）
+   沒實作 runJavaScriptTextInputPanel，prompt() 不會跳出來，直接回傳 null，
+   使用者按了「報到」畫面完全沒反應（2026-08-27 查證 Apple／Android 官方規範）。
+   alert()／confirm() 不受影響，所以全站其他彈窗維持原樣。 */
+.cimodal{position:fixed;inset:0;background:rgba(8,14,28,.55);z-index:90;display:none;
+  align-items:center;justify-content:center;padding:22px}
+.cimodal.on{display:flex}
+.cibox{background:var(--card);border-radius:var(--r);box-shadow:0 18px 50px rgba(8,14,28,.3);
+  width:100%;max-width:360px;padding:20px}
+.cibox h3{font-size:1.08rem;font-weight:800;margin-bottom:5px}
+.cibox .cihint{font-size:.85rem;color:var(--muted);line-height:1.6;margin-bottom:13px}
+.cibox input{width:100%;font-size:16px;padding:13px 14px;border:1px solid var(--line);
+  border-radius:var(--r-sm);text-align:center;letter-spacing:2px;font-weight:700;
+  text-transform:uppercase;font-family:inherit}
+.cibox input:focus{outline:none;border-color:var(--blue-500)}
+.cimsg{font-size:.86rem;line-height:1.6;margin-top:10px;min-height:1.2em}
+.cimsg.err{color:#b4261a}
+.cimsg.ok{color:var(--ok);font-weight:700}
+.cibtns{display:flex;gap:9px;margin-top:15px}
+.cibtns .btn{flex:1}
 .scrim{position:fixed;inset:0;background:rgba(10,20,40,.42);opacity:0;pointer-events:none;
   transition:opacity .2s;z-index:60}
 .scrim.on{opacity:1;pointer-events:auto}
@@ -472,6 +492,16 @@ a.btn{text-decoration:none}
 /* 點讚不做成「跟報名區一樣重的框」：它只有一顆小按鈕，
    重要性也低一階。改成一條輕量橫列，靠按鈕自己的邊框就夠。 */
 .likebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 4px 12px}
+/* 使用說明的首頁入口：⚠️ 只掛在漢堡選單裡等於沒放——夥伴不會為了找說明去翻選單
+   （2026-08-27 羅伯特回報「怎麼沒放到網頁上」，其實有，只是找不到）。
+   左邊界用橘色：首頁其他區塊都是藍系，橘色才跳得出來。 */
+.helpbar{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--orange);
+  border-radius:var(--r);box-shadow:var(--shadow);padding:13px 15px;margin:4px 0 2px;
+  color:var(--text);cursor:pointer;min-height:56px;font-family:inherit;font-size:.94rem}
+.helpbar .ic{font-size:1.2rem;flex:none}
+.helpbar .sub2{display:block;font-size:.81rem;color:var(--muted);margin-top:2px}
+.helpbar .go{margin-left:auto;color:var(--muted);flex:none}
 /* 使用說明：內容由 md 產生，這裡只負責讓它讀起來舒服 */
 .helpdoc h1{font-size:1.3rem;font-weight:800;margin-bottom:4px}
 .helpdoc h2{font-size:1.06rem;font-weight:800;margin:22px 0 8px;padding-left:9px;border-left:4px solid var(--blue-500)}
@@ -640,6 +670,19 @@ a.btn{text-decoration:none}
   <img id="lightimg" alt="">
   <button class="lightx" aria-label="關閉">×</button>
 </div>
+<div class="cimodal" id="cimodal">
+  <div class="cibox">
+    <h3>會場報到</h3>
+    <div class="cihint">輸入會場 QR 上的報到碼，<br>或是幹部口頭報的短碼。</div>
+    <input id="cicode" type="text" inputmode="text" autocomplete="off"
+           autocapitalize="characters" spellcheck="false" placeholder="報到碼">
+    <div class="cimsg" id="cimsg"></div>
+    <div class="cibtns">
+      <button class="btn btn-ghost" onclick="ciClose()">取消</button>
+      <button class="btn btn-checkin" id="cisend" onclick="sendCheckin()">送出報到</button>
+    </div>
+  </div>
+</div>
 <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
 <aside class="drawer" id="drawer">
   <div class="drawerhead">
@@ -667,7 +710,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-26 18:45</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 08:31</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -732,6 +775,11 @@ function DBG(label, data){
   box.textContent = DBGLOG.join("\n");
 }
 const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// ⛔ 要塞進 onclick="f('這裡')" 的值一律用 escAttr，不能只用 esc。
+//    esc 沒處理單引號，名字填 X'+alert(1)+'Y 就會從字串逃出去變成程式碼。
+//    ⚠️ 不能改用 HTML 實體 &#39;——瀏覽器會先把實體解回單引號才交給 JS，等於沒防。
+//    只有反斜線跳脫才有效（2026-08-26 用 Chrome headless 實測確認過兩種寫法）。
+const escAttr = s => esc(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 const el  = id => document.getElementById(id);
 const token = () => localStorage.getItem("tc8_token");
 
@@ -870,26 +918,54 @@ function checkinButton(p){
   return `<button class="btn btn-checkin" onclick="doCheckin(${p.id})">📍 報到</button>`;
 }
 // 報到：先拿定位（拿不到也沒關係，GPS 只記錄不擋人），再送報到碼
-async function doCheckin(postId){
+// ⛔ 報到碼不能用 prompt() 收——在 LINE 內建瀏覽器它不會跳出來，直接回傳 null，
+//    使用者按了「報到」畫面完全沒反應，而報到是會場上最不能失敗的一步。
+//    改用頁面內的輸入框；打錯也留在原地重打，不必從頭再按一次。
+let CI_POST = null;
+function doCheckin(postId){
   if(MY_CHECKINS.has(postId)){ alert("你已經報到過了"); return; }
-  const code = prompt("請輸入會場 QR 上的報到碼\n（或是幹部口頭報的短碼）");
-  if(!code) return;
+  CI_POST = postId;
+  el("cicode").value = "";
+  ciMsg("");
+  el("cisend").disabled = false;
+  el("cimodal").classList.add("on");
+  el("cicode").focus();
+}
+function ciClose(){ el("cimodal").classList.remove("on"); CI_POST = null; }
+function ciMsg(text, kind){
+  const m = el("cimsg"); m.textContent = text; m.className = "cimsg" + (kind ? " " + kind : "");
+}
+async function sendCheckin(){
+  const code = (el("cicode").value || "").trim();
+  if(!code){ ciMsg("請先輸入報到碼", "err"); el("cicode").focus(); return; }
+  const postId = CI_POST;
+  el("cisend").disabled = true;
+  ciMsg("報到中…請稍候");
   const pos = await new Promise(res => {
     if(!navigator.geolocation) return res(null);
     // ⚠️ 超時就放棄，不要讓人卡在報到台前面等定位
     navigator.geolocation.getCurrentPosition(
       p => res(p), () => res(null), {timeout: 6000, maximumAge: 60000});
   });
-  const body = {post_id: postId, code: code.trim().toUpperCase(), method: "qr"};
+  const body = {post_id: postId, code: code.toUpperCase(), method: "qr"};
   if(pos){ body.lat = pos.coords.latitude; body.lng = pos.coords.longitude; body.accuracy = pos.coords.accuracy; }
   const r = await checkinApi("checkin", body);
   if(r && r.ok){
     MY_CHECKINS.add(postId); renderHome();
-    alert(r.already ? "你已經報到過了" : `報到完成，${r.name}！`);
+    ciMsg(r.already ? "你已經報到過了" : "報到完成，" + r.name + "！", "ok");
+    setTimeout(ciClose, 1400);
   }else{
-    alert((r && r.message) || "報到失敗");
+    // 錯了就留在畫面上讓他直接改，不要關掉害他從頭再按一次
+    ciMsg((r && r.message) || "報到失敗，請確認報到碼是否正確", "err");
+    el("cisend").disabled = false;
+    el("cicode").select();
   }
 }
+// 打完碼直接按 Enter 就送出（會場上多半單手操作）
+el("cicode").addEventListener("keydown", e => {
+  if(e.key === "Enter"){ e.preventDefault(); sendCheckin(); }
+  if(e.key === "Escape") ciClose();
+});
 
 // 報名按鈕：沒登入不給按、已報名顯示狀態、額滿停用
 function signupButton(p){
@@ -1107,7 +1183,7 @@ function buyRow(b){
         <button class="mbtn" onclick="event.stopPropagation();openBuyForm(${b.id})">✏️ 改內容</button>
         <button class="mbtn" onclick="event.stopPropagation();openBuyDetail(${b.id}, '')">📋 訂購名單</button>
         ${isOfficer() ? `<button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-          onclick="event.stopPropagation();removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>` : ""}
+          onclick="event.stopPropagation();removeBuy(${b.id}, '${escAttr(b.title||"")}')">🗑 刪掉</button>` : ""}
       </div>` : ""}
     </div></div>`;
 }
@@ -1152,7 +1228,7 @@ function openBuy(buyId){
         const mine = myOf(it.id);
         return `<div class="itemcard">
           ${(it.photos||[]).length ? `<div class="itemphotos">${
-            it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${esc(u)}')">`).join("")}</div>` : ""}
+            it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${escAttr(u)}')">`).join("")}</div>` : ""}
           <div class="itemname">${esc(it.name)}</div>
           <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件</div>
           ${it.body ? `<div class="mdesc" style="margin-top:6px;white-space:pre-wrap">${esc(it.body)}</div>` : ""}
@@ -1176,7 +1252,7 @@ function openBuy(buyId){
                 <label>${esc(g)}</label>
                 <div class="pills mealopt" id="v_${it.id}_${esc(g)}">
                   ${vars.filter(v => v.grp === g).map(v =>
-                    `<button type="button" class="pill" onclick="pickVar(${it.id}, '${esc(g)}', '${esc(v.label)}', this)">${esc(v.label)}</button>`).join("")}
+                    `<button type="button" class="pill" onclick="pickVar(${it.id}, '${escAttr(g)}', '${escAttr(v.label)}', this)">${esc(v.label)}</button>`).join("")}
                 </div></div>`).join("")}
               <div class="ordcell qty">
                 <label>數量</label>
@@ -1191,7 +1267,7 @@ function openBuy(buyId){
         <button class="mbtn add" onclick="openBuyDetail(${buyId}, '')">📋 看訂購名單與統計</button>
         <button class="mbtn add" onclick="openBuyForm(${buyId})">✏️ 改這個團購與商品</button>
         ${isOfficer() ? `<button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-          onclick="removeBuy(${buyId}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button>` : ""}</div>` : ""}
+          onclick="removeBuy(${buyId}, '${escAttr(b.title||"")}')">🗑 刪掉這個團購</button>` : ""}</div>` : ""}
     </div>`;
   go("form");
 }
@@ -1292,7 +1368,7 @@ function openBuyForm(buyId){
           <button class="btn btn-primary" onclick="submitBuy(${b.id}, this)"
             ${items.length ? "" : "disabled style='opacity:.45'"}>送出給幹部審核</button>` : ""}
         ${b && isOfficer() ? `<button class="btn btn-ghost" style="color:#b4261a"
-            onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉這個團購</button>` : ""}
+            onclick="removeBuy(${b.id}, '${escAttr(b.title||"")}')">🗑 刪掉這個團購</button>` : ""}
       </div>
       ${b && (b.status === "draft" || b.status === "rejected") ? `<div class="mnote" style="margin-top:8px">${
         items.length
@@ -1679,13 +1755,13 @@ async function openMemberAdmin(tab){
           </span>
           <span class="actions" style="flex:none;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:230px">
             ${m.status === "pending"
-              ? `<button class="mbtn add" onclick="reviewMember(${m.id},'approve','${esc((m.name||"").replace(/'/g,""))}')">核可</button>
-                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewMember(${m.id},'reject','${esc((m.name||"").replace(/'/g,""))}')">退回</button>`
+              ? `<button class="mbtn add" onclick="reviewMember(${m.id},'approve','${escAttr(m.name||"")}')">核可</button>
+                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewMember(${m.id},'reject','${escAttr(m.name||"")}')">退回</button>`
             : m.status !== null
-              ? `<button class="mbtn" onclick="unretireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">加回來</button>`
-              : `${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">解綁</button>` : ""}
-                 ${m.id !== ME.id ? `<button class="mbtn" onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">退出</button>
-                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="deleteMember(${m.id}, '${esc((m.name||"").replace(/'/g,""))}')">刪除</button>` : ""}`}
+              ? `<button class="mbtn" onclick="unretireMember(${m.id}, '${escAttr(m.name||"")}')">加回來</button>`
+              : `${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${escAttr(m.name||"")}')">解綁</button>` : ""}
+                 ${m.id !== ME.id ? `<button class="mbtn" onclick="retireMember(${m.id}, '${escAttr(m.name||"")}')">退出</button>
+                 <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="deleteMember(${m.id}, '${escAttr(m.name||"")}')">刪除</button>` : ""}`}
           </span>
         </div>`).join("") : `<div class="empty">這個分類沒有人</div>`}</div>
     </div>`;
@@ -1737,13 +1813,13 @@ async function openBuyOverview(){
               <button class="btn btn-primary btn-sm" onclick="approveBuy(${b.id}, false)">核可上架</button>
               <button class="btn btn-ghost btn-sm" onclick="approveBuy(${b.id}, true)">退回</button>
               <button class="btn btn-ghost btn-sm" style="color:#b4261a"
-                onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
+                onclick="removeBuy(${b.id}, '${escAttr(b.title||"")}')">🗑 刪掉</button>
             </div>` : ""}
           <div class="actions" style="margin-top:10px">
             <button class="mbtn add" onclick="openBuyDetail(${b.id}, 'overview')">📋 完整訂購名單</button>
             <button class="mbtn" onclick="openBuyForm(${b.id})">✏️ 改內容</button>
             <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-              onclick="removeBuy(${b.id}, '${esc((b.title||"").replace(/'/g, ""))}')">🗑 刪掉</button>
+              onclick="removeBuy(${b.id}, '${escAttr(b.title||"")}')">🗑 刪掉</button>
           </div>
         </div>`).join("")
         : `<div class="mnote" style="margin-top:16px">還沒有任何團購</div>`}
@@ -2107,7 +2183,7 @@ function guestBlock(p){
           ? `　<span class="mnote">${Object.entries(g.meal_choices).map(([k,v]) => esc(mealLabel(v))).join("・")}</span>` : ""}</span>
       <span>
         <button class="cancelbtn" onclick="openGuest(${p.id}, ${g.id})">改</button>
-        <button class="cancelbtn" onclick="removeGuest(${g.id}, '${esc(g.name)}')">取消</button>
+        <button class="cancelbtn" onclick="removeGuest(${g.id}, '${escAttr(g.name)}')">取消</button>
       </span></div>`).join("")}
   </div>`;
 }
@@ -2147,7 +2223,7 @@ function openGuest(postId, guestId){
             ${mealsFor(postId).filter(m => m.grp === grp).map(m => {
               const on = String(GUEST_PICK[grp]) === String(m.id), out = soldOut(m);
               return `<button type="button" class="pill${on?" on":""}${out&&!on?" sold":""}" ${out&&!on?"disabled":""}
-                onclick="pickGuestMeal('${esc(grp)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
+                onclick="pickGuestMeal('${escAttr(grp)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
                   m.price>0?`<span class="mealprice">$${m.price}</span>`:""}${out?"（已額滿）":""}</button>`;
             }).join("")}
           </div></div>`).join("")}
@@ -2337,7 +2413,7 @@ function renderMeals(postId){
               <input value="${m.price}" disabled><input value="${m.stock}" disabled>
               <input value="${m.sort}" disabled><span class="mnote">每場通用</span><span></span>
             </div>`).join("")}
-          <button class="mbtn add" onclick="addMeal('${esc(g)}', ${postId})">＋ 加一個${esc(g)}選項</button>
+          <button class="mbtn add" onclick="addMeal('${escAttr(g)}', ${postId})">＋ 加一個${esc(g)}選項</button>
         </div>`).join("")}
       <div class="field" style="margin-top:22px">
         <label>加一個新群組</label>
@@ -2412,7 +2488,7 @@ function openSignup(postId){
               const out = soldOut(m), on = String(SIGNUP_PICK[g]) === String(m.id);
               return `<button type="button" class="pill${on ? " on" : ""}${out && !on ? " sold" : ""}"
                 ${out && !on ? "disabled" : ""}
-                onclick="pickMeal('${esc(g)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
+                onclick="pickMeal('${escAttr(g)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
                   m.price > 0 ? `<span class="mealprice">$${m.price}</span>` : ""
                 }${out ? "（已額滿）" : ""}</button>`;
             }).join("")}
@@ -3188,6 +3264,15 @@ function homeHTML(){
 
   let h = "";
 
+  // 使用說明擺第一個：新夥伴最需要，而且只掛在漢堡選單裡他們根本不會去翻。
+  // 只佔一行，不跟下面的月例會搶版面。
+  h += `<button class="helpbar" onclick="go('help')">
+    <span class="ic">📖</span>
+    <span>第一次用？<b>看使用說明</b>
+      <span class="sub2">報名、訂餐、帶來賓、開團購怎麼操作</span></span>
+    <svg class="go" width="17" height="17"><use href="#i-go"/></svg>
+  </button>`;
+
   // 月例會
   h += `<div class="sec"><h2>下一場月例會</h2>${isOfficer()?`<span class="more" onclick="openPost('monthly')">＋ 發布</span>`:""}</div>`;
   h += monthly ? `<section class="hero">
@@ -3202,7 +3287,7 @@ function homeHTML(){
                             [monthly.speaker2,monthly.speaker2_photo,monthly.speaker2_body]].filter(x=>x[0]);
           return sps.length?`<div class="spgrid">`+sps.map(([sp,ph,bd])=>`
             <div class="spcell">
-              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${esc(ph)}')" title="點一下放大">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
+              ${ph?`<img class="ph" src="${esc(ph)}" alt="${esc(sp)}" onclick="openLightbox('${escAttr(ph)}')" title="點一下放大">`:`<div class="noph">${esc(String(sp).trim().slice(0,1))}</div>`}
               <div class="nm"><div class="n">${esc(sp)}</div><div class="r">主講</div>
                 ${bd?`<div class="sptopic">${esc(bd)}</div>`:""}</div></div>`).join("")+`</div>`:"";})()}
         ${myTalkBtn(monthly)}
@@ -3456,7 +3541,7 @@ function openPostDetail(id){
       ${myTalkBtn(p)}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
       ${(p.photos||[]).length?`<div class="block"><div class="lbl">照片</div>
-        <div class="gallery">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" onclick="window.open('${esc(u)}','_blank')">`).join("")}</div></div>`:""}
+        <div class="gallery">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" onclick="window.open('${escAttr(u)}','_blank')">`).join("")}</div></div>`:""}
       ${p.link?`<div class="actions" style="margin-top:18px">
         <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
         <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(p.link)}</div>`:""}
@@ -3574,8 +3659,8 @@ async function openReview(){
           </div>
         </div>
         <div style="display:flex;gap:8px;width:100%">
-          <button class="btn btn-primary btn-sm" onclick="reviewMember(${m.id},'approve','${esc(m.name)}')">核可上線</button>
-          <button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="reviewMember(${m.id},'reject','${esc(m.name)}')">退回</button>
+          <button class="btn btn-primary btn-sm" onclick="reviewMember(${m.id},'approve','${escAttr(m.name)}')">核可上線</button>
+          <button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="reviewMember(${m.id},'reject','${escAttr(m.name)}')">退回</button>
         </div>
       </div>`).join("") : `<div class="empty">目前沒有待審核的新夥伴</div>`}</div>
     <div class="hint" style="margin-top:10px">四位幹部任何一位都可以核可，不必等會長</div>`;
@@ -4560,7 +4645,7 @@ function openMember(id){
         <div style="font-size:.85rem;color:var(--muted);margin-top:3px">${esc([m.tag,m.company,m.title].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
       </div>
       ${(m.photos||[]).length > 1 ? `<div class="mgal">${
-        m.photos.slice(1).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${esc(u)}')">`).join("")}</div>` : ""}
+        m.photos.slice(1).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${escAttr(u)}')">`).join("")}</div>` : ""}
       ${blk("一句話自介", m.intro)}
       ${blk("我可以提供的資源", m.resource)}
       ${blk("我想在 TC8 獲得", m.wish)}
@@ -4582,9 +4667,9 @@ function openMember(id){
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
         <div class="mnote" style="margin-bottom:10px">幹部作業</div>
         <div class="actions">
-          <button class="mbtn" onclick="retireMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">🚪 標記為已退出</button>
+          <button class="mbtn" onclick="retireMember(${m.id}, '${escAttr(m.name||"")}')">🚪 標記為已退出</button>
           <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae"
-            onclick="deleteMember(${m.id}, '${esc((m.name||"").replace(/'/g, ""))}')">🗑 刪掉這筆</button>
+            onclick="deleteMember(${m.id}, '${escAttr(m.name||"")}')">🗑 刪掉這筆</button>
         </div>
         <div class="mnote" style="margin-top:8px">
           <b>標記為已退出</b>：名冊上消失，他分享過的案例與需求留著，之後可以加回來。<br>
@@ -4655,7 +4740,7 @@ async function renderClaim(){
 function filterClaim(q){
   q=(q||"").trim().toLowerCase();
   const list=(window.__claimable||[]).filter(m=>!q||(m.name||"").toLowerCase().includes(q));
-  el("picklist").innerHTML = list.map(m=>`<button onclick="doClaim(${m.id},'${esc(m.name).replace(/'/g,"")}')">
+  el("picklist").innerHTML = list.map(m=>`<button onclick="doClaim(${m.id},'${escAttr(m.name)}')">
     <div class="ava">${esc((m.name||"?").slice(0,1))}</div>
     <div style="flex:1"><div class="n">${esc(m.name)}</div><div class="c">${esc([m.tag,m.company].filter(Boolean).join(" ・ "))||"資料待補"}</div></div>
     </button>`).join("")
@@ -4712,11 +4797,16 @@ async function loadMe(){
   }
   const jumped = await handleCallback();
   const st = await loadMe();
-  await reloadSeats();   // 要在 loadMe 之後：MY_SIGNUPS 需要通行證
-  await reloadReacts();  // 同理：MY_REACTS 需要通行證才知道我按過哪些
-  await reloadStreak();  // 連續缺席也要通行證
-  await reloadComments();// 留言內容要通行證；則數是公開的
-  await reloadBuys();
+  // ⛔ 這五個一定要並行，不能一個 await 接一個。
+  //    它們都只需要通行證（所以排在 loadMe 之後），彼此不相依、
+  //    寫入的全域也完全不重疊——排成一直線只是白等，首頁會多卡好幾秒。
+  await Promise.all([
+    reloadSeats(),    // MY_SIGNUPS 需要通行證
+    reloadReacts(),   // MY_REACTS 需要通行證才知道我按過哪些
+    reloadStreak(),   // 連續缺席也要通行證
+    reloadComments(), // 留言內容要通行證；則數是公開的
+    reloadBuys(),
+  ]);
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
   if(el("v-claim").classList.contains("on")) return renderClaim();
