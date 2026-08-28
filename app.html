@@ -760,7 +760,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:50</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 01:09</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -792,7 +792,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,entry_time,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,line_name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
@@ -833,6 +833,20 @@ const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&
 const escAttr = s => esc(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 const el  = id => document.getElementById(id);
 const token = () => localStorage.getItem("tc8_token");
+
+// ⛔ posts 是逐欄授權：欄位清單裡只要有一個還沒 grant 的欄位，
+//    PostgREST 會拒絕【整個查詢】（400），不是只有那一欄讀不到 → 全站貼文一起消失。
+//    所以新欄位一律走這條退路：完整清單被拒就退回舊清單，畫面照常，只有新欄位是空的。
+//    這讓「前端先上線、資料庫還沒套用」不再是會炸掉的組合。
+const POST_FIELDS_OLD = POST_FIELDS.replace(",entry_time", "");
+async function restPosts(suffix){
+  try{
+    return await rest("posts?select=" + POST_FIELDS + suffix);
+  }catch(e){
+    console.warn("posts 完整欄位查詢被拒，退回舊欄位清單（entry_time 還沒套進資料庫）", e);
+    return await rest("posts?select=" + POST_FIELDS_OLD + suffix);
+  }
+}
 
 async function rest(path){
   const r = await fetch(SB+"/rest/v1/"+path, {headers:{apikey:KEY, Authorization:"Bearer "+KEY}});
@@ -897,7 +911,15 @@ async function signupApi(action, body){
 // 席次是公開數字（v_post_seats 只吐數量、不吐任何一個人）；我報名了哪幾場要驗身分才拿得到
 async function reloadSeats(){
   try{
-    const rows = await rest("v_post_seats?select=post_id,capacity,reserved_seats,taken");
+    // ⛔ 欄位沒授權時 PostgREST 是「整個查詢被拒」，不是只有那一欄讀不到。
+    //    所以 guests_taken 要有退路，否則 migration 還沒套用就會讓全站席次消失。
+    let rows;
+    try{
+      rows = await rest("v_post_seats?select=post_id,capacity,reserved_seats,taken,guests_taken");
+    }catch(e){
+      console.warn("v_post_seats 還沒有 guests_taken 欄位，退回舊查詢（來賓總量會顯示不出來）", e);
+      rows = await rest("v_post_seats?select=post_id,capacity,reserved_seats,taken");
+    }
     SEATS = Object.fromEntries(rows.map(r => [r.post_id, r]));
   }catch(e){ console.error("席次讀取失敗", e); }
   try{
@@ -2234,13 +2256,19 @@ function guestBlock(p){
   if(!p.signup_open) return "";
   if(!ME) return "";
   const mine = guestsOf(p.id);
-  const quota = p.guest_quota == null ? 5 : p.guest_quota;   // ⛔ 不能用 ||：設 0（不開放）會被當成沒設定
+  // ⭐ 全場總額，不是每人上限（羅伯特 2026-08-29：「是來賓總數量是幾位」）
+  const quota = p.guest_quota == null ? 10 : p.guest_quota;  // ⛔ 不能用 ||：設 0（不開放）會被當成沒設定
+  // 全場數字來自 v_post_seats；讀不到就退回只顯示自己登記的，總量交給後端擋
+  const all = (SEATS[p.id] || {}).guests_taken;
+  const used = all == null ? mine.length : all;
   return `<div class="guestbox">
     <div class="guesthead">
-      <span>我帶的來賓　<b>${mine.length}</b> / ${quota}</span>
-      ${mine.length < quota
+      <span>來賓名額　<b>${used}</b> / ${quota}${
+        mine.length ? `　<span class="mnote">我帶了 ${mine.length} 位</span>` : ""}</span>
+      ${quota === 0 ? `<span class="mnote">這場不開放帶來賓</span>`
+        : used < quota
         ? `<button class="cancelbtn" onclick="openGuest(${p.id})">＋ 登記來賓</button>`
-        : `<span class="mnote">已達上限</span>`}
+        : `<span class="mnote">名額已滿</span>`}
     </div>
     ${mine.map(g => `<div class="guestrow">
       <span>${esc(g.name)}${g.company ? `　<span class="mnote">${esc(g.company)}</span>` : ""}${
@@ -3074,7 +3102,8 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <li>主講者的宣傳照與講題</li>
 <li>活動詳細內容與照片</li>
 <li><strong>📋 誰報名了</strong></li>
-<li><strong>我要帶來賓</strong>（填姓名、公司、電話，每人每場預設 5 位）</li>
+<li><strong>我要帶來賓</strong>（填姓名、公司、電話）。
+  ⭐ 來賓名額是<strong>整場合計</strong>、預設 10 位，不是每人 10 位——額滿了就登記不了，要帶請早</li>
 </ul>
 
 </section><section class="hcard"><h2><span class="hico">📍</span>當天報到</h2>
@@ -3162,7 +3191,11 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 </tr>
 <tr>
 <td>來賓名額</td>
-<td>每人每場可以帶幾位，空白＝5，填 0＝這場不開放帶來賓</td>
+<td>⭐ <strong>整場活動的來賓總數</strong>（不是每人可以帶幾位），空白＝10，填 0＝這場不開放帶來賓</td>
+</tr>
+<tr>
+<td>開放入場時間</td>
+<td>月例會限定。「日期與時間」那格填的是<strong>開始</strong>時間（19:00），提早入場填這裡（18:30）</td>
 </tr>
 </tbody>
 </table></div>
@@ -3509,6 +3542,7 @@ function featuredBanner(p, extra, bandOnly){
     <div class="fbody">
       ${img ? `<div class="t">${esc(p.title)}</div>` : ""}
       <div class="d">${[whenLabel(p) || fmtDate(p.event_at), p.time_text ? esc(p.time_text) : "",
+        p.entry_time ? `🚪 ${esc(p.entry_time)} 開放入場` : "",
         placeChip(p.place, true)].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
       ${extra || ""}
@@ -3628,6 +3662,7 @@ function openPostDetail(id){
         p.start_date&&p.deadline&&p.start_date!==p.deadline?`　（${esc(p.start_date)} 到 ${esc(p.deadline)}）`:
         (p.start_date||p.deadline)?`　（${esc(p.start_date||p.deadline)}）`:""}</p></div>`:""}
       ${row("時間", p.time_text)}
+      ${row("開放入場", p.entry_time)}
       ${placeRow(p.place)}
       ${p.fee?`<div class="block"><div class="lbl">費用</div><p style="white-space:pre-wrap">${esc(p.fee)}</p></div>`:""}
       ${(()=>{const sps=[[p.speaker,p.speaker_photo,p.speaker_body],
@@ -4300,7 +4335,7 @@ function openPost(kind, id){
   const p = id ? POSTS.find(x=>x.id===id) : null;
   const F = {
     // album＝活動照片／海報。月例會原本沒有這一格，所以它的橫幅只能用底色撐著
-    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","capacity","signup","album"],
+    monthly:      ["body","speaker","photo1","speaker2","photo2","place","event_at","entry","capacity","signup","album"],
     event:        ["speaker_free","place","dates","time","fee","body","link","album"],
     notice:       ["msgtype","body"],
     survey:       ["msgtype","body"],
@@ -4432,16 +4467,20 @@ function openPost(kind, id){
           <input type="date" id="p_event_date" value="${twParts(p&&p.event_at).date}" class="dateinput" style="flex:1;min-width:0">
           <input type="time" id="p_event_time" value="${twParts(p&&p.event_at).time}" class="dateinput" style="flex:1;min-width:0">
         </div></div>`:""}
+      ${has("entry")?`<div class="field"><label>開放入場時間</label>
+        <div class="help">上面那格的時間是<b>開始</b>時間（例 19:00）。
+          提早開放入場就填這裡，例：18:30。不填就不顯示</div>
+        <input type="time" id="p_entry_time" value="${val("entry_time")}" class="dateinput"></div>`:""}
       ${has("capacity")?`<div class="field"><label>人數上限</label>
         <div class="help">空白 = 不限人數。改小到低於已報名人數時系統會擋下來</div>
         <input type="text" id="p_capacity" value="${val("capacity")}" placeholder="例：60"></div>`:""}
       ${has("signup")?`<div class="field"><label>保留席</label>
         <div class="help">講者、工作人員的位子，不開放報名。可報名人數 = 人數上限 − 保留席</div>
         <input type="text" id="p_reserved" value="${p&&p.reserved_seats?p.reserved_seats:""}" placeholder="例：2"></div>`:""}
-      ${has("signup")?`<div class="field"><label>每人可以帶幾位來賓</label>
-        <div class="help">空白＝預設 5 位。填 <b>0</b> ＝這場不開放帶來賓。<br>
-          這是「每位夥伴」的上限，不是全場總額</div>
-        <input type="text" id="p_guestquota" value="${p&&p.guest_quota!=null?p.guest_quota:""}" placeholder="例：5"></div>`:""}
+      ${has("signup")?`<div class="field"><label>來賓名額（全場合計）</label>
+        <div class="help">⭐ 這是<b>整場活動的來賓總數</b>，不是每個人可以帶幾位。<br>
+          空白＝預設 <b>10</b> 位。填 <b>0</b> ＝這場不開放帶來賓</div>
+        <input type="text" id="p_guestquota" value="${p&&p.guest_quota!=null?p.guest_quota:""}" placeholder="例：10"></div>`:""}
       ${has("signup")?`<div class="field"><label>線上報名</label>
         <div class="help"><b>打開</b>：夥伴在首頁按一下就報名，順便選餐點、登記來賓。<br>
           <b>關著</b>：首頁不會出現報名按鈕。<br>
@@ -4530,6 +4569,7 @@ async function savePost(kind, id){
   const g = f => el("p_"+f) ? el("p_"+f).value : undefined;
   const body = {id, kind, title:g("title"), body:g("body"), link:g("link"), place:g("place"),
     speaker:g("speaker"), speaker2:g("speaker2"), time_text:g("time_text"), fee:g("fee"),
+    entry_time: g("entry_time") || null,
     speaker_photo:g("speaker_photo"), speaker2_photo:g("speaker2_photo"),
     speaker_body:g("speaker_body"), speaker2_body:g("speaker2_body"),
     speaker_id:g("speaker_id"), speaker2_id:g("speaker2_id"),
@@ -4581,7 +4621,7 @@ async function reloadPosts(){
       if(all && all.posts){ POSTS = all.posts; return; }
     }catch(e){ console.error("幹部完整貼文讀取失敗，退回公開版", e); }
   }
-  POSTS = await rest("posts?select=" + POST_FIELDS + "&order=created_at.desc");
+  POSTS = await restPosts("&order=created_at.desc");
 }
 
 function caseRow(c){
@@ -4919,7 +4959,7 @@ async function loadMe(){
       rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
-      rest("posts?select=" + POST_FIELDS + "&order=created_at.desc"),
+      restPosts("&order=created_at.desc"),
       rest("ai_needs?select=id,member_id,title,problem,tried,urgency,detail,tags,closed_at,helpers,created_at&order=created_at.desc"),
     ]).then(r => { POSTS = r[3]; NEEDS = r[4]; return r; });
   }
