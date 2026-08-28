@@ -561,6 +561,25 @@ a.btn{text-decoration:none}
 .evbody{padding:13px 15px 14px;display:flex;flex-direction:column;flex:1}
 .evbody .evmeta{margin-top:auto;padding-top:8px}
 .evtitle{font-weight:800;font-size:.98rem;line-height:1.45}
+.obadge{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.5px;
+  background:var(--chip);color:var(--chip-text);border-radius:6px;padding:2px 6px;margin-right:6px;
+  vertical-align:2px}
+/* 三條須知：發布前一定會看到的那一塊，用暖色跟一般欄位分開 */
+.mnotice{margin-top:14px;border:1px solid #f0d9c4;background:#fff8f1;border-radius:var(--r-sm);padding:12px 14px}
+.mnotice-h{font-weight:800;font-size:.9rem;color:var(--orange-dark);margin-bottom:7px}
+.mnotice ol{margin:0;padding-left:19px;font-size:.83rem;line-height:1.75;color:var(--text)}
+.mnotice ol li{margin-bottom:5px}
+.mcheck{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:.86rem;
+  font-weight:700;cursor:pointer}
+.mcheck input{margin-top:2px;flex:none;width:17px;height:17px}
+/* 分頁上的常駐說明：離開這一頁就看不到，所以卡片上另有徽章 */
+.tabnote{border:1px solid var(--line);background:var(--chip);color:var(--chip-text);
+  border-radius:var(--r-sm);padding:10px 13px;font-size:.8rem;line-height:1.7;margin-bottom:12px}
+/* 詳情頁底部聲明：按下報名連結前的最後一眼 */
+.disclaimer{margin-top:20px;border-top:1px solid var(--line);padding-top:14px;
+  font-size:.8rem;line-height:1.75;color:var(--muted)}
+.disclaimer .dh{font-weight:800;color:var(--text);font-size:.86rem;margin-bottom:6px}
+.disclaimer p{margin:0 0 6px}
 .evdesc{font-size:.83rem;color:var(--muted);line-height:1.6;margin-top:5px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .evmeta{font-size:.78rem;color:var(--muted);margin-top:8px}
@@ -731,7 +750,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-27 19:39</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:24</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1054,10 +1073,18 @@ const ORG_TABS = [
   ["cxo",    "CXO"],
   ["member", "夥伴的活動"],
 ];
+// 夥伴活動結束隔天就收起來——表單上向夥伴承諾過這件事，之前只寫了沒做。
+// ⛔ 用台灣日期字串直接比大小，不要 new Date()：時區會把「今天」算成過期。
+// 只收夥伴活動，TC8／CXO 的官方活動照舊留著（那是分會自己的紀錄）。
+const twToday = () => new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});
+const isOverMemberEvent = p => p.kind === "member_event"
+  && !!(p.deadline || p.start_date) && (p.deadline || p.start_date) < twToday();
+
 function actsOf(tab){
-  const isAct = p => p.kind === "monthly" || p.kind === "event" || p.kind === "member_event";
+  const isAct = p => (p.kind === "monthly" || p.kind === "event" || p.kind === "member_event")
+    && !isOverMemberEvent(p);
   if(tab === "all")    return POSTS.filter(isAct);
-  if(tab === "member") return POSTS.filter(p => p.kind === "member_event");
+  if(tab === "member") return POSTS.filter(p => p.kind === "member_event" && !isOverMemberEvent(p));
   if(tab === "tc8")    return POSTS.filter(p => p.kind === "monthly" || (p.kind === "event" && p.org === "tc8"));
   return POSTS.filter(p => p.kind === "event" && p.org !== "tc8");
 }
@@ -1101,6 +1128,8 @@ function renderActs(){
       ${ORG_TABS.map(([k, label]) => `<button class="chip${ACT_TAB===k?" on":""}"
         onclick="ACT_TAB='${k}';renderActs()">${label} ${actsOf(k).length}</button>`).join("")}
     </div></div>
+    ${ACT_TAB === "member" ? `<div class="tabnote">這一頁的活動由<b>夥伴自行主辦</b>，TC8 僅提供張貼平台。
+      涉及費用請自行向主辦人確認；日後如有糾紛，請自行協商或循法律途徑處理。</div>` : ""}
     ${top.length ? `<div class="featured">${top.map(featuredBanner).join("")}</div>` : ""}
     ${groups.length ? groups.map(([k, ps]) => `
       <div class="monthsec${k === twNow ? " now" : ""}">
@@ -2974,7 +3003,8 @@ const KIND_LABEL = {monthly:"月例會", event:"CXO & TC8 活動", notice:"公�
 const isOfficer = () => ME && ME.role === "officer";
 // 依日期排：活動看「什麼時候」，公告看「什麼時候發的」
 const byKind = k => {
-  const list = POSTS.filter(p => p.kind === k);
+  // 過期的夥伴活動不進首頁；主辦人自己在「我的張貼」還是找得到，可以改可以刪
+  const list = POSTS.filter(p => p.kind === k && !isOverMemberEvent(p));
   if(k === "monthly"){
     // 未來的場次優先、由近而遠；都過去了就拿最近辦過的那場
     const now = Date.now();
@@ -3467,7 +3497,9 @@ function eventBlock(list, showAuthor){
 }
 
 function eventCard(p, showAuthor){
-  const who = showAuthor ? esc(memberName(p.author_id)) : "";
+  // 夥伴活動不管在哪一頁出現都要標主辦人：責任跟著卡片走，不是跟著分頁走
+  const own = p.kind === "member_event";
+  const who = (showAuthor || own) ? esc(memberName(p.author_id)) : "";
   const n = (p.photos||[]).length;
   return `<article class="evcard" onclick="openPostDetail(${p.id})">
     ${n?`<div class="evphoto">
@@ -3476,9 +3508,9 @@ function eventCard(p, showAuthor){
       ${n>1?`<span class="evcount">＋${n-1}</span>`:""}
     </div>`:""}
     <div class="evbody">
-      <div class="evtitle">${esc(p.title)}</div>
+      <div class="evtitle">${own?`<span class="obadge">夥伴主辦</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
-      <div class="evmeta">${[who, whenLabel(p), p.time_text ? esc(p.time_text) : "",
+      <div class="evmeta">${[own&&who?"主辦："+who:who, whenLabel(p), p.time_text ? esc(p.time_text) : "",
         p.place ? "📍 " + esc(p.place) : "", p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
     </div>
@@ -3570,6 +3602,13 @@ function openPostDetail(id){
       ${p.link?`<div class="actions" style="margin-top:18px">
         <a class="btn btn-primary" href="${esc(p.link)}" target="_blank" rel="noopener">前往連結</a></div>
         <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(p.link)}</div>`:""}
+      ${p.kind==="member_event"?`<div class="disclaimer">
+        <div class="dh">關於這場活動</div>
+        <p>這場活動由 <b>${esc(memberName(p.author_id))}</b> 自行主辦，TC8 僅提供張貼平台。</p>
+        <p>若涉及費用或金流往來，請您自行向主辦人確認內容與條件。日後如有糾紛，
+          請自行協商或循法律途徑處理，TC8 不介入、不擔保。</p>
+        <p>幹部若知悉活動有糾紛，將立即將該活動下架。</p>
+      </div>`:""}
     </article>
     ${signupArea(p)}
     ${likeBar("post", p.id)}
@@ -4218,7 +4257,7 @@ function openPost(kind, id){
     event:        ["speaker_free","place","dates","time","fee","body","link","album"],
     notice:       ["msgtype","body"],
     survey:       ["msgtype","body"],
-    member_event: ["body","place","dates","time","link","album"],
+    member_event: ["body","place","dates","time","fee","link","album"],
   }[kind] || ["body"];
   const has = f => F.includes(f);
   const val = f => p && p[f]!=null ? esc(p[f]) : "";
@@ -4242,7 +4281,18 @@ function openPost(kind, id){
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${p?"編輯":"發布"}${KIND_LABEL[kind]}</div>
       ${kind==="member_event"?`<div style="color:var(--muted);font-size:.85rem;margin-top:5px;line-height:1.7">
-        你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>`:""}
+        你的活動、開課、展覽、開放日都可以貼。會顯示在首頁「夥伴的近期活動」。</div>
+      <div class="mnotice">
+        <div class="mnotice-h">張貼前請確認這三件事</div>
+        <ol>
+          <li><b>價格</b>：請提供 TC8 夥伴最優惠的價格，並把對外價格一起寫出來。</li>
+          <li><b>責任</b>：活動由你自行主辦，TC8 僅提供張貼平台。若涉及費用或金流往來，
+            日後如有糾紛請自行協商或循法律途徑處理；幹部若知悉有糾紛，會立即將活動下架。</li>
+          <li><b>日期</b>：請填寫明確的活動日期區間。活動結束隔天，系統會自動把它收起來。</li>
+        </ol>
+        <label class="mcheck"><input type="checkbox" id="p_agree" ${p?"checked":""}>
+          <span>我已閱讀並同意以上三點</span></label>
+      </div>`:""}
       ${isOfficer()?`<div class="field" style="margin-top:14px"><label>要不要現在公開</label>
         <div class="help">先存成隱藏，幹部之間討論改好了再公開。隱藏時只有四位幹部看得到</div>
         <div class="pills" id="p_vis">
@@ -4310,9 +4360,13 @@ function openPost(kind, id){
         <div class="help">例：10:00–17:30、上午場、晚上 19:00 起。<b>寫幾點開始很重要</b>，
           只寫日期別人不知道要幾點到</div>
         <input type="text" id="p_time_text" value="${val("time_text")}" placeholder="19:00–21:00"></div>`:""}
-      ${has("fee")?`<div class="field"><label>費用</label>
-        <div class="help">有揪團或早鳥方案就一起寫，可以分行</div>
-        <textarea id="p_fee" maxlength="800" placeholder="1 人 NT$2,000\n帶 1 位朋友：2 人 NT$2,500\n帶 2 位朋友：3 人 NT$3,000">${val("fee")}</textarea></div>`:""}
+      ${has("fee")?`<div class="field"><label>費用${kind==="member_event"?`<span class="req">*</span>`:""}</label>
+        <div class="help">${kind==="member_event"
+          ? `<b>請提供 TC8 夥伴最優惠的價格</b>，並把對外價格一起寫出來，夥伴才看得到優惠在哪。免費的活動就寫「免費」。`
+          : "有揪團或早鳥方案就一起寫，可以分行"}</div>
+        <textarea id="p_fee" maxlength="800" placeholder="${kind==="member_event"
+          ? "對外價格：NT$3,000\nTC8 專屬價：NT$2,400"
+          : "1 人 NT$2,000\n帶 1 位朋友：2 人 NT$2,500\n帶 2 位朋友：3 人 NT$3,000"}">${val("fee")}</textarea></div>`:""}
       ${has("speaker2")?`<div class="field"><label>第二位主講者</label>
         <div class="help">只有一位就留空</div>
         <input type="text" id="p_speaker2" value="${val("speaker2")}"></div>
@@ -4445,6 +4499,14 @@ async function savePost(kind, id){
     event_at: (el("p_event_date") && el("p_event_date").value)
       ? new Date(`${el("p_event_date").value}T${(el("p_event_time") && el("p_event_time").value) || "00:00"}:00+08:00`).toISOString()
       : null};
+  // 夥伴活動的三條規則在這裡才真的成立：只寫在說明文字裡沒人會照做
+  if(kind==="member_event"){
+    const miss = (!el("p_agree") || !el("p_agree").checked) ? "請先勾選「我已閱讀並同意以上三點」"
+      : (!body.start_date && !body.deadline) ? "請填活動日期。沒有日期，系統就不知道什麼時候該把它收起來"
+      : !(body.fee||"").trim() ? "請填費用。免費的活動請直接寫「免費」" : "";
+    if(miss){ el("p_err").innerHTML = `<div class="err">${miss}</div>`;
+      b.disabled=false; b.textContent=id?"儲存":"發布"; return; }
+  }
   if(body.start_date && body.deadline && body.deadline < body.start_date){
     el("p_err").innerHTML = '<div class="err">結束日比開始日還早，請檢查一下</div>';
     b.disabled=false; b.textContent=id?"儲存":"發布"; return;
