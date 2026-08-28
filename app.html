@@ -580,6 +580,15 @@ a.btn{text-decoration:none}
   font-size:.8rem;line-height:1.75;color:var(--muted)}
 .disclaimer .dh{font-weight:800;color:var(--text);font-size:.86rem;margin-bottom:6px}
 .disclaimer p{margin:0 0 6px}
+.maplink{color:var(--blue-700);font-weight:700;text-decoration:none;border-bottom:1px solid #c3d3f2}
+.maplink:hover{border-bottom-color:var(--blue-700)}
+/* 公開／隱藏膠囊：只有幹部看得到，深色＝還沒公開，綠色＝已經在檯面上 */
+.vrow{margin-bottom:6px}
+.vpill{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.4px;
+  border-radius:999px;padding:2px 9px;line-height:1.6}
+.vpill.pub{background:#e6f4ec;color:var(--ok)}
+.vpill.hid{background:#6b7280;color:#fff}
+.fvis{position:absolute;top:12px;left:12px;z-index:2}
 .evdesc{font-size:.83rem;color:var(--muted);line-height:1.6;margin-top:5px;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .evmeta{font-size:.78rem;color:var(--muted);margin-top:8px}
@@ -750,7 +759,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:25</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:41</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3385,6 +3394,19 @@ function homeHTML(){
 
 // 距離到期還有幾天——快到的講「剩 N 天」，遠的講日期
 // 活動日期怎麼講：單日講日期、跨日講區間、快到了講剩幾天
+// 地點一律可以點開 Google 地圖：貼了網址就用那個網址，只寫地名就拿地名去搜。
+// ⛔ 不另外開一個「地圖網址」欄位——那要改資料庫，夥伴也得多填一次；
+//    地點欄位本來就在，讓它同時吃得下「名稱」與「名稱＋網址」就夠了。
+function placeRow(place){
+  const t = String(place || "").trim();
+  if(!t) return "";
+  const m = t.match(/https?:\/\/\S+/);
+  const url = m ? m[0] : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t);
+  const label = m ? (t.replace(m[0], "").trim() || "在 Google 地圖開啟") : t;
+  return `<div class="block"><div class="lbl">地點</div>
+    <p><a class="maplink" href="${escAttr(url)}" target="_blank" rel="noopener">📍 ${esc(label)}</a></p></div>`;
+}
+
 function whenLabel(p){
   const s0=p.start_date, e0=p.deadline;
   if(!s0 && !e0) return "";
@@ -3468,6 +3490,7 @@ function featuredBanner(p, extra, bandOnly){
     : "";
   return `<article class="fbn" onclick="openPostDetail(${p.id})">
     ${badge}
+    ${visPill(p)?`<span class="fvis">${visPill(p)}</span>`:""}
     ${img
       ? `<div class="fimg"><img src="${esc(img)}" alt="" loading="lazy"></div>`
       : `<div class="fband"><div class="k">${KIND_LABEL[p.kind] || ""}</div>
@@ -3496,6 +3519,14 @@ function eventBlock(list, showAuthor){
   return `<div class="evgrid">${list.map(p=>eventCard(p, showAuthor)).join("")}</div>`;
 }
 
+// 幹部一眼看出這則公開了沒——不用一則一則點進去確認（羅伯特 2026-08-29）
+// ⛔ 只給幹部看：一般夥伴的資料裡根本沒有 visibility 欄位，畫出來會全部變成「公開」在騙人
+function visPill(p){
+  if(!ME || !isOfficer()) return "";
+  const hid = p.visibility === "officer";
+  return `<span class="vpill ${hid?"hid":"pub"}">${hid?"● 隱藏":"● 公開"}</span>`;
+}
+
 function eventCard(p, showAuthor){
   // 夥伴活動不管在哪一頁出現都要標主辦人：責任跟著卡片走，不是跟著分頁走
   const own = p.kind === "member_event";
@@ -3508,6 +3539,7 @@ function eventCard(p, showAuthor){
       ${n>1?`<span class="evcount">＋${n-1}</span>`:""}
     </div>`:""}
     <div class="evbody">
+      ${visPill(p)?`<div class="vrow">${visPill(p)}</div>`:""}
       <div class="evtitle">${own?`<span class="obadge">夥伴主辦</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
       <div class="evmeta">${[own&&who?"主辦："+who:who, whenLabel(p), p.time_text ? esc(p.time_text) : "",
@@ -3563,6 +3595,10 @@ function openPostDetail(id){
   const cur0 = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
   if(cur0 && cur0.id !== "v-pdetail") PDETAIL_FROM = cur0.id.slice(2);
   const row = (l,v) => v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
+  // ⛔ 月例會的日期時間存在 event_at，whenLabel() 只看 start_date/deadline，
+  //    對月例會一律回空字串 → 詳情頁整塊「日期」不見了（首頁卡片有 fmtDate 當退路，這裡漏了）。
+  //    fmtDate 會把時間一起帶出來：8/29（五）19:00
+  const when = whenLabel(p) || fmtDate(p.event_at);
   el("v-pdetail").innerHTML = `
     <div class="backbar">
       <button class="back" onclick="go('${PDETAIL_FROM}')"><svg width="17" height="17"><use href="#i-back"/></svg>回${VIEW_NAME[PDETAIL_FROM] || "上一頁"}</button>
@@ -3577,11 +3613,11 @@ function openPostDetail(id){
           <div style="font-size:.79rem;color:var(--muted)">${ago(p.created_at)} 發布</div></div>
         ${canEdit?`<button class="btn btn-ghost btn-sm" onclick="openPost('${p.kind}',${p.id})">編輯</button>`:""}
       </div>
-      ${whenLabel(p)?`<div class="block"><div class="lbl">日期</div><p>${esc(whenLabel(p))}${
+      ${when?`<div class="block"><div class="lbl">日期</div><p>${esc(when)}${
         p.start_date&&p.deadline&&p.start_date!==p.deadline?`　（${esc(p.start_date)} 到 ${esc(p.deadline)}）`:
         (p.start_date||p.deadline)?`　（${esc(p.start_date||p.deadline)}）`:""}</p></div>`:""}
       ${row("時間", p.time_text)}
-      ${row("地點", p.place)}
+      ${placeRow(p.place)}
       ${p.fee?`<div class="block"><div class="lbl">費用</div><p style="white-space:pre-wrap">${esc(p.fee)}</p></div>`:""}
       ${(()=>{const sps=[[p.speaker,p.speaker_photo,p.speaker_body],
                           [p.speaker2,p.speaker2_photo,p.speaker2_body]].filter(x=>x[0]);
@@ -4375,7 +4411,10 @@ function openPost(kind, id){
         <div class="field"><label>第二位的講題與內容簡介</label>
           <textarea id="p_speaker2_body" rows="4" maxlength="2000">${val("speaker2_body")}</textarea></div>`:""}
       ${has("photo2")?photoField("p_speaker2_photo","第二位主講者照片", p&&p.speaker2_photo):""}
-      ${has("place")?`<div class="field"><label>地點</label><input type="text" id="p_place" value="${val("place")}"></div>`:""}
+      ${has("place")?`<div class="field"><label>地點</label>
+        <div class="help">寫地名就好，詳情頁的地點會自動接到 Google 地圖。<br>
+          想指定精確位置，把地圖網址接在後面：<b>台中金典酒店 https://maps.app.goo.gl/…</b></div>
+        <input type="text" id="p_place" value="${val("place")}" placeholder="例：台中金典酒店 12F"></div>`:""}
       ${has("event_at")?`<div class="field"><label>日期與時間</label>
         <div class="help">分開選比較好按。時間一律以台灣時間為準</div>
         <div style="display:flex;gap:8px">
