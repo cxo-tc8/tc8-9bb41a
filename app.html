@@ -585,7 +585,8 @@ a.btn{text-decoration:none}
 /* 公開／隱藏膠囊：只有幹部看得到，深色＝還沒公開，綠色＝已經在檯面上 */
 .vrow{margin-bottom:6px}
 .vpill{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.4px;
-  border-radius:999px;padding:2px 9px;line-height:1.6}
+  border-radius:999px;padding:2px 9px;line-height:1.6;margin-right:5px;vertical-align:1px}
+.pplain{color:inherit}
 .vpill.pub{background:#e6f4ec;color:var(--ok)}
 .vpill.hid{background:#6b7280;color:#fff}
 .fvis{position:absolute;top:12px;left:12px;z-index:2}
@@ -759,7 +760,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:41</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 00:50</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2541,7 +2542,7 @@ function openSignup(postId){
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${mine ? "改我的餐點" : "報名"}　${esc(p.title)}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
-        ${p.event_at ? esc(fmtDate(p.event_at)) + "　" : ""}${p.place ? "📍 " + esc(p.place) : ""}
+        ${p.event_at ? esc(fmtDate(p.event_at)) + "　" : ""}${placeChip(p.place)}
         ${left !== null ? `<br>還剩 <b style="color:var(--orange)">${left}</b> 個位子` : ""}
       </div>
       ${groups.map((g, gi) => `
@@ -3397,14 +3398,24 @@ function homeHTML(){
 // 地點一律可以點開 Google 地圖：貼了網址就用那個網址，只寫地名就拿地名去搜。
 // ⛔ 不另外開一個「地圖網址」欄位——那要改資料庫，夥伴也得多填一次；
 //    地點欄位本來就在，讓它同時吃得下「名稱」與「名稱＋網址」就夠了。
-function placeRow(place){
+// 線上活動沒有實體地點，接去 Google 地圖搜尋「線上課」只會得到一堆無關的店家
+const ONLINE_PLACE = /^(線上|online|遠距|直播|zoom|google\s*meet|meet|teams|webex)/i;
+function placeChip(place, inCard){
   const t = String(place || "").trim();
   if(!t) return "";
   const m = t.match(/https?:\/\/\S+/);
+  // 沒附網址、又看起來是線上場 → 純文字，不做連結
+  if(!m && ONLINE_PLACE.test(t)) return `<span class="pplain">💻 ${esc(t)}</span>`;
   const url = m ? m[0] : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(t);
-  const label = m ? (t.replace(m[0], "").trim() || "在 Google 地圖開啟") : t;
-  return `<div class="block"><div class="lbl">地點</div>
-    <p><a class="maplink" href="${escAttr(url)}" target="_blank" rel="noopener">📍 ${esc(label)}</a></p></div>`;
+  const label = m ? (t.replace(m[0], "").trim() || (inCard ? "看地圖" : "在 Google 地圖開啟")) : t;
+  // ⛔ 卡片與橫幅整張本來就可以點進詳情頁，地點連結一定要 stopPropagation，
+  //    否則按地圖會同時把詳情頁也打開，兩件事一起發生。
+  return `<a class="maplink" href="${escAttr(url)}" target="_blank" rel="noopener"${
+    inCard ? ` onclick="event.stopPropagation()"` : ""}>📍 ${esc(label)}</a>`;
+}
+function placeRow(place){
+  const chip = placeChip(place, false);
+  return chip ? `<div class="block"><div class="lbl">地點</div><p>${chip}</p></div>` : "";
 }
 
 function whenLabel(p){
@@ -3438,7 +3449,7 @@ function dueLabel(d){
 function noticeCard(p){
   return `<div class="card${p.important?" important":""}"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
     <div class="ic${p.important?" red":""}"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
-    <div style="flex:1;min-width:0"><div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${
+    <div style="flex:1;min-width:0"><div class="t">${visPill(p)}${
       p.important?`<span class="imptag">重要</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
       <div class="d">${ago(p.created_at)}</div>
@@ -3452,7 +3463,7 @@ function surveyCard(p){
   return `<div class="card"><div class="survey">
     <div style="display:flex;gap:9px;align-items:flex-start">
       <div style="flex:1;min-width:0">
-        <div class="t">${p.visibility==="officer"?`<span class="draft">未公開</span>`:""}${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">問卷</span>`}${esc(p.title)}</div>
+        <div class="t">${visPill(p)}${p.required?`<span class="reqbadge">必填</span>`:`<span class="optbadge">問卷</span>`}${esc(p.title)}</div>
         <div class="d">${[p.deadline?dueLabel(p.deadline):"", p.required?"這份請大家都填":"想填再填"].filter(Boolean).join("　・　")}</div>
       </div>
       <div style="display:flex;gap:7px;flex:none;align-items:center">
@@ -3498,7 +3509,7 @@ function featuredBanner(p, extra, bandOnly){
     <div class="fbody">
       ${img ? `<div class="t">${esc(p.title)}</div>` : ""}
       <div class="d">${[whenLabel(p) || fmtDate(p.event_at), p.time_text ? esc(p.time_text) : "",
-        p.place ? "📍 " + esc(p.place) : ""].filter(Boolean).join("　・　")}</div>
+        placeChip(p.place, true)].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
       ${extra || ""}
     </div>
@@ -3543,7 +3554,7 @@ function eventCard(p, showAuthor){
       <div class="evtitle">${own?`<span class="obadge">夥伴主辦</span>`:""}${esc(p.title)}</div>
       ${p.body?`<div class="evdesc">${esc(p.body)}</div>`:""}
       <div class="evmeta">${[own&&who?"主辦："+who:who, whenLabel(p), p.time_text ? esc(p.time_text) : "",
-        p.place ? "📍 " + esc(p.place) : "", p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
+        placeChip(p.place, true), p.link?"有連結":""].filter(Boolean).join("　・　")}</div>
       ${statLine(p)}
     </div>
   </article>`;
