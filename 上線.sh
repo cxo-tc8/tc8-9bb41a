@@ -52,6 +52,12 @@ CHECK
 #      語法檢查完全通過、上線後首頁卡在「載入中…」，是使用者回報才發現）──
 #    語法對 ≠ 跑得起來。這一關實際載入頁面、攔截 JS 錯誤、量首頁字數。
 SHOT="$(mktemp -d)"
+# ⛔ 這一關失敗時如果沒把 server 收掉，它會一直占著 8991、指向已被刪掉的暫存夾，
+#    之後每次上線探針都抓不到頁面（GATE 空），症狀看起來像程式壞了，其實是埠沒放掉。
+#    trap ＝這次一定收乾淨；下面那行 ＝把上一次留下來的收掉。（2026-08-29 真的中過）
+trap 'kill "$(cat "$SHOT/pid" 2>/dev/null)" 2>/dev/null; rm -rf "$SHOT"' EXIT
+OLDPID="$(lsof -nP -tiTCP:8991 -sTCP:LISTEN 2>/dev/null || true)"
+if [ -n "$OLDPID" ]; then echo "⚠️ 8991 被上次殘留的程序占著，先收掉（$OLDPID）"; kill $OLDPID 2>/dev/null || true; sleep 1; fi
 cp app.html "$SHOT/probe.html"
 python3 - "$SHOT/probe.html" <<'PROBE'
 import io,sys
