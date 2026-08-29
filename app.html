@@ -767,7 +767,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 09:25</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 09:34</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -854,6 +854,47 @@ async function restPosts(suffix){
     return await rest("posts?select=" + POST_FIELDS_OLD + suffix);
   }
 }
+
+// ── 桌面版網站模式的警示 ────────────────────────────────────
+// 手機的 Safari／Chrome 開了「桌面版網站」時，會強制忽略 width=device-width，
+// viewport 變成 980~1200，畫面就會擠在左半邊、右邊一片空白。
+// 這不是網站壞掉，但使用者只會覺得「這網站爛掉了」，所以要講出來。
+// （羅伯特 2026-08-29 就是中這個：螢幕 390、viewport 卻是 1200）
+//
+// ⛔ 判斷要同時看兩個數字：螢幕本身很小（<500）＋ viewport 遠大於螢幕（1.5 倍以上）。
+//    只看 innerWidth 會把真正的桌機也一起罵進去。
+function warnDesktopMode(){
+  try{
+    if(localStorage.getItem("hide_desktop_warn") === "1") return;
+  }catch(e){}
+  const sc = window.screen;
+  if(!sc || !sc.width || !sc.height) return;
+  const shortest = Math.min(sc.width, sc.height);
+  const longest  = Math.max(sc.width, sc.height);
+  if(shortest >= 500) return;                       // 不是手機（平板、桌機）就不管
+  // ⛔ 基準要用螢幕的「長邊」，不是 screen.width：
+  //    手機橫置時 innerWidth 本來就會變成長邊（390 → 844），
+  //    拿短邊當基準會把每一次橫置都誤判成桌面模式。
+  if(window.innerWidth <= longest * 1.05) return;
+
+  const bar = document.createElement("div");
+  bar.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:9998;background:#7a3b00;color:#fff;" +
+    "font-size:13px;line-height:1.6;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;" +
+    "box-shadow:0 2px 10px rgba(0,0,0,.3)";
+  bar.innerHTML = '<div style="flex:1">你的瀏覽器開著<b>「桌面版網站」</b>，所以畫面會擠在左半邊。<br>' +
+    '點網址列旁邊的圖示 → 選<b>「切換為行動裝置版網站」</b>就會恢復正常。</div>';
+  const btn = document.createElement("button");
+  btn.textContent = "知道了";
+  btn.style.cssText = "flex:none;background:#fff;color:#7a3b00;border:0;border-radius:6px;" +
+    "padding:6px 10px;font-weight:800;font-size:12px";
+  btn.onclick = () => {
+    try{ localStorage.setItem("hide_desktop_warn", "1"); }catch(e){}
+    bar.remove();
+  };
+  bar.appendChild(btn);
+  document.body.appendChild(bar);
+}
+addEventListener("load", warnDesktopMode);
 
 // ── 診斷開關：手機排版怪怪的時候，開 ?debug=w 讓畫面自己報數字 ──
 // ⛔ 不要用猜的。2026-08-29 手機版「內容只佔左半邊」，在 390px 量三次都重現不出來，
