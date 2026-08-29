@@ -767,7 +767,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 08:06</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 09:25</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -854,6 +854,34 @@ async function restPosts(suffix){
     return await rest("posts?select=" + POST_FIELDS_OLD + suffix);
   }
 }
+
+// ── 診斷開關：手機排版怪怪的時候，開 ?debug=w 讓畫面自己報數字 ──
+// ⛔ 不要用猜的。2026-08-29 手機版「內容只佔左半邊」，在 390px 量三次都重現不出來，
+//    所以改成讓實際那台手機自己回報 viewport 寬度。
+//    正常：viewport ≈ 螢幕寬（iPhone 多半 390~430）、scrollWidth 應該等於 viewport。
+//    若 viewport 是 980＝Safari 開了「桌面版網站」；scrollWidth 比 viewport 大＝有東西撐寬版面。
+function showViewportDebug(){
+  if(!/[?&]debug=w/.test(location.search)) return;
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:8px;bottom:calc(var(--nav-h) + 10px);z-index:9999;" +
+    "background:#111;color:#fff;font:600 12px/1.6 ui-monospace,monospace;padding:8px 10px;" +
+    "border-radius:8px;max-width:calc(100vw - 16px);white-space:pre;box-shadow:0 4px 14px rgba(0,0,0,.4)";
+  const draw = () => {
+    const de = document.documentElement;
+    const over = de.scrollWidth - window.innerWidth;
+    box.textContent =
+      "viewport 寬　" + window.innerWidth + "\n" +
+      "螢幕寬　　　" + window.screen.width + "\n" +
+      "頁面寬　　　" + de.scrollWidth + (over > 1 ? "　⚠️ 撐寬了 " + over + "px" : "　✓ 沒溢出") + "\n" +
+      "縮放比　　　" + (window.visualViewport ? window.visualViewport.scale.toFixed(2) : "?") + "\n" +
+      (window.innerWidth > 900 ? "⚠️ 看起來是「桌面版網站」模式" : "✓ 行動版");
+  };
+  draw();
+  addEventListener("resize", draw);
+  setInterval(draw, 1000);
+  document.body.appendChild(box);
+}
+addEventListener("load", showViewportDebug);
 
 async function rest(path){
   const r = await fetch(SB+"/rest/v1/"+path, {headers:{apikey:KEY, Authorization:"Bearer "+KEY}});
