@@ -580,6 +580,13 @@ a.btn{text-decoration:none}
   font-size:.8rem;line-height:1.75;color:var(--muted)}
 .disclaimer .dh{font-weight:800;color:var(--text);font-size:.86rem;margin-bottom:6px}
 .disclaimer p{margin:0 0 6px}
+.tplbox{margin-top:18px;border:1px solid var(--line);background:var(--chip);
+  border-radius:var(--r-sm);padding:12px 13px}
+.tplhead{font-weight:800;font-size:.92rem;display:flex;gap:9px;align-items:baseline;margin-bottom:8px}
+.tplrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.tplrow .tn{font-weight:700;font-size:.9rem}
+.tplsave{display:flex;gap:8px;margin-top:10px}
+.tplsave input{flex:1;min-width:0}
 .maplink{color:var(--blue-700);font-weight:700;text-decoration:none;border-bottom:1px solid #c3d3f2}
 .maplink:hover{border-bottom-color:var(--blue-700)}
 /* 公開／隱藏膠囊：只有幹部看得到，深色＝還沒公開，綠色＝已經在檯面上 */
@@ -760,7 +767,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 01:09</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 08:06</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -924,7 +931,15 @@ async function reloadSeats(){
   }catch(e){ console.error("席次讀取失敗", e); }
   try{
     // 停用的選項讀不到（RLS 擋住），所以前台自動只看得到現行的
-    MEALS = await rest("meal_options?select=id,post_id,grp,label,price,stock,sort&order=grp.asc,sort.asc");
+    // ⛔ 排除範本列（template_name 有值的）：範本的 post_id 是 null，
+    //    而 post_id is null 在報名頁的語意是「每一場都適用的預設」——
+    //    不排除的話，範本會變成每一場都能點的餐點。
+    try{
+      MEALS = await rest("meal_options?template_name=is.null&select=id,post_id,grp,label,price,stock,sort&order=grp.asc,sort.asc");
+    }catch(e){
+      console.warn("meal_options 還沒有 template_name 欄位，退回舊查詢", e);
+      MEALS = await rest("meal_options?select=id,post_id,grp,label,price,stock,sort&order=grp.asc,sort.asc");
+    }
     const t = await rest("v_meal_taken?select=option_id,taken");
     MEAL_TAKEN = Object.fromEntries(t.map(x => [x.option_id, x.taken]));
   }catch(e){ MEALS = []; MEAL_TAKEN = {}; console.error("餐點選項讀取失敗", e); }
@@ -2456,13 +2471,47 @@ function downloadRoster(cols, postId){
 
 // ── 幹部：管這一場的餐點選項 ────────────────────────
 // ⛔ 停用不刪除：刪掉之後，上個月報名的人選了什麼就查不到了
-let MEAL_ALL = [];
+let MEAL_ALL = [], MEAL_TPL = [];
 async function openMeals(postId){
   if(!isOfficer()) return;
-  const r = await signupApi("opt_all", {});
+  // ⛔ tpl_list 要吃掉錯誤：後端還沒部署新版時它會失敗，
+  //    不能讓「餐點管理整頁打不開」變成連帶災情。
+  const [r, t] = await Promise.all([
+    signupApi("opt_all", {}),
+    signupApi("tpl_list", {}).catch(e => { console.warn("範本清單讀取失敗（後端可能還沒部署）", e); return null; }),
+  ]);
   MEAL_ALL = (r && r.options) || [];
+  MEAL_TPL = (t && t.templates) || [];
   renderMeals(postId);
   go("form");
+}
+
+// ── 餐點範本：整套存、下次直接載入 ─────────────────────────
+// ⛔ 命名一律用頁面內的輸入框，不要用 prompt()：
+//    LINE 內建瀏覽器 iOS／Android 兩邊都不會跳，而且不報錯，使用者只會覺得「按了沒反應」。
+async function saveTpl(postId){
+  const name = (el("m_tplname").value || "").trim();
+  if(!name){ alert("請先填範本名稱"); return; }
+  if(MEAL_TPL.some(t => t.name === name) &&
+     !confirm(`已經有一套叫「${name}」的範本，要覆蓋掉嗎？`)) return;
+  const r = await signupApi("tpl_save", {name, post_id: postId});
+  if(!r || !r.ok){ alert((r && r.message) || "存檔失敗"); return; }
+  alert(`已存成範本「${name}」，共 ${r.saved} 個選項`);
+  await openMeals(postId);
+}
+async function loadTpl(name, postId){
+  const cur = MEAL_ALL.filter(m => m.post_id === postId && m.active).length;
+  if(cur && !confirm(`這一場已經有 ${cur} 個選項。\n載入會把範本的品項「加上去」，不會蓋掉現有的。\n要繼續嗎？`)) return;
+  const r = await signupApi("tpl_load", {name, post_id: postId});
+  if(!r || !r.ok){ alert((r && r.message) || "載入失敗"); return; }
+  await reloadSeats(); await openMeals(postId);
+  alert(`已載入「${name}」，加了 ${r.added} 個選項`);
+}
+async function delTpl(name, postId){
+  if(!confirm(`確定刪掉範本「${name}」嗎？\n只會刪範本本身，已經辦過的活動不受影響。`)) return;
+  const r = await signupApi("tpl_delete", {name});
+  if(!r || !r.ok){ alert("刪除失敗"); return; }
+  await openMeals(postId);
 }
 function renderMeals(postId){
   const p = POSTS.find(x => x.id === postId);
@@ -2494,6 +2543,27 @@ function renderMeals(postId){
         只有真的限量的東西才填數字，例如「手工甜點只做 10 份」，選完會自動變「已額滿」。<br>
         <b>排序</b>數字小的排前面，它也決定群組的先後（想讓餐點排在飲品前面就把餐點的數字調小）。<br>
         不要的選項按「停用」<b>不要刪掉</b>——刪了的話，以前報名的人選了什麼就查不到了。
+      </div>
+      <div class="tplbox">
+        <div class="tplhead">🍱 餐點範本<span class="mnote">建好一次，之後每個月直接載入</span></div>
+        ${MEAL_TPL.length ? MEAL_TPL.map(t => `
+          <div class="tplrow">
+            <div style="flex:1;min-width:0">
+              <div class="tn">${esc(t.name)}</div>
+              <div class="mnote">${t.count} 個選項　・　${t.groups.map(esc).join("、")}</div>
+            </div>
+            <button class="mbtn" style="flex:none;color:var(--blue-500)" onclick="loadTpl('${escAttr(t.name)}', ${postId})">載入</button>
+            <button class="mbtn" style="flex:none" onclick="delTpl('${escAttr(t.name)}', ${postId})">刪</button>
+          </div>`).join("")
+          : `<div class="mnote" style="padding:9px 0">還沒有範本。先把這一場的餐點建好，再存成範本，下個月就不用重建。</div>`}
+        <div class="tplsave">
+          <input type="text" id="m_tplname" placeholder="範本名稱，例如：標準月例會">
+          <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="saveTpl(${postId})">存成範本</button>
+        </div>
+        <div class="help" style="margin-top:7px">
+          <b>載入</b>會把範本的品項<b>加到這一場</b>，不會蓋掉現有的（已經有人報名的選項不能動）。<br>
+          用同一個名字再存一次＝覆蓋那套範本。範本改了不會影響已經辦過的活動。
+        </div>
       </div>
       ${groups.map(g => `
         <div class="field" style="margin-top:20px">
@@ -3208,6 +3278,18 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <p>月例會那塊 →「🍱 餐點選項」。用「群組」分類（例如 主餐／飲品），
 每個選項可以設價格與數量上限。</p>
 <p>⛔ <strong>選項只能停用不能刪除</strong>——刪掉之後，過去報名的人點了什麼就查不到了。</p>
+<h3>餐點範本：建好一次，之後每個月直接載入</h3>
+<p>品項多的時候，一道一道建很花時間。餐點頁最上面有「🍱 餐點範本」：</p>
+<ol>
+<li>這一場的餐點建好之後，填個名字（例如「標準月例會」）按 <strong>存成範本</strong></li>
+<li>下個月開新的月例會，先把活動存起來 → 進「🍱 餐點選項」→ 按 <strong>載入</strong></li>
+<li>載入後直接改菜名、改價格，改的是這一場，<strong>不會動到範本</strong></li>
+</ol>
+<ul>
+<li><strong>載入是「加上去」</strong>，不會蓋掉這一場已經有的選項——因為可能已經有人照著報名了。</li>
+<li>用<strong>同一個名字</strong>再存一次＝覆蓋那套範本。</li>
+<li>刪範本不會影響任何已經辦過的活動。</li>
+</ul>
 
 </section><section class="hcard"><h2>3　報名名單與訂餐統計</h2>
 <p>月例會那塊 →「📋 報名名單」。</p>
