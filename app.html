@@ -238,6 +238,14 @@ a{color:inherit;text-decoration:none}
   border:1px solid var(--line);cursor:pointer}
 .buyimg{width:100%;height:150px;object-fit:cover;display:block}
 .buybody{padding:12px 14px}
+/* ⛔ 桌機卡片寬 ~1200px，固定 150px 高會變成 8:1 細長條，照片被攔腰橫切。
+   ≥820px 改橫式：圖片吃固定寬 240px、鎖 4:3，比例不再隨容器寬度飄。 */
+@media (min-width:820px){
+  .buycard{display:flex;align-items:stretch}
+  .buycard .buyimg{width:240px;height:auto;aspect-ratio:4/3;flex:none;
+    background:var(--chip);align-self:center}
+  .buycard .buybody{flex:1;min-width:0;padding:14px 18px;align-self:center}
+}
 .buytitle{font-weight:700;font-size:1rem}
 .buymeta{font-size:.8rem;color:var(--muted);margin-top:4px}
 .buymeta b{color:var(--blue-900);font-size:.95rem}
@@ -767,7 +775,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-08-29 09:34</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 13:48</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
