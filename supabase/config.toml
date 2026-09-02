@@ -1,0 +1,23 @@
+project_id = "fehubnmhohnkftjbozls"
+
+# ⛔ 這七支函式一律 verify_jwt = false，不可以改成 true。
+#    這個系統的登入 token 是自家的（LINE 登入產生的 tc8_token，存在 localStorage），
+#    不是 Supabase 的 JWT。閘道一旦開啟 JWT 驗證，使用者的 token 會在進到函式之前
+#    就被擋掉，畫面只會跳一行英文「Invalid JWT」，完全看不出原因。
+#    身分驗證是在函式裡面自己做的（whoami），不靠閘道。
+#    （2026-09-02 真的中過：deploy 沒帶 --no-verify-jwt，CLI 預設 true，
+#      後台一存商品就 Invalid JWT。有了這個檔，deploy 會自動套用下面的設定。）
+[functions.auth]
+verify_jwt = false
+[functions.cases]
+verify_jwt = false
+[functions.posts]
+verify_jwt = false
+[functions.signup]
+verify_jwt = false
+[functions.guests]
+verify_jwt = false
+[functions.checkin]
+verify_jwt = false
+[functions.groupbuy]
+verify_jwt = false
