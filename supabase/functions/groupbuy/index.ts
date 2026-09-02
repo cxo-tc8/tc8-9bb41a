@@ -134,16 +134,24 @@ Deno.serve(async (req) => {
           method: "DELETE", headers: { Prefer: "return=minimal" },
         });
         const rows: Record<string, unknown>[] = [];
+        let gi = 0;
         for (const sp of b.specs.slice(0, 6)) {
           const grp = TEXT(sp?.grp, 20);
           if (!grp || !Array.isArray(sp.labels)) continue;
-          let sort = 0;
+          // 這一組每個選項各自的成團門檻（例如顏色：白 50、黑 50 分開算）。
+          // null ＝ 這組不獨立算，跟著商品的總門檻走。
+          const capRaw = Math.trunc(Number(sp?.min_qty) || 0);
+          const cap = capRaw > 0 ? capRaw : null;
+          // ⛔ sort 要把「第幾組」算進去。每組都從 10 開始的話，
+          //    組別之間的先後就不確定，顏色有可能排到尺寸後面。
+          let sort = gi * 1000;
           for (const raw of sp.labels.slice(0, 30)) {
             const label = TEXT(raw, 40);
             if (!label) continue;
             sort += 10;
-            rows.push({ item_id: itemId, buy_id: buyId, grp, label, sort });
+            rows.push({ item_id: itemId, buy_id: buyId, grp, label, sort, min_qty: cap });
           }
+          gi++;
         }
         if (rows.length) {
           await db("group_buy_variants", {

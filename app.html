@@ -777,7 +777,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 14:26</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 14:46</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -828,6 +828,7 @@ let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
 let MY_CHECKINS = new Set();         // 我報到過哪幾場
 let BUYS = [], BUY_ITEMS = {}, BUY_PROG = {}, BUY_VARS = {}, MY_ORDERS = [];  // 團購
+let VAR_PROG = {};   // 規格層門檻的進度（顏色白 12/50、黑 8/50 這種）
 window.__tc8 = { get members(){return MEMBERS}, get me(){return ME} };
 // 幹部頭銜有各種 emoji（🏆💰…），一律剝掉只留文字
 const cleanTitle = t => (t||"").replace(/\p{Extended_Pictographic}|\uFE0F/gu,"").trim();
@@ -959,9 +960,12 @@ async function reloadBuys(){
     its.forEach(i => { (BUY_ITEMS[i.buy_id] ??= []).push(i); });
     const pr = await rest("v_gb_progress?select=item_id,buy_id,min_qty,qty,buyers");
     BUY_PROG = Object.fromEntries(pr.map(x => [x.item_id, x]));
-    const vs = await rest("group_buy_variants?select=id,item_id,grp,label,sort&order=sort.asc");
+    const vs = await rest("group_buy_variants?select=id,item_id,grp,label,sort,min_qty&order=sort.asc");
     BUY_VARS = {};
     vs.forEach(v => { if(v.item_id) (BUY_VARS[v.item_id] ??= []).push(v); });
+    // 規格層門檻的累積量（例如顏色：白 12/50、黑 8/50）。key = 商品id|類別|選項
+    const vp = await rest("v_gb_variant_progress?select=item_id,grp,label,min_qty,qty,buyers");
+    VAR_PROG = Object.fromEntries(vp.map(x => [`${x.item_id}|${x.grp}|${x.label}`, x]));
   }catch(e){ BUYS = []; console.error("團購讀取失敗", e); }
   MY_ORDERS = [];
   if(token()){
@@ -1342,7 +1346,15 @@ function renderBuys(){
 function buyRow(b){
   const items = BUY_ITEMS[b.id] || [];
   const totQty = items.reduce((a,i) => a + ((BUY_PROG[i.id]||{}).qty || 0), 0);
-  const reached = items.filter(i => ((BUY_PROG[i.id]||{}).qty || 0) >= i.min_qty).length;
+  // ⛔ 有「分開算門檻」的規格時（顏色白 50／黑 50），不能拿商品總量比門檻——
+  //    白 30 + 黑 25 = 55 會假性顯示「已成團」，但兩色其實都還沒到。
+  const itemReached = i => {
+    const capped = (BUY_VARS[i.id] || []).filter(v => v.min_qty);
+    if(capped.length) return capped.every(v =>
+      ((VAR_PROG[`${i.id}|${v.grp}|${v.label}`] || {}).qty || 0) >= v.min_qty);
+    return ((BUY_PROG[i.id]||{}).qty || 0) >= i.min_qty;
+  };
+  const reached = items.filter(itemReached).length;
   const my = MY_ORDERS.filter(o => o.buy_id === b.id).reduce((a,o) => a + o.qty, 0);
   const days = daysLeft(b.deadline);
   const cover = items.find(i => (i.photos||[]).length);
@@ -1409,6 +1421,10 @@ function openBuy(buyId){
         const mine = myOf(it.id);
         // 我還能訂幾件（null ＝ 不限購）。正在改的那一筆不算進已訂量，
         // 否則限購 1 件的人要改自己那筆訂單時會被自己擋住。
+        // 有各自門檻的那一組規格（例如顏色：白 50 / 黑 50 分開算）。
+        // 只支援一組——兩組都分開算的話進度條會變成組合爆炸，沒人看得懂。
+        const capped = vars.filter(v => v.min_qty);
+        const capGrp = capped.length ? capped[0].grp : "";
         const myLeft = it.max_per_person
           ? Math.max(0, it.max_per_person - mine
               .filter(o => o.id !== ORD_EDIT[it.id])
@@ -1418,12 +1434,23 @@ function openBuy(buyId){
           ${(it.photos||[]).length ? `<div class="itemphotos">${
             it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${escAttr(u)}')">`).join("")}</div>` : ""}
           <div class="itemname">${esc(it.name)}</div>
-          <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件${
+          <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}${
+            capped.length ? `${esc(capGrp)}各滿 ${capped[0].min_qty} 件才成團` : `成團門檻 ${it.min_qty} 件`}${
             it.max_per_person ? `　｜　<b>每人限購 ${it.max_per_person} 件</b>` : ""}</div>
           ${it.body ? `<div class="mdesc" style="margin-top:6px;white-space:pre-wrap">${esc(it.body)}</div>` : ""}
-          <div class="bar"><div class="barfill${pr.qty >= it.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
+          ${capped.length ? capped.map(v => {
+            const vp = VAR_PROG[`${it.id}|${v.grp}|${v.label}`] || {qty:0, min_qty:v.min_qty};
+            const vpct = Math.min(100, Math.round(vp.qty / Math.max(1, v.min_qty) * 100));
+            const ok = vp.qty >= v.min_qty;
+            return `<div style="margin-top:10px">
+              <div class="buymeta"><b>${esc(v.label)}</b>　已訂 <b>${vp.qty}</b> / ${v.min_qty} 件${
+                ok ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>
+              <div class="bar" style="margin:5px 0 0"><div class="barfill${ok ? " ok" : ""}" style="width:${vpct}%"></div></div>
+            </div>`;
+          }).join("") + `<div class="mnote" style="margin-top:8px">${esc(capGrp)}分開計算，各自滿 ${capped[0].min_qty} 件才下單</div>`
+          : `<div class="bar"><div class="barfill${pr.qty >= it.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
           <div class="buymeta">已訂 <b>${pr.qty}</b> / ${it.min_qty} 件${
-            pr.qty >= it.min_qty ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>
+            pr.qty >= it.min_qty ? `　<span class="okmark">✓ 已成團</span>` : ""}</div>`}
 
           ${mine.length ? `<div class="myorders">${mine.map(o => `
             <div class="myorderrow">
@@ -1662,8 +1689,9 @@ function openItemForm(buyId, itemId){
   SPEC_ROWS = grps.map(g => ({
     grp: g,
     labels: vars.filter(x => x.grp === g).sort((a2,b2) => a2.sort - b2.sort).map(x => x.label).join("、"),
+    min: (vars.find(x => x.grp === g && x.min_qty) || {}).min_qty || "",
   }));
-  if(!SPEC_ROWS.length) SPEC_ROWS = [{grp:"", labels:""}];
+  if(!SPEC_ROWS.length) SPEC_ROWS = [{grp:"", labels:"", min:""}];
   go("form");
   renderItemPhotos();
   renderSpecRows();
@@ -1677,16 +1705,19 @@ function renderSpecRows(){
         oninput="SPEC_ROWS[${i}].grp=this.value" style="flex:0 0 34%">
       <input type="text" placeholder="選項（紅、藍、黑）" maxlength="300" value="${esc(r.labels)}"
         oninput="SPEC_ROWS[${i}].labels=this.value">
+      <input type="number" min="1" placeholder="每項門檻" title="這一組每個選項各自要滿幾件才成團。留空＝不分開算"
+        value="${r.min || ""}" oninput="SPEC_ROWS[${i}].min=this.value" style="flex:0 0 22%">
       <button type="button" class="mbtn" onclick="rmSpecRow(${i})">×</button>
     </div>`).join("");
 }
-function addSpecRow(){ SPEC_ROWS.push({grp:"", labels:""}); renderSpecRows(); }
-function rmSpecRow(i){ SPEC_ROWS.splice(i,1); if(!SPEC_ROWS.length) SPEC_ROWS.push({grp:"",labels:""}); renderSpecRows(); }
+function addSpecRow(){ SPEC_ROWS.push({grp:"", labels:"", min:""}); renderSpecRows(); }
+function rmSpecRow(i){ SPEC_ROWS.splice(i,1); if(!SPEC_ROWS.length) SPEC_ROWS.push({grp:"",labels:"",min:""}); renderSpecRows(); }
 // 逗號、頓號、全形逗號都收；空白與重複自動去掉
 function collectSpecs(){
   return SPEC_ROWS.map(r => ({
     grp: (r.grp||"").trim(),
     labels: [...new Set((r.labels||"").split(/[,，、\n]/).map(x => x.trim()).filter(Boolean))],
+    min_qty: Number(r.min) || 0,   // 0 ＝ 這組不分開算門檻
   })).filter(x => x.grp && x.labels.length);
 }
 
