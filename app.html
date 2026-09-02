@@ -255,9 +255,11 @@ a{color:inherit;text-decoration:none}
 .barfill.ok{background:#1f7a4d}
 .itemcard{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
 .itemname{font-weight:700;font-size:1.02rem}
-.itemphotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.itemphotos img{width:100%;height:130px;object-fit:cover;border-radius:8px;display:block}
-.itemphotos img:only-child{grid-column:span 2;height:170px}
+/* ⛔ 商品照多半是「說明長圖」，寫死高度 + object-fit:cover 會把說明文字整段切掉。
+   改成 height:auto 讓圖完整呈現（點一下仍用 lightbox 放大看細節）。 */
+.itemphotos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;align-items:start}
+.itemphotos img{width:100%;height:auto;border-radius:8px;display:block;background:var(--chip)}
+.itemphotos img:only-child{grid-column:span 2}
 .ordbox{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .myorders{margin-top:10px;padding:8px 10px;background:var(--chip);border-radius:var(--r-sm)}
 .myorderrow{display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -775,7 +777,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 13:48</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 13:54</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
