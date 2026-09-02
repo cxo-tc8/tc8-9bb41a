@@ -777,7 +777,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 13:54</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 14:08</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -954,7 +954,7 @@ async function reloadBuys(){
     // RLS 已經擋掉待審／退回的單，這裡讀到的都是可以公開看的
     BUYS = await rest("group_buys?select=id,owner_id,title,body,deadline,status&order=deadline.asc");
     // 一張單多樣商品：商品、規格、進度都按「商品」分組
-    const its = await rest("group_buy_items?select=id,buy_id,name,body,unit_price,min_qty,photos,sort&order=sort.asc");
+    const its = await rest("group_buy_items?select=id,buy_id,name,body,unit_price,min_qty,max_per_person,photos,sort&order=sort.asc");
     BUY_ITEMS = {};
     its.forEach(i => { (BUY_ITEMS[i.buy_id] ??= []).push(i); });
     const pr = await rest("v_gb_progress?select=item_id,buy_id,min_qty,qty,buyers");
@@ -1407,11 +1407,19 @@ function openBuy(buyId){
         const vars = BUY_VARS[it.id] || [];
         const grps = [...new Set(vars.map(v => v.grp))];
         const mine = myOf(it.id);
+        // 我還能訂幾件（null ＝ 不限購）。正在改的那一筆不算進已訂量，
+        // 否則限購 1 件的人要改自己那筆訂單時會被自己擋住。
+        const myLeft = it.max_per_person
+          ? Math.max(0, it.max_per_person - mine
+              .filter(o => o.id !== ORD_EDIT[it.id])
+              .reduce((a, o) => a + (Number(o.qty) || 0), 0))
+          : null;
         return `<div class="itemcard">
           ${(it.photos||[]).length ? `<div class="itemphotos">${
             it.photos.slice(0,2).map(u => `<img src="${esc(u)}" alt="" onclick="openLightbox('${escAttr(u)}')">`).join("")}</div>` : ""}
           <div class="itemname">${esc(it.name)}</div>
-          <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件</div>
+          <div class="buymeta">${it.unit_price ? `每件 $${it.unit_price}　｜　` : ""}成團門檻 ${it.min_qty} 件${
+            it.max_per_person ? `　｜　<b>每人限購 ${it.max_per_person} 件</b>` : ""}</div>
           ${it.body ? `<div class="mdesc" style="margin-top:6px;white-space:pre-wrap">${esc(it.body)}</div>` : ""}
           <div class="bar"><div class="barfill${pr.qty >= it.min_qty ? " ok" : ""}" style="width:${pct}%"></div></div>
           <div class="buymeta">已訂 <b>${pr.qty}</b> / ${it.min_qty} 件${
@@ -1437,9 +1445,13 @@ function openBuy(buyId){
                 </div></div>`).join("")}
               <div class="ordcell qty">
                 <label>數量</label>
-                <input type="number" min="1" value="1" id="q_${it.id}" class="qtyin"></div>
+                <input type="number" min="1"${myLeft != null ? ` max="${myLeft}"` : ""}
+                  value="1" id="q_${it.id}" class="qtyin"></div>
             </div>
-            <button class="mbtn add" style="margin-top:10px" onclick="addOrder(${it.id}, this)">${mine.length ? "再加一筆" : "訂購這一樣"}</button>
+            ${myLeft === 0
+              ? `<div class="mnote" style="margin-top:10px">你已經訂滿 ${it.max_per_person} 件（每人限購）</div>`
+              : `<button class="mbtn add" style="margin-top:10px" onclick="addOrder(${it.id}, this)">${
+                  mine.length ? "再加一筆" : "訂購這一樣"}</button>`}
           </div>` : ""}
         </div>`;
       }).join("")}
@@ -1627,6 +1639,11 @@ function openItemForm(buyId, itemId){
         <div class="help">累積到這個數量你才願意製作。截止時沒達到，系統會通知訂購的人</div>
         <input type="number" id="it_min" min="1" value="${it ? it.min_qty : 10}"></div>
 
+      <div class="field"><label>每人最多幾件（留空＝不限）</label>
+        <div class="help">同一個人在這樣商品累計最多能訂幾件。留空或 0 就是不限購。</div>
+        <input type="number" id="it_max" min="1" placeholder="不限"
+          value="${it && it.max_per_person ? it.max_per_person : ""}"></div>
+
       <div class="field"><label>照片（最多 2 張）</label>
         <div id="it_photos" class="album"></div></div>
 
@@ -1699,6 +1716,7 @@ async function saveItem(buyId, itemId, btn){
     body: el("it_body").value,
     unit_price: Number(el("it_price").value) || 0,
     min_qty: Number(el("it_min").value) || 1,
+    max_per_person: Number(el("it_max").value) || 0,   // 0 ＝ 不限，後端會存成 null
     photos: ITEM_PHOTOS,
     specs: collectSpecs(),
     sort: itemId ? undefined : ((BUY_ITEMS[buyId]||[]).length + 1) * 10,
