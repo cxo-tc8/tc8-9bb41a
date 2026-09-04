@@ -39,7 +39,9 @@ const TEXT = (v: unknown, max: number) => {
   const t = (v ?? "").toString().trim();
   return t ? (t.length > max ? t.slice(0, max) : t) : null;
 };
-const twToday = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);  // 台灣的今天
+const twNow   = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 16).replace("T", " ");  // 台灣的此刻 YYYY-MM-DD HH:MM
+// 截止時刻。deadline_time 留空 ＝ 當天 23:59（＝加這個欄位之前的行為，舊單不受影響）
+const closeAt = (d: string, t?: string | null) => `${d} ${(t ?? "23:59").slice(0, 5)}`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -53,6 +55,8 @@ Deno.serve(async (req) => {
 
       const title = TEXT(b.title, 80);
       const deadline = TEXT(b.deadline, 10);
+      // 只收 HH:MM；空的或格式不對一律存 null（＝當天 23:59）
+      const dtime = /^\d{2}:\d{2}$/.test(String(b.deadline_time ?? "")) ? `${b.deadline_time}:00` : null;
       if (!title) return json({ ok: false, error: "BAD_INPUT", message: "請填商品名稱" }, 400);
       if (!deadline) return json({ ok: false, error: "BAD_INPUT", message: "請填截止日" }, 400);
 
@@ -61,6 +65,7 @@ Deno.serve(async (req) => {
         title,
         body: TEXT(b.body, 2000),
         deadline,
+        deadline_time: dtime,
         updated_at: new Date().toISOString(),
       };
 
@@ -199,7 +204,7 @@ Deno.serve(async (req) => {
       const me = await whoami(req);
       if (!isOfficer(me)) return json({ ok: false, error: "FORBIDDEN" }, 403);
       // 待審的看不到商品（RLS 擋著），所以連商品一起用 service key 撈出來給幹部看
-      const rows = await db(`group_buys?status=eq.pending&select=id,title,body,deadline,created_at,members!group_buys_owner_id_fkey(id,name),group_buy_items(id,name,unit_price,min_qty,photos)&order=created_at.asc`);
+      const rows = await db(`group_buys?status=eq.pending&select=id,title,body,deadline,deadline_time,created_at,members!group_buys_owner_id_fkey(id,name),group_buy_items(id,name,unit_price,min_qty,photos)&order=created_at.asc`);
       return json({ ok: true, list: rows ?? [] });
     }
 
@@ -208,7 +213,7 @@ Deno.serve(async (req) => {
       const me = await whoami(req);
       if (!isOfficer(me)) return json({ ok: false, error: "FORBIDDEN" }, 403);
       // ⛔ 排除 draft：還沒送審的草稿是團主自己的東西，幹部不該看到
-      const buys = await db(`group_buys?status=neq.draft&select=id,title,status,deadline,owner_id,body,members!group_buys_owner_id_fkey(id,name),group_buy_items(id,name,unit_price,min_qty)&order=deadline.desc`) ?? [];
+      const buys = await db(`group_buys?status=neq.draft&select=id,title,status,deadline,deadline_time,owner_id,body,members!group_buys_owner_id_fkey(id,name),group_buy_items(id,name,unit_price,min_qty)&order=deadline.desc`) ?? [];
       const orders = await db(`group_buy_orders?select=buy_id,item_id,qty`) ?? [];
       const qtyOf: Record<number, number> = {};
       for (const o of orders) qtyOf[o.item_id as number] = (qtyOf[o.item_id as number] ?? 0) + (o.qty as number);
@@ -221,7 +226,7 @@ Deno.serve(async (req) => {
         list: buys.map((b: Record<string, unknown>) => {
           const items = (b.group_buy_items ?? []) as Record<string, unknown>[];
           return {
-            id: b.id, title: b.title, status: b.status, deadline: b.deadline, body: b.body,
+            id: b.id, title: b.title, status: b.status, deadline: b.deadline, deadline_time: b.deadline_time, body: b.body,
             owner: (b.members as { name?: string } | null)?.name ?? "",
             amount: items.reduce((n, i) => n + (qtyOf[i.id as number] ?? 0) * (i.unit_price as number), 0),
             paid_total: paidOf[b.id as number] ?? 0,
@@ -255,11 +260,13 @@ Deno.serve(async (req) => {
       const itemId = Number(b.item_id);
       const qty = Math.trunc(Number(b.qty) || 0);
 
-      const it = await db(`group_buy_items?id=eq.${itemId}&select=id,buy_id,name,max_per_person,group_buys(status,deadline)`);
+      const it = await db(`group_buy_items?id=eq.${itemId}&select=id,buy_id,name,max_per_person,group_buys(status,deadline,deadline_time)`);
       if (!it.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
-      const buy = it[0].group_buys as { status: string; deadline: string };
+      const buy = it[0].group_buys as { status: string; deadline: string; deadline_time: string | null };
       if (buy.status !== "open") return json({ ok: false, error: "CLOSED", message: "這個團購已經結束了" }, 409);
-      if (twToday() > buy.deadline) return json({ ok: false, error: "CLOSED", message: "已經過了截止日" }, 409);
+      if (twNow() > closeAt(buy.deadline, buy.deadline_time)) {
+        return json({ ok: false, error: "CLOSED", message: `已經過了截止時間（${closeAt(buy.deadline, buy.deadline_time)}）` }, 409);
+      }
 
       // 規格選擇 {"顏色":"紅","尺寸":"M"}；同一個人可以買不同規格各一筆
       let choices: Record<string, string> | null = null;
@@ -336,7 +343,7 @@ Deno.serve(async (req) => {
       const me = await whoami(req);
       if (!me) return json({ ok: false, error: "NOT_BOUND" }, 401);
       const buyId = Number(b.buy_id);
-      const cur = await db(`group_buys?id=eq.${buyId}&select=id,owner_id,title,deadline,status`);
+      const cur = await db(`group_buys?id=eq.${buyId}&select=id,owner_id,title,deadline,deadline_time,status`);
       if (!cur.length) return json({ ok: false, error: "NOT_FOUND" }, 404);
       if (cur[0].owner_id !== me.id && !isOfficer(me)) {
         return json({ ok: false, error: "FORBIDDEN", message: "只有開單的人跟幹部看得到訂購名單" }, 403);
@@ -477,7 +484,7 @@ Deno.serve(async (req) => {
     if (action === "mine_buys") {
       const me = await whoami(req);
       if (!me) return json({ ok: true, buys: [], items: [], variants: [] });
-      const buys = await db(`group_buys?owner_id=eq.${me.id}&status=in.(draft,pending,rejected)&select=id,owner_id,title,body,deadline,status&order=deadline.asc`) ?? [];
+      const buys = await db(`group_buys?owner_id=eq.${me.id}&status=in.(draft,pending,rejected)&select=id,owner_id,title,body,deadline,deadline_time,status&order=deadline.asc`) ?? [];
       if (!buys.length) return json({ ok: true, buys: [], items: [], variants: [] });
       const ids = buys.map((x: { id: number }) => x.id).join(",");
       const items = await db(`group_buy_items?buy_id=in.(${ids})&select=id,buy_id,name,body,unit_price,min_qty,photos,sort&order=sort.asc`) ?? [];

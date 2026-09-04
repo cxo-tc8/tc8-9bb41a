@@ -777,7 +777,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-02 14:46</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-04 09:38</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -953,7 +953,7 @@ async function buyApi(action, body){
 async function reloadBuys(){
   try{
     // RLS 已經擋掉待審／退回的單，這裡讀到的都是可以公開看的
-    BUYS = await rest("group_buys?select=id,owner_id,title,body,deadline,status&order=deadline.asc");
+    BUYS = await rest("group_buys?select=id,owner_id,title,body,deadline,deadline_time,status&order=deadline.asc");
     // 一張單多樣商品：商品、規格、進度都按「商品」分組
     const its = await rest("group_buy_items?select=id,buy_id,name,body,unit_price,min_qty,max_per_person,photos,sort&order=sort.asc");
     BUY_ITEMS = {};
@@ -1368,7 +1368,9 @@ function buyRow(b){
         prices.length ? `　｜　$${Math.min(...prices)}${
           Math.max(...prices) !== Math.min(...prices) ? `～$${Math.max(...prices)}` : ""}` : ""}　｜　${
         b.status === "closed" ? "已成團" : b.status === "cancelled" ? "未達門檻" :
-        days < 0 ? "已截止" : days === 0 ? "今天截止" : `剩 ${days} 天`}</div>
+        buyClosed(b) ? "已截止" : days === 0
+          ? (b.deadline_time ? `今天 ${b.deadline_time.slice(0,5)} 截止` : "今天截止")
+          : `剩 ${days} 天`}</div>
       <div class="buymeta">累積 <b>${totQty}</b> 件${
         reached ? `　<span class="okmark">✓ ${reached} 樣已成團</span>` : ""}${
         my ? `　｜　我訂了 <b>${my}</b> 件` : ""}</div>
@@ -1397,18 +1399,27 @@ const daysLeft = d => {
   const tw = x => new Date(x).toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});
   return Math.round((new Date(d + "T00:00:00+08:00") - new Date(tw(new Date()) + "T00:00:00+08:00")) / 86400000);
 };
+// ── 截止時刻 ────────────────────────────────────────
+// deadline 是日期、deadline_time 是時間（可留空）。留空 ＝ 當天 23:59，
+// 也就是「加時間這個功能之前」的行為，所以既有的團購不會因為這次改動提早關掉。
+// ⚠️ 前端擋只是體驗，真正擋下單的是伺服器（groupbuy Edge Function 同一套算法）。
+const twMinuteNow = () => new Date(Date.now() + 8*3600e3).toISOString().slice(0,16).replace("T"," ");
+const buyCloseAt  = b => b.deadline ? `${b.deadline} ${(b.deadline_time || "23:59").slice(0,5)}` : "";
+const buyClosed   = b => !!b.deadline && twMinuteNow() > buyCloseAt(b);
+// 給人看的：有設時間才顯示時間，沒設就只顯示日期
+const deadlineText = b => b.deadline ? b.deadline + (b.deadline_time ? ` ${b.deadline_time.slice(0,5)}` : "") : "";
 
 // ── 訂購畫面：一樣商品一張卡，各自選規格與數量 ──────────
 function openBuy(buyId){
   const b = BUYS.find(x => x.id === buyId); if(!b) return;
   const items = BUY_ITEMS[buyId] || [];
-  const canOrder = ME && b.status === "open" && daysLeft(b.deadline) >= 0;
+  const canOrder = ME && b.status === "open" && !buyClosed(b);
   const myOf = itemId => MY_ORDERS.filter(o => o.item_id === itemId);
 
   el("v-form").innerHTML = `${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">${esc(b.title)}</div>
-      <div class="buymeta" style="margin-top:6px">開團：${esc(memberName(b.owner_id))}　｜　截止 ${esc(b.deadline)}</div>
+      <div class="buymeta" style="margin-top:6px">開團：${esc(memberName(b.owner_id))}　｜　截止 ${esc(deadlineText(b))}</div>
       ${b.body ? `<div class="mdesc" style="margin-top:10px;white-space:pre-wrap">${esc(b.body)}</div>` : ""}
       ${!ME ? `<div class="mnote" style="margin-top:16px">登入之後才能訂購</div>` : ""}
       ${!items.length ? `<div class="mnote" style="margin-top:16px">開團的人還沒放商品</div>` : ""}
@@ -1563,6 +1574,16 @@ function openBuyForm(buyId){
         <textarea id="gb_body" maxlength="2000">${v("body")}</textarea></div>
       <div class="field"><label>截止日 *</label>
         <input type="date" id="gb_deadline" value="${v("deadline")}"></div>
+      <div class="field"><label>當天幾點截止</label>
+        <div class="help">不填＝當天 23:59 才關。設了時間，過了那一刻系統就不再接受訂購。</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="time" id="gb_deadline_time" style="flex:1;min-width:150px"
+            value="${b && b.deadline_time ? esc(b.deadline_time.slice(0,5)) : ""}">
+          <button type="button" class="mbtn" onclick="setDeadlineTime('12:00')">12:00</button>
+          <button type="button" class="mbtn" onclick="setDeadlineTime('18:00')">18:00</button>
+          <button type="button" class="mbtn" onclick="setDeadlineTime('21:00')">21:00</button>
+          <button type="button" class="mbtn" onclick="setDeadlineTime('')">整天</button>
+        </div></div>
 
       ${b ? `<div class="sec" style="margin-top:24px"><h2>商品（${items.length} 樣）</h2></div>
         <button class="btn btn-primary" style="width:100%" onclick="openItemForm(${b.id})">＋ 加一樣商品</button>
@@ -1630,6 +1651,9 @@ async function submitBuy(buyId, btn){
   go("buys"); renderBuys();
 }
 
+// 常用時段一鍵填入（手機上轉時間滾輪很煩，這幾顆省掉大部分情況）
+function setDeadlineTime(t){ el("gb_deadline_time").value = t; }
+
 async function saveBuy(buyId, btn){
   const title = el("gb_title").value.trim(), deadline = el("gb_deadline").value;
   if(!title){ alert("請填團購名稱"); return; }
@@ -1637,6 +1661,7 @@ async function saveBuy(buyId, btn){
   btn.disabled = true; btn.textContent = "送出中…";
   const r = await buyApi(buyId ? "update" : "create", {
     id: buyId || undefined, title, body: el("gb_body").value, deadline,
+    deadline_time: el("gb_deadline_time").value || null,
   });
   btn.disabled = false;
   if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
@@ -1871,7 +1896,7 @@ async function openBuyDetail(buyId, from){
   el("v-form").innerHTML = `${bar}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">訂購名單　${esc(r.buy.title)}</div>
-      <div class="buymeta" style="margin-top:6px">截止 ${esc(r.buy.deadline)}　｜　
+      <div class="buymeta" style="margin-top:6px">截止 ${esc(deadlineText(r.buy))}　｜　
         全部總金額 <b>$${r.grand_amount}</b></div>
       ${payBlock(r)}
       ${r.items.map(it => `
@@ -2025,7 +2050,7 @@ async function openBuyOverview(){
             <div class="itemname">${esc(b.title)}</div>
             <span class="mnote">${LABEL[b.status] || b.status}</span>
           </div>
-          <div class="buymeta">${esc(b.owner)}　｜　截止 ${esc(b.deadline)}</div>
+          <div class="buymeta">${esc(b.owner)}　｜　截止 ${esc(deadlineText(b))}</div>
           ${b.amount ? `<div class="buymeta">應收 <b>$${b.amount}</b>　｜　已收 <b>$${b.paid_total}</b>${
             b.amount - b.paid_total > 0
               ? `　｜　未收 <b style="color:var(--orange-dark)">$${b.amount - b.paid_total}</b>`
