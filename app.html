@@ -295,17 +295,6 @@ a{color:inherit;text-decoration:none}
       「名稱／價格／庫存／排序」四個標題全部黏到最左邊，而且完全不報錯。
    ⛔ 標籤一律各自貼在自己那個框的正上方，不要拉一條表頭列去對齊：
       表頭列在手機上一定得隱藏，總務就看不懂哪一格是什麼。 */
-/* 首頁月例會卡片上的來賓入口膠囊（羅伯特 2026-09-10：入口原本在活動詳情頁第二層，
-   每個月都要做的事藏在第二層等於沒有）。⛔ 只放入口，不把整張來賓清單搬上首頁。 */
-.guestpills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.gpill{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;
-  border:1.5px solid var(--blue-500);background:var(--card);color:var(--blue-700);
-  font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
-.gpill:hover{background:var(--chip)}
-.gpill:focus-visible{outline:3px solid var(--blue-500);outline-offset:2px}
-.gpill b{font-size:16px;margin:0 1px}
-.gpill.ghost{border-color:var(--line);color:var(--muted)}
-.gpill.full{border-style:dashed;border-color:var(--line);color:var(--muted);cursor:default}
 .opgroup{margin-top:22px}
 .opghead{display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
 .opgname{font-weight:800;font-size:1.06rem;flex:1;min-width:0}
@@ -351,6 +340,10 @@ a{color:inherit;text-decoration:none}
 .tallyrow{display:flex;justify-content:space-between;padding:9px 12px;font-size:.9rem;border-top:1px solid var(--line-soft)}
 .tallyrow:first-child{border-top:none}
 .tallyrow b{font-size:1.05rem;color:var(--blue-900)}
+/* 夥伴／來賓／合計三個數字並排。i 只是排版用，不要斜體 */
+.tnums{display:flex;align-items:center;gap:14px}
+.tnums i{font-style:normal;font-size:.86rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.tnums b{font-variant-numeric:tabular-nums;min-width:26px;text-align:right}
 .tallyrow.sum{background:var(--chip);font-weight:700}
 .rosterwrap{margin-top:6px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm)}
 .roster{border-collapse:collapse;width:100%;font-size:.86rem;white-space:nowrap}
@@ -826,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-10 16:41</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-10 16:48</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2501,19 +2494,17 @@ function guestBlock(p){
 // 首頁月例會卡片上的來賓入口。⛔ 只放一顆膠囊，不把整張來賓清單搬上首頁——
 //    首頁「不要變成捲不完的長河」那個原則不變；要改／取消還是進活動詳情頁的來賓區。
 // ⚠️ 卡片整張可點（會打開詳情頁），所以這一列一定要 stopPropagation。
+// ⚠️ 跟「我要報名／報到」排同一列、用同一個 .btn 尺寸（羅伯特 2026-09-10：
+//    「不能坐在報到右邊，一樣大嗎？」）——所以這裡回傳的是一顆按鈕，不是一整列。
 function guestPill(p){
   if(!p || !p.signup_open || !ME) return "";
   const quota = p.guest_quota == null ? 10 : p.guest_quota;  // ⛔ 不能用 ||：0＝不開放
   if(quota === 0) return "";
-  const mine = guestsOf(p.id).length;
   const all = (SEATS[p.id] || {}).guests_taken;
-  const used = all == null ? mine : all;
-  return `<div class="guestpills" onclick="event.stopPropagation()">
-    ${used >= quota
-      ? `<span class="gpill full">來賓名額已滿　${used}/${quota}</span>`
-      : `<button class="gpill" onclick="openGuest(${p.id})">＋ 幫來賓登記　<b>${used}</b>/${quota}</button>`}
-    ${mine ? `<button class="gpill ghost" onclick="openPostDetail(${p.id})">我帶了 ${mine} 位 ›</button>` : ""}
-  </div>`;
+  const used = all == null ? guestsOf(p.id).length : all;
+  return used >= quota
+    ? `<button class="btn btn-done" disabled>來賓額滿　${used}/${quota}</button>`
+    : `<button class="btn btn-ghost" onclick="openGuest(${p.id})">來賓登記　${used}/${quota}</button>`;
 }
 function openGuest(postId, guestId){
   if(!ME){ go("me"); return; }
@@ -2604,7 +2595,9 @@ async function openRoster(postId, backJs){
     }catch(e){ console.error("信用讀取失敗", e); }
   }
   const p = POSTS.find(x => x.id === postId);
-  const grps = Object.keys(r.tally || {});
+  // ⛔ 群組要把兩邊聯集起來：某個群組只有來賓點過的話，只看 r.tally 會整組不見
+  const grps = [...new Set([...Object.keys(r.tally || {}), ...Object.keys(r.tally_guest || {})])];
+  const hasGuest = (r.guest_total || 0) > 0;
   const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices || {})))];
 
   el("v-form").innerHTML = `
@@ -2613,17 +2606,30 @@ async function openRoster(postId, backJs){
       <div style="font-weight:800;font-size:1.15rem">報名名單　${esc(p ? p.title : "")}</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
         已確認報名 <b style="color:var(--orange);font-size:1.1rem">${r.total}</b> 人${
-          r.no_choice ? `，其中 <b>${r.no_choice}</b> 人沒有訂餐` : ""}
+          hasGuest ? `　＋　來賓 <b style="color:var(--orange);font-size:1.1rem">${r.guest_total}</b> 位　＝　現場 <b>${r.total + r.guest_total}</b> 人` : ""}${
+          (r.no_choice || r.guest_no_choice) ? `<br>其中 <b>${(r.no_choice||0) + (r.guest_no_choice||0)}</b> 人沒有訂餐` : ""}
       </div>
-      ${(r.officer ? grps : []).map(g => `
+      ${(r.officer ? grps : []).map(g => {
+        const mem = (r.tally || {})[g] || {}, gst = (r.tally_guest || {})[g] || {};
+        const labels = [...new Set([...Object.keys(mem), ...Object.keys(gst)])]
+          .sort((a, b) => ((mem[b]||0)+(gst[b]||0)) - ((mem[a]||0)+(gst[a]||0)));
+        const sumM = Object.values(mem).reduce((a,b)=>a+b,0);
+        const sumG = Object.values(gst).reduce((a,b)=>a+b,0);
+        return `
         <div class="field" style="margin-top:18px">
           <label>${esc(g)}統計</label>
-          <div class="tally">${Object.entries(r.tally[g])
-            .sort((a,b) => b[1]-a[1])
-            .map(([k,v]) => `<div class="tallyrow"><span>${esc(k)}</span><b>${v}</b></div>`).join("")}
-            <div class="tallyrow sum"><span>小計</span><b>${Object.values(r.tally[g]).reduce((a,b)=>a+b,0)}</b></div>
+          <div class="tally">${labels.map(k => `
+            <div class="tallyrow"><span>${esc(k)}</span>
+              <span class="tnums">${hasGuest
+                ? `<i>夥伴 ${mem[k]||0}</i><i>來賓 ${gst[k]||0}</i>` : ""}<b>${(mem[k]||0)+(gst[k]||0)}</b></span>
+            </div>`).join("")}
+            <div class="tallyrow sum"><span>小計</span>
+              <span class="tnums">${hasGuest
+                ? `<i>夥伴 ${sumM}</i><i>來賓 ${sumG}</i>` : ""}<b>${sumM + sumG}</b></span>
+            </div>
           </div>
-        </div>`).join("")}
+          ${hasGuest ? `<div class="help" style="margin-top:5px">合計已含來賓——照「合計」訂就對了</div>` : ""}
+        </div>`; }).join("")}
       ${r.guests && r.guests.length ? `<div class="field" style="margin-top:20px">
         <label>來賓（${r.guests.length} 位）</label>
         <div class="rosterwrap"><table class="roster">
@@ -3519,10 +3525,11 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <li>主講者的宣傳照與講題</li>
 <li>活動詳細內容與照片</li>
 <li><strong>📋 誰報名了</strong></li>
-<li><strong>我要帶來賓</strong>：首頁月例會卡片上「我要報名」下面那顆膠囊
-  <strong>＋ 幫來賓登記　3/10</strong> 按下去就能登記（填姓名、公司、電話、餐點）。
+<li><strong>我要帶來賓</strong>：首頁月例會卡片上，「報到」右邊那顆
+  <strong>來賓登記　1/5</strong> 按下去就能登記（填姓名、公司、電話、餐點）。
+  數字是<strong>全場已登記／名額上限</strong>，滿了會變成「來賓額滿」按不下去。
   <strong>自己還沒報名也可以幫來賓登記。</strong>
-  已經登記過的會多一顆「我帶了 N 位」，點進去可以改資料或取消。
+  要改資料或取消，點進那則月例會、在下面的來賓區改。
   ⭐ 來賓名額是<strong>整場合計</strong>、預設 10 位，不是每人 10 位——額滿了就登記不了，要帶請早</li>
 </ul>
 
@@ -3818,8 +3825,8 @@ function homeHTML(){
                 ? `<button class="btn btn-ghost" onclick="openPost('monthly',${monthly.id})">尚未開放報名（去打開）</button>`
                 : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
         ${checkinButton(monthly)}
+        ${guestPill(monthly)}
       </div>
-      ${guestPill(monthly)}
       ${isOfficer() ? `<div class="adminbar" onclick="event.stopPropagation()">
         <span class="adminlbl">幹部</span>
         <button onclick="openPost('monthly',${monthly.id})">✏️ 編輯這場（內文、餐點）</button>
