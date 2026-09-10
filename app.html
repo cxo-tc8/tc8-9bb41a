@@ -289,10 +289,60 @@ a{color:inherit;text-decoration:none}
 .mealopt{display:flex;flex-wrap:wrap;gap:8px}
 .mealopt .pill.sold{opacity:.45;text-decoration:line-through;cursor:not-allowed}
 .mealprice{font-size:.78rem;color:var(--muted);margin-left:4px}
-.mhead{display:grid;grid-template-columns:1fr 72px 72px 62px auto auto;gap:6px;font-size:.75rem;color:var(--muted);margin:6px 0 3px;padding:0 2px}
-.mrow{display:grid;grid-template-columns:1fr 72px 72px 62px auto auto;gap:6px;align-items:center;margin-top:6px}
-.mrow input{min-height:40px;padding:0 9px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:.9rem;width:100%}
-.mrow.off input{opacity:.5;text-decoration:line-through}
+/* ── 幹部：餐點選項編輯 ─────────────────────────────
+   ⛔ class 一律 op 開頭。原本這裡叫 .mrow/.mhead，跟下面「夥伴」那一區撞名，
+      後面的 .mrow{display:flex} 把這裡的 grid 整組蓋掉——症狀是
+      「名稱／價格／庫存／排序」四個標題全部黏到最左邊，而且完全不報錯。
+   ⛔ 標籤一律各自貼在自己那個框的正上方，不要拉一條表頭列去對齊：
+      表頭列在手機上一定得隱藏，總務就看不懂哪一格是什麼。 */
+/* 首頁月例會卡片上的來賓入口膠囊（羅伯特 2026-09-10：入口原本在活動詳情頁第二層，
+   每個月都要做的事藏在第二層等於沒有）。⛔ 只放入口，不把整張來賓清單搬上首頁。 */
+.guestpills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.gpill{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;
+  border:1.5px solid var(--blue-500);background:var(--card);color:var(--blue-700);
+  font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.gpill:hover{background:var(--chip)}
+.gpill:focus-visible{outline:3px solid var(--blue-500);outline-offset:2px}
+.gpill b{font-size:16px;margin:0 1px}
+.gpill.ghost{border-color:var(--line);color:var(--muted)}
+.gpill.full{border-style:dashed;border-color:var(--line);color:var(--muted);cursor:default}
+.opgroup{margin-top:22px}
+.opghead{display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+.opgname{font-weight:800;font-size:1.06rem;flex:1;min-width:0}
+.opcard{border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);
+  padding:12px 13px 11px;margin-top:10px}
+.opcard.off{background:var(--chip);opacity:.62}
+.opcard.shared{background:var(--chip)}
+.opfields{display:flex;flex-wrap:wrap;gap:11px}
+.opf{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
+.opf.name{flex:1 1 100%;min-width:0}
+.opf > span{font-size:.94rem;font-weight:700;color:var(--muted)}
+.opf input[type=text],.opf input[type=number]{border:1.5px solid var(--line);border-radius:var(--r-sm);
+  padding:0 11px;min-height:48px;font-size:17px;background:var(--card);font-family:inherit;width:100%;
+  font-variant-numeric:tabular-nums}
+.opf input:focus{outline:none;border-color:var(--blue-500)}
+.opf.name input{width:100%}
+.opf.price input{width:110px}
+.opstock{display:flex;align-items:center;gap:9px}
+.opstock input[type=number]{width:96px}
+.opck{display:flex;align-items:center;gap:5px;font-size:.94rem;font-weight:700;white-space:nowrap;cursor:pointer}
+.opck input{width:19px;height:19px;accent-color:var(--blue-500)}
+.opbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px}
+.opact{display:flex;gap:8px;margin-left:auto}
+.opord{display:flex;gap:5px}
+.mbtn.ico{min-width:44px;min-height:44px;padding:0;font-size:1.1rem;line-height:1}
+/* 刪除是不可逆的，跟「儲存／停用」之間留一段距離，不要排成一排等人誤按 */
+.mbtn.del{color:#b4261a;border-color:#e8b4ae;margin-left:6px}
+/* 太淡會看不出「為什麼按不動」，0.45 是還讀得到字的下限 */
+.mbtn:disabled{opacity:.45;cursor:not-allowed}
+/* 鍵盤操作要看得出焦點在哪（滑鼠點按不會出現，外觀不變） */
+.mbtn:focus-visible{outline:3px solid var(--blue-500);outline-offset:2px}
+.opadd{display:flex;gap:8px;margin-top:10px}
+.opadd input{flex:1;min-width:0;border:1.5px dashed var(--line);border-radius:var(--r-sm);
+  padding:0 11px;min-height:48px;font-size:17px;background:var(--card);font-family:inherit}
+.opoff{margin-top:10px}
+.opoff summary{cursor:pointer;font-size:.94rem;font-weight:700;color:var(--muted);padding:5px 0}
+.opsaved{font-size:.9rem;font-weight:700;color:#1b7a45}
 .mbtn{min-height:40px;padding:0 12px;white-space:nowrap;border:1.5px solid var(--line);background:var(--card);border-radius:var(--r-sm);font-size:.85rem;font-weight:600;cursor:pointer}
 .mbtn.save{background:var(--blue-500);color:#fff;border-color:var(--blue-500)}
 .mbtn.add{margin-top:8px;width:100%;color:var(--blue-500);border-style:dashed}
@@ -308,9 +358,8 @@ a{color:inherit;text-decoration:none}
 .roster th{background:var(--chip);font-weight:700;position:sticky;top:0}
 .roster td:first-child,.roster th:first-child{color:var(--muted);text-align:right}
 @media (max-width:640px){
-  .mhead{display:none}
-  .mrow{grid-template-columns:1fr 60px 60px 52px;grid-auto-rows:auto}
-  .mrow .mbtn{grid-column:span 1}
+  .opact{margin-left:0;width:100%}
+  .opact .mbtn{flex:1}
 }
 
 a.btn{text-decoration:none}
@@ -777,7 +826,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-04 09:38</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-10 16:41</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2449,6 +2498,23 @@ function guestBlock(p){
   </div>`;
 }
 
+// 首頁月例會卡片上的來賓入口。⛔ 只放一顆膠囊，不把整張來賓清單搬上首頁——
+//    首頁「不要變成捲不完的長河」那個原則不變；要改／取消還是進活動詳情頁的來賓區。
+// ⚠️ 卡片整張可點（會打開詳情頁），所以這一列一定要 stopPropagation。
+function guestPill(p){
+  if(!p || !p.signup_open || !ME) return "";
+  const quota = p.guest_quota == null ? 10 : p.guest_quota;  // ⛔ 不能用 ||：0＝不開放
+  if(quota === 0) return "";
+  const mine = guestsOf(p.id).length;
+  const all = (SEATS[p.id] || {}).guests_taken;
+  const used = all == null ? mine : all;
+  return `<div class="guestpills" onclick="event.stopPropagation()">
+    ${used >= quota
+      ? `<span class="gpill full">來賓名額已滿　${used}/${quota}</span>`
+      : `<button class="gpill" onclick="openGuest(${p.id})">＋ 幫來賓登記　<b>${used}</b>/${quota}</button>`}
+    ${mine ? `<button class="gpill ghost" onclick="openPostDetail(${p.id})">我帶了 ${mine} 位 ›</button>` : ""}
+  </div>`;
+}
 function openGuest(postId, guestId){
   if(!ME){ go("me"); return; }
   const p = POSTS.find(x => x.id === postId);
@@ -2635,8 +2701,13 @@ async function openMeals(postId){
   ]);
   MEAL_ALL = (r && r.options) || [];
   MEAL_TPL = (t && t.templates) || [];
+  // ⚠️ 每一個動作（存、停用、↑↓）都是重畫整頁，而 go() 會把畫面捲回最上面。
+  //    總務改到第八個品項按儲存，畫面就彈回標題——一定要把捲動位置留住。
+  const wasOpen = el("v-form").classList.contains("on");
+  const keepY = wasOpen ? window.scrollY : 0;
   renderMeals(postId);
   go("form");
+  if(keepY) window.scrollTo(0, keepY);
 }
 
 // ── 餐點範本：整套存、下次直接載入 ─────────────────────────
@@ -2666,6 +2737,9 @@ async function delTpl(name, postId){
   if(!r || !r.ok){ alert("刪除失敗"); return; }
   await openMeals(postId);
 }
+// 排序不再叫總務填數字，改成 ↑ ↓：一次把整場的順序重排（opt_reorder）。
+// 「已存過」的視覺回饋要跨越 re-render，所以記在這裡而不是按鈕上。
+let MEAL_SAVED = 0;
 function renderMeals(postId){
   const p = POSTS.find(x => x.id === postId);
   const mine = MEAL_ALL.filter(m => m.post_id === postId);
@@ -2676,26 +2750,92 @@ function renderMeals(postId){
   all.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
   const groups = [...new Set(all.map(m => m.grp))]
     .sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
-  const row = m => `
-    <div class="mrow${m.active ? "" : " off"}">
-      <input class="mi-label" value="${esc(m.label)}" placeholder="名稱">
-      <input class="mi-price" type="number" value="${m.price}" placeholder="0">
-      <input class="mi-stock" type="number" value="${m.stock}" title="-1 = 不限量（一般都填 -1）">
-      <input class="mi-sort" type="number" value="${m.sort}" title="數字小的排前面">
-      <button class="mbtn save" onclick="saveMeal(${m.id}, ${postId}, this)">存</button>
-      <button class="mbtn" onclick="toggleMeal(${m.id}, ${!m.active}, ${postId})">${m.active ? "停用" : "啟用"}</button>
+
+  const taken = m => MEAL_TAKEN[m.id] || 0;
+
+  // 一個選項一張卡，四個欄位各自把標籤貼在自己框框的正上方
+  const card = (m, i, arr) => {
+    const t = taken(m);
+    return `
+    <div class="opcard${m.active ? "" : " off"}">
+      <div class="opfields">
+        <label class="opf name"><span>名稱</span>
+          <input type="text" class="mi-label" value="${esc(m.label)}" placeholder="例如：雞排飯"></label>
+        <label class="opf price"><span>價格（元）</span>
+          <input type="number" class="mi-price" inputmode="numeric" min="0" value="${m.price}"></label>
+        <div class="opf"><span>份數上限</span>
+          <div class="opstock">
+            <label class="opck"><input type="checkbox" class="mi-nolimit" ${m.stock < 0 ? "checked" : ""}
+              onchange="stockToggle(this)">不限量</label>
+            <input type="number" class="mi-stock" inputmode="numeric" min="0" placeholder="例如 10"
+              value="${m.stock < 0 ? "" : m.stock}"${m.stock < 0 ? ' disabled style="display:none"' : ""}>
+          </div>
+        </div>
+      </div>
+      <div class="opbar">
+        <span class="opord">
+          <button class="mbtn ico" title="往上移" aria-label="把「${esc(m.label)}」往上移"${i === 0 ? " disabled" : ""} onclick="moveMeal(${m.id},-1,${postId})">↑</button>
+          <button class="mbtn ico" title="往下移" aria-label="把「${esc(m.label)}」往下移"${i === arr.length - 1 ? " disabled" : ""} onclick="moveMeal(${m.id},1,${postId})">↓</button>
+        </span>
+        ${MEAL_SAVED === m.id ? `<span class="opsaved" role="status">✓ 已儲存</span>` : ""}
+        ${t ? `<span class="mnote">已有 ${t} 人選這項</span>` : ""}
+        <span class="opact">
+          <button class="mbtn save" onclick="saveMeal(${m.id},${postId},this)">儲存</button>
+          <button class="mbtn" onclick="toggleMeal(${m.id},${!m.active},${postId})">${m.active ? "停用" : "啟用"}</button>
+          ${t ? `<button class="mbtn" disabled title="已經有人選了，刪掉他們的紀錄就會對不上，只能停用">刪除</button>`
+               : `<button class="mbtn del" onclick="delMeal(${m.id},'${escAttr(m.label)}',${postId})">刪除</button>`}
+        </span>
+      </div>
     </div>`;
+  };
+
+  const sharedCard = m => `
+    <div class="opcard shared">
+      <div class="opfields">
+        <label class="opf name"><span>名稱（每場通用，要改請到通用設定）</span>
+          <input type="text" value="${esc(m.label)}" disabled></label>
+        <label class="opf price"><span>價格（元）</span>
+          <input type="number" value="${m.price}" disabled></label>
+      </div>
+    </div>`;
+
+  const section = (g, gi) => {
+    const items = mine.filter(m => m.grp === g).sort((a, b) => a.sort - b.sort);
+    const on = items.filter(m => m.active), off = items.filter(m => !m.active);
+    const sh = shared.filter(m => m.grp === g);
+    return `
+      <div class="opgroup">
+        <div class="opghead">
+          <div class="opgname">${esc(g)}<span class="mnote">　可選 ${on.length} 項</span></div>
+          <span class="opord">
+            <button class="mbtn ico" title="這個群組往前" aria-label="把「${esc(g)}」整組往前"${gi === 0 ? " disabled" : ""} onclick="moveGroup('${escAttr(g)}',-1,${postId})">↑</button>
+            <button class="mbtn ico" title="這個群組往後" aria-label="把「${esc(g)}」整組往後"${gi === groups.length - 1 ? " disabled" : ""} onclick="moveGroup('${escAttr(g)}',1,${postId})">↓</button>
+          </span>
+        </div>
+        ${on.map(m => card(m, items.indexOf(m), items)).join("")}
+        ${sh.map(sharedCard).join("")}
+        <div class="opadd">
+          <input type="text" id="m_new_${gi}" placeholder="新增一個「${esc(g)}」選項，例如：雞排飯"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addMeal('${escAttr(g)}',${postId},'m_new_${gi}')}">
+          <button class="mbtn add" style="margin-top:0;width:auto;flex:none" onclick="addMeal('${escAttr(g)}',${postId},'m_new_${gi}')">＋ 新增</button>
+        </div>
+        ${off.length ? `
+        <details class="opoff">
+          <summary>已停用 ${off.length} 項（點開來看，可以啟用或刪除）</summary>
+          ${off.map(m => card(m, items.indexOf(m), items)).join("")}
+        </details>` : ""}
+      </div>`;
+  };
 
   el("v-form").innerHTML = `
     ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">餐點選項　${esc(p ? p.title : "")}</div>
-      <div style="color:var(--muted);font-size:.85rem;margin-top:6px;line-height:1.7">
-        每個月的菜色不一樣，在這裡改就好，不必找人改程式。<br>
-        <b>庫存一般用不到，留 −1 就好</b>（−1 = 不限量，訂幾份就幾份）。<br>
-        只有真的限量的東西才填數字，例如「手工甜點只做 10 份」，選完會自動變「已額滿」。<br>
-        <b>排序</b>數字小的排前面，它也決定群組的先後（想讓餐點排在飲品前面就把餐點的數字調小）。<br>
-        不要的選項按「停用」<b>不要刪掉</b>——刪了的話，以前報名的人選了什麼就查不到了。
+      <div style="color:var(--muted);font-size:.95rem;margin-top:8px;line-height:1.75">
+        每個月的菜色不一樣，在這裡改就好，不必找人改程式。改完<b>每一張卡都要按自己的「儲存」</b>。<br>
+        <b>份數上限</b>平常就讓它「不限量」，訂幾份就幾份；只有真的限量才取消勾選並填數字（例如手工甜點只做 10 份），選完會自動變「已額滿」。<br>
+        <b>↑ ↓</b> 調順序：卡片上的箭頭排選項，群組標題旁的箭頭排群組（餐點要排在飲品前面就把餐點整組往上移）。<br>
+        <b>已經有人選過的選項只能「停用」不能刪</b>——刪了以前報名的人點了什麼就查不到。沒人選過的可以直接刪掉。
       </div>
       <div class="tplbox">
         <div class="tplhead">🍱 餐點範本<span class="mnote">建好一次，之後每個月直接載入</span></div>
@@ -2708,73 +2848,127 @@ function renderMeals(postId){
             <button class="mbtn" style="flex:none;color:var(--blue-500)" onclick="loadTpl('${escAttr(t.name)}', ${postId})">載入</button>
             <button class="mbtn" style="flex:none" onclick="delTpl('${escAttr(t.name)}', ${postId})">刪</button>
           </div>`).join("")
-          : `<div class="mnote" style="padding:9px 0">還沒有範本。先把這一場的餐點建好，再存成範本，下個月就不用重建。</div>`}
+          : `<div class="mnote" style="padding:9px 0;white-space:normal">還沒有範本。先把這一場的餐點建好，再存成範本，下個月就不用重建。</div>`}
         <div class="tplsave">
           <input type="text" id="m_tplname" placeholder="範本名稱，例如：標準月例會">
           <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="saveTpl(${postId})">存成範本</button>
         </div>
         <div class="help" style="margin-top:7px">
-          <b>載入</b>會把範本的品項<b>加到這一場</b>，不會蓋掉現有的（已經有人報名的選項不能動）。<br>
+          <b>載入</b>會把範本的品項<b>加到這一場</b>，不會蓋掉現有的。<br>
+          載入前先把這一場不要的選項刪掉（沒人選過的就刪得掉），才不會出現一堆重複的。<br>
           用同一個名字再存一次＝覆蓋那套範本。範本改了不會影響已經辦過的活動。
         </div>
       </div>
-      ${groups.map(g => `
-        <div class="field" style="margin-top:20px">
-          <label>${esc(g)}</label>
-          <div class="mhead"><span>名稱</span><span>價格</span><span>庫存</span><span>排序</span><span></span><span></span></div>
-          ${mine.filter(m => m.grp === g).map(row).join("")}
-          ${shared.filter(m => m.grp === g).map(m => `
-            <div class="mrow${m.active ? "" : " off"}" style="opacity:.7">
-              <input value="${esc(m.label)}" disabled>
-              <input value="${m.price}" disabled><input value="${m.stock}" disabled>
-              <input value="${m.sort}" disabled><span class="mnote">每場通用</span><span></span>
-            </div>`).join("")}
-          <button class="mbtn add" onclick="addMeal('${escAttr(g)}', ${postId})">＋ 加一個${esc(g)}選項</button>
-        </div>`).join("")}
-      <div class="field" style="margin-top:22px">
+      ${groups.map(section).join("")}
+      <div class="field" style="margin-top:26px">
         <label>加一個新群組</label>
         <div class="help">例如「點心」。加了之後報名的人就要各選一項。不必改程式</div>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <input type="text" id="m_newgrp" placeholder="群組名稱，例如：點心" style="flex:1;min-width:0">
+        <div class="opadd" style="flex-wrap:wrap">
+          <input type="text" id="m_newgrp" placeholder="群組名稱，例如：點心" style="flex:1 1 160px">
+          <input type="text" id="m_newgrpitem" placeholder="第一個選項，例如：布丁" style="flex:1 1 160px">
           <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="addGroup(${postId})">建立</button>
         </div>
       </div>
     </div>`;
 }
+// 勾了「不限量」就把數字框整個藏起來——留在那裡的話，placeholder 的灰字
+// 會被讀成「已經填了 10」。⛔ 用 style.display 不用 hidden 屬性：
+// [hidden]{display:none} 優先度最低，會被別的規則蓋掉，屬性設了畫面照顯示。
+function stockToggle(cb){
+  const n = cb.closest(".opcard").querySelector(".mi-stock");
+  n.disabled = cb.checked;
+  n.style.display = cb.checked ? "none" : "block";
+  if(!cb.checked) n.focus();
+}
+// 讀一張卡上填的值。「不限量」＝ stock -1，總務不必知道 -1 這個約定。
+function mealCardValues(card){
+  const nolimit = card.querySelector(".mi-nolimit").checked;
+  return {
+    label: card.querySelector(".mi-label").value.trim(),
+    price: Math.max(0, Number(card.querySelector(".mi-price").value) || 0),
+    stock: nolimit ? -1 : Math.max(0, Number(card.querySelector(".mi-stock").value) || 0),
+  };
+}
 async function saveMeal(id, postId, btn){
-  const r = btn.closest(".mrow");
+  const card = btn.closest(".opcard");
+  const v = mealCardValues(card);
+  if(!v.label){ alert("名稱不能空白"); card.querySelector(".mi-label").focus(); return; }
+  const m = MEAL_ALL.find(x => x.id === id);
   btn.disabled = true; btn.textContent = "…";
-  const res = await signupApi("opt_save", {
-    id, post_id: postId,
-    grp: MEAL_ALL.find(m => m.id === id).grp,
-    label: r.querySelector(".mi-label").value.trim(),
-    price: Number(r.querySelector(".mi-price").value) || 0,
-    stock: Number(r.querySelector(".mi-stock").value),
-    sort: Number(r.querySelector(".mi-sort").value) || 0,
-  });
-  btn.disabled = false; btn.textContent = "存";
+  const res = await signupApi("opt_save", {id, post_id: postId, grp: m.grp, sort: m.sort, ...v});
+  btn.disabled = false; btn.textContent = "儲存";
   if(!res || !res.ok){ alert((res && res.message) || "存檔失敗"); return; }
+  MEAL_SAVED = id;                       // re-render 之後那張卡會顯示「✓ 已儲存」
   await reloadSeats(); await openMeals(postId);
 }
 async function toggleMeal(id, active, postId){
   const res = await signupApi("opt_toggle", {id, active});
   if(!res || !res.ok){ alert("失敗"); return; }
+  MEAL_SAVED = 0;
   await reloadSeats(); await openMeals(postId);
 }
-async function addMeal(grp, postId){
-  const label = prompt(`新的「${grp}」選項名稱`); if(!label) return;
+// ⛔ 只刪沒人選過的。有人選過的話，報名紀錄裡存的是選項 id，
+//    刪掉之後名單上那一格就變成查不到的孤兒——後端會再擋一次（含已取消的報名）。
+async function delMeal(id, label, postId){
+  if(!confirm(`確定刪掉「${label}」嗎？\n沒有人選過它，刪掉不影響任何報名紀錄。`)) return;
+  const res = await signupApi("opt_delete", {id});
+  if(!res || !res.ok){ alert((res && res.message) || "刪不掉"); return; }
+  MEAL_SAVED = 0;
+  await reloadSeats(); await openMeals(postId);
+}
+// ── 排序：↑ ↓ 一律換算成「整場重排一次」，總務不用碰數字 ──────────
+function mealOrder(postId){
+  const mine = MEAL_ALL.filter(m => m.post_id === postId), gmin = {};
+  mine.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
+  const groups = [...new Set(mine.map(m => m.grp))]
+    .sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
+  return { groups, byGrp: g => mine.filter(m => m.grp === g).sort((a, b) => a.sort - b.sort) };
+}
+async function applyMealOrder(groups, byGrp, postId){
+  const ids = [];
+  groups.forEach(g => byGrp(g).forEach(m => ids.push(m.id)));
+  const res = await signupApi("opt_reorder", {post_id: postId, ids});
+  if(!res || !res.ok){ alert((res && res.message) || "排序沒改成功"); return; }
+  MEAL_SAVED = 0;
+  await reloadSeats(); await openMeals(postId);
+}
+async function moveMeal(id, dir, postId){
+  const { groups, byGrp } = mealOrder(postId);
+  const m = MEAL_ALL.find(x => x.id === id); if(!m) return;
+  const items = byGrp(m.grp), i = items.findIndex(x => x.id === id), j = i + dir;
+  if(i < 0 || j < 0 || j >= items.length) return;
+  [items[i], items[j]] = [items[j], items[i]];
+  await applyMealOrder(groups, g => (g === m.grp ? items : byGrp(g)), postId);
+}
+async function moveGroup(grp, dir, postId){
+  const { groups, byGrp } = mealOrder(postId);
+  const i = groups.indexOf(grp), j = i + dir;
+  if(i < 0 || j < 0 || j >= groups.length) return;
+  const gs = groups.slice(); [gs[i], gs[j]] = [gs[j], gs[i]];
+  await applyMealOrder(gs, byGrp, postId);
+}
+// ⛔ 新增一律用頁面內的輸入框，不要用 prompt()：
+//    LINE 內建瀏覽器 iOS／Android 兩邊都不會跳，而且不報錯，使用者只會覺得「按了沒反應」。
+async function addMeal(grp, postId, inputId){
+  const box = el(inputId);
+  const label = (box && box.value || "").trim();
+  if(!label){ alert("請先填選項名稱"); if(box) box.focus(); return; }
   const sameGrp = MEAL_ALL.filter(m => m.grp === grp);
   const sort = (sameGrp.length ? Math.max(...sameGrp.map(m => m.sort)) : 0) + 10;
   const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
   if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
+  MEAL_SAVED = 0;
   await reloadSeats(); await openMeals(postId);
 }
 async function addGroup(postId){
-  const grp = (el("m_newgrp").value || "").trim(); if(!grp) return;
-  const label = prompt(`「${grp}」的第一個選項名稱`); if(!label) return;
+  const grp = (el("m_newgrp").value || "").trim();
+  const label = (el("m_newgrpitem").value || "").trim();
+  if(!grp){ alert("請填群組名稱"); el("m_newgrp").focus(); return; }
+  if(!label){ alert("請填這個群組的第一個選項，例如「布丁」"); el("m_newgrpitem").focus(); return; }
   const sort = (MEAL_ALL.length ? Math.max(...MEAL_ALL.map(m => m.sort)) : 0) + 100;
   const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
   if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
+  MEAL_SAVED = 0;
   await reloadSeats(); await openMeals(postId);
 }
 
@@ -3325,7 +3519,10 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <li>主講者的宣傳照與講題</li>
 <li>活動詳細內容與照片</li>
 <li><strong>📋 誰報名了</strong></li>
-<li><strong>我要帶來賓</strong>（填姓名、公司、電話）。
+<li><strong>我要帶來賓</strong>：首頁月例會卡片上「我要報名」下面那顆膠囊
+  <strong>＋ 幫來賓登記　3/10</strong> 按下去就能登記（填姓名、公司、電話、餐點）。
+  <strong>自己還沒報名也可以幫來賓登記。</strong>
+  已經登記過的會多一顆「我帶了 N 位」，點進去可以改資料或取消。
   ⭐ 來賓名額是<strong>整場合計</strong>、預設 10 位，不是每人 10 位——額滿了就登記不了，要帶請早</li>
 </ul>
 
@@ -3429,8 +3626,14 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 
 </section><section class="hcard"><h2>2　餐點選項</h2>
 <p>月例會那塊 →「🍱 餐點選項」。用「群組」分類（例如 主餐／飲品），
-每個選項可以設價格與數量上限。</p>
-<p>⛔ <strong>選項只能停用不能刪除</strong>——刪掉之後，過去報名的人點了什麼就查不到了。</p>
+一個選項一張卡，名稱、價格、份數上限各自標在框框上面。改完<strong>那張卡要按自己的「儲存」</strong>。</p>
+<ul>
+<li><strong>份數上限</strong>：平常勾「不限量」就好，訂幾份就幾份。真的限量才取消勾選填數字（手工甜點只做 10 份），選完自動變「已額滿」。</li>
+<li><strong>↑ ↓ 調順序</strong>：卡片上的箭頭排選項，群組標題旁的箭頭排群組（想讓主餐排在飲品前面就把主餐整組往上移）。</li>
+<li><strong>刪除</strong>：<strong>沒有人選過</strong>的選項可以直接刪掉——載入範本載重複了就是用這個清。</li>
+<li>⛔ <strong>已經有人選過的只能「停用」</strong>，刪除鍵會是灰的——刪掉之後，過去報名的人點了什麼就查不到了。</li>
+<li>停用的選項會自動收進「已停用 N 項」，點開才看得到，畫面不會被劃線的舊品項塞滿。</li>
+</ul>
 <h3>餐點範本：建好一次，之後每個月直接載入</h3>
 <p>品項多的時候，一道一道建很花時間。餐點頁最上面有「🍱 餐點範本」：</p>
 <ol>
@@ -3439,7 +3642,7 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <li>載入後直接改菜名、改價格，改的是這一場，<strong>不會動到範本</strong></li>
 </ol>
 <ul>
-<li><strong>載入是「加上去」</strong>，不會蓋掉這一場已經有的選項——因為可能已經有人照著報名了。</li>
+<li><strong>載入是「加上去」</strong>，不會蓋掉這一場已經有的選項——因為可能已經有人照著報名了。所以<strong>載入前先把不要的刪掉</strong>，才不會出現一堆重複的。</li>
 <li>用<strong>同一個名字</strong>再存一次＝覆蓋那套範本。</li>
 <li>刪範本不會影響任何已經辦過的活動。</li>
 </ul>
@@ -3616,6 +3819,7 @@ function homeHTML(){
                 : `<button class="btn btn-done" disabled>報名尚未開放</button>`)}
         ${checkinButton(monthly)}
       </div>
+      ${guestPill(monthly)}
       ${isOfficer() ? `<div class="adminbar" onclick="event.stopPropagation()">
         <span class="adminlbl">幹部</span>
         <button onclick="openPost('monthly',${monthly.id})">✏️ 編輯這場（內文、餐點）</button>
