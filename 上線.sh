@@ -27,7 +27,7 @@ for m in re.finditer(r'\b(const|let|var|function)\s*([^\x00-\x7F][^\s=(]*)', s):
 
 # ② 未授權欄位當查詢條件：整個查詢會被拒 401，不是只有那一欄讀不到
 #    （2026-08-26 加了 status=is.null → 全站名冊掛掉三分鐘）
-UNGRANTED = ["status", "line_user_id", "bound_at", "exit_date", "joined_at", "admin_link"]
+UNGRANTED = ["status", "line_user_id", "exit_date", "joined_at", "admin_link"]   # bound_at 2026-09-11 起開放（名冊排序）
 for m in re.finditer(r'rest\(\s*["`]([^"`]+)["`]', s):
     q = m.group(1)
     if not q.startswith("members"):

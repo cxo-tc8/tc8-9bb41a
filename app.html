@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-10 16:48</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 11:59</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -853,6 +853,12 @@ const industryNames = {
 };
 const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,entry_time,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,line_name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club";
+// 名冊排序要用 bound_at（LINE 綁定＝第一次登入的時間）。它是 2026-09-11 才開放讀取的欄位，
+// 資料庫還沒套用 grant 時整個查詢會被拒 → 退回不帶它的清單，名冊照舊順序，不會空白。
+async function loadMembers(){
+  try { return await rest("members?select=" + MEMBER_FIELDS + ",bound_at&order=sort.asc"); }
+  catch(e){ return await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"); }
+}
 
 let ME = null, MEMBERS = [], TAGS = [], CASES = [], POSTS = [], NEEDS = [], COMMENTS = [], PENDING = 0;
 let SEATS = {};        // post_id → {taken, capacity, reserved_seats}
@@ -4262,7 +4268,7 @@ async function reviewMember(id, act, name){
   if(act==="reject" && !confirm(`確定退回「${name}」的申請嗎？資料會被刪除，他可以重新申請。`)) return;
   const r = await fn(act, {id});
   if(r.error) return alert(r.error);
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  MEMBERS = await loadMembers();
   PENDING = Math.max(0, (PENDING || 0) - 1); syncNewBadges();   // 待辦少一件，紅點跟著改
   // 從夥伴管理進來的就回夥伴管理，從「我的 → 新夥伴審核」進來的才回舊頁
   if(MADMIN){ MADMIN = null; await openMemberAdmin(); } else openReview();
@@ -4381,7 +4387,7 @@ async function saveProfile(){
   });
   if(r.error){ el("pf_err").innerHTML = `<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent="儲存"; return; }
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  MEMBERS = await loadMembers();
   await loadMe();
   openMember(ME.id);
 }
@@ -5240,10 +5246,27 @@ function memberCard(m){
   </article>`;
 }
 
+// 名片牆順序（羅伯特 2026-09-11）：前 8 位固定不動；其餘依參與度分四層——
+// ①登入過又填了資料 ②登入過沒填 ③沒登入但有 8/25 匯入的舊資料 ④什麼都沒有。
+// 同一層內先登入的排前面；沒登入的照原本 sort（Claire 是 99999，自然還是最後）。
+function rosterOrder(list){
+  const hasData = m => !!(m.intro||m.resource||m.wish||m.topic||m.description);
+  const tier = m => (m.bound_at ? 0 : 2) + (hasData(m) ? 0 : 1);
+  const so = m => m.sort ?? 1e9;
+  return [...list].sort((a,b)=>{
+    const fa = so(a) <= 8, fb = so(b) <= 8;
+    if(fa || fb) return (fa && fb) ? so(a)-so(b) : (fa ? -1 : 1);
+    const ta = tier(a), tb = tier(b);
+    if(ta !== tb) return ta - tb;
+    if(a.bound_at && b.bound_at && a.bound_at !== b.bound_at) return a.bound_at < b.bound_at ? -1 : 1;  // ISO 字串可直接比
+    return so(a) - so(b);
+  });
+}
+
 function filterMembers(){
   const q = (el("mq")?.value||"").trim().toLowerCase();
   const ind = el("mind")?.value || "";
-  const hit = MEMBERS.filter(m=>{
+  const hit = rosterOrder(MEMBERS).filter(m=>{
     if(ind && (m.industry||"other")!==ind) return false;
     if(!q) return true;
     return [m.name,m.line_name,m.company,m.tag,m.title,m.description,m.intro,m.resource,m.wish,m.topic]
@@ -5324,7 +5347,7 @@ async function retireMember(id, name){
 }
 
 async function reloadMembers(){
-  MEMBERS = await rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc");
+  MEMBERS = await loadMembers();
 }
 
 // 幹部：已退出的名單，可以加回來
@@ -5402,7 +5425,7 @@ async function loadMe(){
   el("v-home").innerHTML = '<div class="busy">載入中…</div>';
   try{
     [MEMBERS, TAGS, CASES] = await Promise.all([
-      rest("members?select=" + MEMBER_FIELDS + "&order=sort.asc"),
+      loadMembers(),
       rest("tag_vocab?select=slug,label&active=is.true&order=sort.asc"),
       rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc"),
       restPosts("&order=created_at.desc"),
