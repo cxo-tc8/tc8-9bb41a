@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:28</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:31</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -5246,16 +5246,14 @@ function memberCard(m){
   </article>`;
 }
 
-// 名片牆順序（羅伯特 2026-09-11）：前 8 位固定不動；其餘依參與度分三層——
-// ①登入過又在新網站上填了資料 ②登入過沒填 ③沒登入（含只有 8/25 匯入舊資料的人）。
-// 同一層內先登入的排前面；沒登入的照原本 sort（Claire 是 99999，自然還是最後）。
-// ⚠️「有資料」不算 8/25 從總務問卷匯入的那批：那批 created_at 與 updated_at 都是同一刻，
-//    之後自己改過的 updated_at 才會比 created_at 晚；新申請的夥伴填表當下就是在寫資料。
+// 名片牆順序（羅伯特 2026-09-11）：前 8 位固定不動；其餘依參與度分四層——
+// ①登入過又有資料 ②登入過但空白 ③沒登入但有資料 ④什麼都沒有。
+// 「有資料」= 自介／可提供／想找／關注／簡介任一欄有內容，不管是自己填的還是 8/25 問卷匯入的
+//（一度排除過匯入那批，Tammy、Eric 被誤排到後面 → 改回只看內容）。
+// 同一層內先登入的排前面；沒登入的照原本 sort。
 function rosterOrder(list){
-  const IMPORT = "2026-08-25T12:45";
-  const hasData = m => !!(m.intro||m.resource||m.wish||m.topic||m.description)
-    && ((m.updated_at||"") > (m.created_at||"") || !(m.created_at||"").startsWith(IMPORT));
-  const tier = m => m.bound_at ? (hasData(m) ? 0 : 1) : 2;
+  const hasData = m => !!(m.intro||m.resource||m.wish||m.topic||m.description);
+  const tier = m => (m.bound_at ? 0 : 2) + (hasData(m) ? 0 : 1);
   const so = m => m.sort ?? 1e9;
   return [...list].sort((a,b)=>{
     // sort=99999 是 Claire（CXO 派來的，不是 TC8 夥伴）：她登入過，但羅伯特要她永遠排最後
