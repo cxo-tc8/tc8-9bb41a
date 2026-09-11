@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:11</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:28</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -5258,6 +5258,9 @@ function rosterOrder(list){
   const tier = m => m.bound_at ? (hasData(m) ? 0 : 1) : 2;
   const so = m => m.sort ?? 1e9;
   return [...list].sort((a,b)=>{
+    // sort=99999 是 Claire（CXO 派來的，不是 TC8 夥伴）：她登入過，但羅伯特要她永遠排最後
+    const la = so(a) >= 99999, lb = so(b) >= 99999;
+    if(la !== lb) return la ? 1 : -1;
     const fa = so(a) <= 8, fb = so(b) <= 8;
     if(fa || fb) return (fa && fb) ? so(a)-so(b) : (fa ? -1 : 1);
     const ta = tier(a), tb = tier(b);
