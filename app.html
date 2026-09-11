@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:31</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:34</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -5251,7 +5251,9 @@ function memberCard(m){
 // 「有資料」= 自介／可提供／想找／關注／簡介任一欄有內容，不管是自己填的還是 8/25 問卷匯入的
 //（一度排除過匯入那批，Tammy、Eric 被誤排到後面 → 改回只看內容）。
 function rosterOrder(list){
-  const hasData = m => !!(m.intro||m.resource||m.wish||m.topic||m.description);
+  // ⛔ v1 匯入時有 11 人的簡介是佔位字「（成員資料待補充，歡迎提供）」，那不是資料
+  const real = v => !!(v||"").trim() && !/資料待補/.test(v);
+  const hasData = m => [m.intro,m.resource,m.wish,m.topic,m.description].some(real);
   const tier = m => (hasData(m) ? 0 : 2) + (m.bound_at ? 0 : 1);
   const so = m => m.sort ?? 1e9;
   return [...list].sort((a,b)=>{
