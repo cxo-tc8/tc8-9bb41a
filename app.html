@@ -5246,14 +5246,13 @@ function memberCard(m){
   </article>`;
 }
 
-// 名片牆順序（羅伯特 2026-09-11）：前 8 位固定不動；其餘依參與度分四層——
-// ①登入過又有資料 ②登入過但空白 ③沒登入但有資料 ④什麼都沒有。
+// 名片牆順序（羅伯特 2026-09-11 定案）：前 8 位固定不動；其餘只分兩層——
+// 有資料的在前、完全空白的全部往後。每一層裡登入過的先（依登入先後），沒登入的照原本 sort。
 // 「有資料」= 自介／可提供／想找／關注／簡介任一欄有內容，不管是自己填的還是 8/25 問卷匯入的
 //（一度排除過匯入那批，Tammy、Eric 被誤排到後面 → 改回只看內容）。
-// 同一層內先登入的排前面；沒登入的照原本 sort。
 function rosterOrder(list){
   const hasData = m => !!(m.intro||m.resource||m.wish||m.topic||m.description);
-  const tier = m => (m.bound_at ? 0 : 2) + (hasData(m) ? 0 : 1);
+  const tier = m => (hasData(m) ? 0 : 2) + (m.bound_at ? 0 : 1);
   const so = m => m.sort ?? 1e9;
   return [...list].sort((a,b)=>{
     // sort=99999 是 Claire（CXO 派來的，不是 TC8 夥伴）：她登入過，但羅伯特要她永遠排最後
