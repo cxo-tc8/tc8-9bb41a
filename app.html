@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-11 12:41</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-12 21:34</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2555,8 +2555,6 @@ function openGuest(postId, guestId){
                   m.price>0?`<span class="mealprice">$${m.price}</span>`:""}${out?"（已額滿）":""}</button>`;
             }).join("")}
           </div></div>`).join("")}
-      <div class="field"><label>飲食備註</label>
-        <input type="text" id="g_diet" maxlength="200" value="${v("diet_note")}"></div>
       <div class="formbar">
         <button class="btn btn-primary" onclick="submitGuest(${postId}, ${guestId || "null"}, this)">${g ? "存起來" : "登記"}</button>
       </div>
@@ -2576,7 +2574,7 @@ async function submitGuest(postId, guestId, btn){
     post_id: postId, id: guestId || undefined, name,
     company: el("g_company").value, title: el("g_title").value,
     phone: el("g_phone").value, industry: el("g_industry").value,
-    diet_note: el("g_diet").value,
+    diet_note: ((guestId && MY_GUESTS.find(x => x.id === guestId)) || {}).diet_note || "",   // 備註欄 2026-09-12 拿掉；舊值原樣保留
     meal_choices: Object.keys(GUEST_PICK).length ? GUEST_PICK : undefined,
   };
   const r = await guestApi(guestId ? "update" : "add", body);
@@ -3020,11 +3018,6 @@ function openSignup(postId){
             }).join("")}
           </div>
         </div>`).join("")}
-      <div class="field" style="margin-top:18px">
-        <label>飲食備註（選填）</label>
-        <div class="help">素食、過敏、不吃牛之類的，總務訂餐時會看到</div>
-        <input type="text" id="s_diet" maxlength="200" value="${mine ? esc(mine.diet_note || "") : ""}">
-      </div>
       <div class="formbar">
         <button class="btn btn-primary" onclick="submitSignup(${postId}, this)">${mine ? "存起來" : "送出報名"}</button>
       </div>
@@ -3042,7 +3035,7 @@ async function submitSignup(postId, btn){
   if(missing.length){ alert("還沒選：" + missing.join("、")); return; }
   btn.disabled = true; btn.textContent = "送出中…";
   const r = await signupApi("register", {
-    post_id: postId, meal_choices: SIGNUP_PICK, diet_note: (el("s_diet").value || "").trim(),
+    post_id: postId, meal_choices: SIGNUP_PICK, diet_note: (MY_SIGNUPS.get(postId) || {}).diet_note || "",   // 備註欄 2026-09-12 拿掉（羅伯特：不要讓大家填）；舊值原樣保留
   });
   await reloadSeats();
   if(r && r.ok){
