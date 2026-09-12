@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-12 21:34</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-12 23:10</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2208,7 +2208,7 @@ async function renderAdmin(){
 // ── 出席信用分數（S8 #21）────────────────────────────
 // ⭐ 分數不存在資料庫裡，每次查詢當場算——規則會變（12.5 可能改成 25、
 //    門檻可能挪），事實（誰在哪一場沒到、原因是什麼）不會變。
-const LIGHT = {ok:["⚪","正常"], warn:["🟡","幹部關心一下"], alert:["🔴","會長談話"]};
+const LIGHT = {ok:["🟢","正常"], warn:["🟡","幹部關心一下"], alert:["🔴","會長談話"]};
 async function openMyCredit(){
   if(!ME){ go("me"); return; }
   const r = await checkinApi("credit", {});
