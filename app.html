@@ -85,6 +85,7 @@ a{color:inherit;text-decoration:none}
 .btn-primary:hover{background:var(--orange-dark)}
 .btn-ghost{background:transparent;color:var(--blue-500);border:1.5px solid var(--line)}
 .btn-done{background:var(--chip);color:var(--muted);cursor:default}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 .btn-checkin{background:#1f7a4d;color:#fff}
 .btn-checkin:hover{background:#186040}
 .seatline{margin-top:12px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:.88rem;color:var(--muted)}
@@ -819,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 17:01</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 17:12</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -851,7 +852,7 @@ const industryNames = {
   re:"不動產", mkt:"行銷顧問", ag:"農業", sport:"運動產業", retail:"零售",
   media:"媒體", trade:"貿易", fin:"金融", car:"汽車", other:"其他"
 };
-const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,entry_time,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,author_id,created_at";
+const POST_FIELDS = "id,kind,title,body,link,event_at,place,speaker,speaker2,speaker_body,speaker2_body,speaker_id,speaker2_id,speaker_photo,speaker2_photo,photos,required,start_date,deadline,important,time_text,entry_time,fee,capacity,reserved_seats,signup_open,waitlist_open,guest_quota,org,done_count,needs_consent,author_id,created_at";
 const MEMBER_FIELDS = "id,sort,name,line_name,officer,company,title,industry,tag,description,web,intro,resource,wish,topic,role,is_member,photos,q_why_tc8,q_ai_needs,q_book_club,created_at,updated_at";
 // 名冊排序要用 bound_at（LINE 綁定＝第一次登入的時間）。它是 2026-09-11 才開放讀取的欄位，
 // 資料庫還沒套用 grant 時整個查詢會被拒 → 退回不帶它的清單，名冊照舊順序，不會空白。
@@ -872,6 +873,17 @@ let CMT_COUNTS = {};
 // STREAK_SESSIONS 是母數：目前總共只有幾場「開過報到」的月例會可以數。
 let STREAK = {}, STREAK_SESSIONS = 0;
 let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
+let MY_CONSENTS = new Map(); // post_id → 我的條款簽署 {choice, reason, created_at}
+async function reloadConsents(){
+  MY_CONSENTS = new Map();
+  if(!token()) return;
+  try{
+    const r = await postApi("consent_mine", {});
+    if(r && r.ok) MY_CONSENTS = new Map((r.consents||[]).map(x => [x.post_id, x]));
+  }catch(e){ console.error("簽署紀錄讀取失敗", e); }
+}
+// 還沒簽的條款（登入後才算得出來）
+const pendingConsents = () => ME ? POSTS.filter(p => p.kind === "notice" && p.needs_consent && !MY_CONSENTS.has(p.id)) : [];
 let MEALS = [], MEAL_TAKEN = {};  // 餐點選項、每個選項已被選幾份
 let MY_GUESTS = [], MY_ROLE = null;  // 我登記的來賓、我的身分
 let MY_CHECKINS = new Set();         // 我報到過哪幾場
@@ -904,7 +916,7 @@ const token = () => localStorage.getItem("tc8_token");
 //    PostgREST 會拒絕【整個查詢】（400），不是只有那一欄讀不到 → 全站貼文一起消失。
 //    所以新欄位一律走這條退路：完整清單被拒就退回舊清單，畫面照常，只有新欄位是空的。
 //    這讓「前端先上線、資料庫還沒套用」不再是會炸掉的組合。
-const POST_FIELDS_OLD = POST_FIELDS.replace(",entry_time", "");
+const POST_FIELDS_OLD = POST_FIELDS.replace(",entry_time", "").replace(",needs_consent", "");
 async function restPosts(suffix){
   try{
     return await rest("posts?select=" + POST_FIELDS + suffix);
@@ -3849,6 +3861,13 @@ function homeHTML(){
   const edit = (p) => isOfficer() ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openPost('${p.kind}',${p.id})">編輯</button>` : "";
 
   let h = "";
+  // 待簽署的條款放最上面：沒簽的人每次打開都會看到，簽完就消失
+  const pc = pendingConsents();
+  if(pc.length) h += `<div class="card important" style="margin-bottom:14px"><div class="notice" onclick="openPostDetail(${pc[0].id})" style="cursor:pointer">
+    <div class="ic red"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
+    <div style="flex:1;min-width:0"><div class="t" style="color:#c0392b">你有 ${pc.length} 份條款待簽署</div>
+      <div class="d">${esc(pc[0].title)}${pc.length>1?`　等 ${pc.length} 則`:""}　・　點一下閱讀並簽署</div></div>
+    <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div></div>`;
 
   // 月例會：首頁只放精簡卡片（藍底標題＋日期地點＋報名人數）＋報名/報到兩顆鈕。
   // 講者、內容、來賓、報名名單一律點進去看——首頁一年後才不會變成捲不完的長河。
@@ -3879,7 +3898,8 @@ function homeHTML(){
   // 公告與問卷：只放最新 3 則，其餘進「公告」分頁
   // ⚠️ 首頁不能什麼都放——一年後會變成一條捲不完的長河
   const msgs = [...notices, ...surveys].sort((a,b)=>
-    ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 必填問卷排最前
+    ((b.needs_consent&&!MY_CONSENTS.has(b.id))?1:0) - ((a.needs_consent&&!MY_CONSENTS.has(a.id))?1:0)   // 我還沒簽的條款最前
+    || ((b.kind==="survey"&&b.required)?1:0) - ((a.kind==="survey"&&a.required)?1:0)   // 再來必填問卷
     || (b.important?1:0) - (a.important?1:0)                                        // 再來是重要公告
     || new Date(b.created_at) - new Date(a.created_at));
   h += `<div class="sec"><h2>公告與問卷</h2>${
@@ -3960,13 +3980,84 @@ function dueLabel(d){
   return `到 ${d.slice(5).replace("-","/")}`;
 }
 
+// ── 條款簽署（2026-09-13）──────────────────────────────
+// 「簽署」＝LINE 登入身分＋按下的時間。勾選＋按鈕兩個動作，手機上才不會手滑誤簽。
+// ⛔ 不用 prompt()：LINE 內建瀏覽器不跳也不報錯，原因欄一律放頁面內的 textarea。
+function consentTag(p){
+  if(!p.needs_consent) return "";
+  const mine = MY_CONSENTS.get(p.id);
+  if(!ME) return `<span class="tagw">條款</span>`;
+  return mine ? `<span class="optbadge">${mine.choice === "agree" ? "✅ 已同意" : "已簽：不同意"}</span>`
+              : `<span class="reqbadge">待簽署</span>`;
+}
+function consentBlock(p){
+  if(!p.needs_consent) return "";
+  if(!ME) return `<div class="block"><div class="lbl">簽署</div><p>請先用 LINE 登入，才能簽署這份條款。</p></div>`;
+  const mine = MY_CONSENTS.get(p.id);
+  let h = "";
+  if(mine){
+    h = `<div class="block"><div class="lbl">你的簽署</div>
+      <p><b>${mine.choice === "agree" ? "✅ 同意" : "不同意"}</b>　${esc(payTime(mine.created_at))}${
+        mine.choice === "disagree" && mine.reason ? `<br><span class="mnote">原因：${esc(mine.reason)}</span>` : ""}</p>
+      ${mine.choice === "disagree" ? `<div class="help">幹部會找你聊聊。談過之後若改變想法，可以改為同意：</div>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="signConsent(${p.id}, 'agree')">改為同意</button>` : ""}
+    </div>`;
+  }else{
+    h = `<div class="block" id="consentbox"><div class="lbl">簽署</div>
+      <label class="mcheck"><input type="checkbox" id="c_read" onchange="document.querySelectorAll('#consentbox .cbtn').forEach(b => b.disabled = !this.checked)">
+        <span>我已閱讀並了解以上條款</span></label>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn btn-primary cbtn" disabled onclick="signConsent(${p.id}, 'agree')">同意</button>
+        <button class="btn btn-ghost cbtn" disabled onclick="askDisagree(${p.id})">不同意</button>
+      </div>
+      <div id="disagreebox" style="display:none;margin-top:12px">
+        <label style="font-size:.86rem;font-weight:700">不同意的原因（選填）</label>
+        <textarea id="c_reason" rows="3" maxlength="300" style="width:100%;margin-top:6px;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px;font-size:1rem" placeholder="讓幹部知道你的想法"></textarea>
+        <button class="btn btn-ghost" style="margin-top:8px" onclick="signConsent(${p.id}, 'disagree')">送出：不同意</button>
+      </div>
+      <div class="help" style="margin-top:8px">按下後會記錄你的姓名與時間，等同簽名。</div>
+    </div>`;
+  }
+  if(isOfficer()) h += `<div class="block" id="consentstat"><div class="lbl">簽署狀況（只有幹部看得到）</div><div class="busy">載入中…</div></div>`;
+  return h;
+}
+function askDisagree(postId){
+  const box = el("disagreebox"); box.style.display = "block"; el("c_reason").focus();
+}
+async function signConsent(postId, choice){
+  const reason = choice === "disagree" ? ((el("c_reason") || {}).value || "").trim() : "";
+  if(!confirm(choice === "agree" ? "確定簽署「同意」？簽了就不能改。" : "確定簽署「不同意」？")) return;
+  const r = await postApi("consent_sign", {post_id: postId, choice, reason});
+  if(!r || !r.ok){ alert((r && r.message) || "簽署失敗，請再試一次"); return; }
+  await reloadConsents();
+  alert(choice === "agree" ? "已簽署：同意" : "已簽署：不同意，幹部會再跟你聯絡");
+  openPostDetail(postId);
+}
+// 幹部：誰同意、誰不同意、誰還沒簽（未簽＝名冊上的現任夥伴減掉已簽的）
+async function loadConsentStat(postId){
+  const box = el("consentstat"); if(!box) return;
+  const r = await postApi("consent_list", {post_id: postId});
+  if(!r || !r.ok){ box.querySelector(".busy").textContent = "讀取失敗"; return; }
+  const signed = new Map(r.consents.map(c => [c.member_id, c]));
+  const agree = r.consents.filter(c => c.choice === "agree");
+  const disagree = r.consents.filter(c => c.choice === "disagree");
+  const unsigned = MEMBERS.filter(m => m.is_member !== false && !signed.has(m.id));
+  const names = list => list.length ? list.map(x => esc(x.name || memberName(x.member_id))).join("、") : "—";
+  box.innerHTML = `<div class="lbl">簽署狀況（只有幹部看得到）</div>
+    <p>✅ 同意 <b>${agree.length}</b>　・　不同意 <b>${disagree.length}</b>　・　未簽 <b>${unsigned.length}</b></p>
+    ${disagree.length ? `<p style="margin-top:8px"><b>不同意：</b></p><ul style="margin:4px 0 0 18px;font-size:.92rem;line-height:1.7">${
+      disagree.map(c => `<li>${esc(memberName(c.member_id))}　<span class="mnote">${esc(payTime(c.created_at))}${c.reason ? `　原因：${esc(c.reason)}` : ""}</span></li>`).join("")}</ul>` : ""}
+    <p style="margin-top:8px"><b>未簽（${unsigned.length}）：</b>${names(unsigned)}</p>
+    <p style="margin-top:8px"><b>已同意（${agree.length}）：</b>${names(agree)}</p>`;
+}
+
 // 有照片和沒照片是兩種版型：
 // 照片本身就是吸引點擊的東西，縮成 52px 等於白貼；沒照片就別留一塊空白
 function noticeCard(p){
   return `<div class="card${p.important?" important":""}"><div class="notice" onclick="openPostDetail(${p.id})" style="cursor:pointer">
     <div class="ic${p.important?" red":""}"><svg width="17" height="17"><use href="#i-bell"/></svg></div>
     <div style="flex:1;min-width:0"><div class="t">${visPill(p)}${
-      p.important?`<span class="imptag">重要</span>`:""}${esc(p.title)}</div>
+      p.important?`<span class="imptag">重要</span>`:""}${consentTag(p)}${esc(p.title)}</div>
       ${p.body?`<div class="d" style="margin-top:4px;color:var(--text);font-size:.85rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(p.body)}</div>`:""}
       <div class="d">${ago(p.created_at)}</div>
       ${statLine(p)}</div>
@@ -4162,6 +4253,7 @@ function openPostDetail(id){
                 ${bd?`<div class="sptopic">${esc(bd)}</div>`:""}</div></div>`).join("")+`</div></div>`:"";})()}
       ${myTalkBtn(p)}
       ${p.body?`<div class="block"><div class="lbl">內容</div><p style="white-space:pre-wrap">${esc(p.body)}</p></div>`:""}
+      ${consentBlock(p)}
       ${(p.photos||[]).length?`<div class="block"><div class="lbl">照片</div>
         <div class="gallery">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" onclick="window.open('${escAttr(u)}','_blank')">`).join("")}</div></div>`:""}
       ${p.link?`<div class="actions" style="margin-top:18px">
@@ -4182,6 +4274,7 @@ function openPostDetail(id){
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
   el("v-pdetail").classList.add("on"); window.scrollTo(0,0);
   loadLikers("post", p.id);
+  if(p.needs_consent && isOfficer()) loadConsentStat(p.id);
 }
 
 // ── 發布 / 編輯貼文 ─────────────────────────────
@@ -4876,6 +4969,13 @@ function openPost(kind, id){
             <button type="button" class="pill${p&&p.important?"":" on"}" data-i="0">一般</button>
             <button type="button" class="pill${p&&p.important?" on":""}" data-i="1">重要</button>
           </div></div>
+        <div class="field"><label>要不要大家簽署</label>
+          <div class="help">開了之後每位夥伴打開這則會看到「我已閱讀」勾選框與同意／不同意，簽署紀錄只有幹部看得到。
+            ⛔ 一旦有人簽了，標題與內文就鎖住不能改——要改條款請發新的一則重簽。</div>
+          <div class="pills" id="p_consent">
+            <button type="button" class="pill${p&&p.needs_consent?"":" on"}" data-c="0">不用</button>
+            <button type="button" class="pill${p&&p.needs_consent?" on":""}" data-c="1">要簽署（條款）</button>
+          </div></div>
       </div>`:""}
       ${has("msgtype")?`<div id="surveyfields" style="display:${kind==="survey"?"block":"none"}">
         <div style="color:var(--muted);font-size:.85rem;margin-top:12px;line-height:1.7">
@@ -5065,6 +5165,7 @@ async function savePost(kind, id){
     waitlist_open: el("p_waitopen") ? el("p_waitopen").querySelector(".pill.on").dataset.w === "1" : undefined,
     org: el("p_org") ? el("p_org").querySelector(".pill.on").dataset.o : undefined,
     important: el("p_imp") ? el("p_imp").querySelector(".pill.on").dataset.i === "1" : undefined,
+    needs_consent: el("p_consent") ? el("p_consent").querySelector(".pill.on").dataset.c === "1" : undefined,
     done_count:g("done_count"), admin_link:g("admin_link"),
     visibility: el("p_vis") ? el("p_vis").querySelector(".pill.on").dataset.v : undefined,
     required: el("p_required") ? el("p_required").querySelector(".pill.on").dataset.r === "1" : false,
@@ -5489,6 +5590,7 @@ async function loadMe(){
     reloadStreak(),   // 連續缺席也要通行證
     reloadComments(), // 留言內容要通行證；則數是公開的
     reloadBuys(),
+    reloadConsents(), // 我簽過哪些條款
   ]);
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
   if(!jumped && st==="unbound"){ go("claim"); return; }
