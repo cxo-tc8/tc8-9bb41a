@@ -820,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 17:17</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:04</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2033,16 +2033,21 @@ async function openMemberAdmin(tab){
   const r = await fn("member_admin");
   if(r.error){ el("v-form").innerHTML = `${backBar()}<div class="form"><div class="err">${esc(r.error)}</div></div>`; return; }
   MADMIN = r;
+  const paid = new Set((r.fees || []).map(f => f.member_id));
+  const onLeave = Object.fromEntries((r.on_leave || []).map(l => [l.member_id, l]));
   const F = {
     pending:  m => m.status === "pending",
     all:      m => m.status === null,
+    unpaid:   m => m.status === null && !paid.has(m.id),
     unbound:  m => m.status === null && !m.bound_at,
     bound:    m => m.status === null && m.bound_at,
     // ⛔ pending 是待審申請不是已退出，兩者的 status 都不是 null
     retired:  m => m.status !== null && m.status !== "pending",
   };
   const list = (r.list || []).filter(F[MADMIN_TAB] || F.all);
+  const unpaidN = (r.list || []).filter(F.unpaid).length;
   const TABS = [["pending","🔔 待審核",r.stats.pending],["all","全部現任",r.stats.total],
+                ["unpaid",`💰 ${r.fee_year} 年費未繳`,unpaidN],
                 ["unbound","還沒綁",r.stats.unbound],["bound","已綁定",r.stats.bound],
                 ["retired","已退出",r.stats.retired]];
   el("v-form").innerHTML = `${backBar()}
@@ -2055,10 +2060,19 @@ async function openMemberAdmin(tab){
         ${TABS.map(([k,label,n]) => `<button class="chip${MADMIN_TAB===k?" on":""}"
           onclick="openMemberAdmin('${k}')">${label} ${n}</button>`).join("")}
       </div></div>
+      ${MADMIN_TAB === "unpaid" ? `<div class="mnote" style="margin-top:10px">
+        年費每年 5 月繳、一年 1,000 元；${r.fee_year} 年度＝${r.fee_year}/5～${r.fee_year+1}/4。
+        財務長已收過一波的，勾選後按下面「已勾選的標記已繳」一次處理。</div>
+        <div class="actions" style="margin-top:8px">
+          <button class="mbtn add" onclick="feeBulk(${r.fee_year})">已勾選的標記已繳</button>
+          <button class="mbtn" onclick="document.querySelectorAll('.feeck').forEach(c=>c.checked=true)">全選</button></div>` : ""}
       <div class="card admincard" style="margin-top:10px">${list.length ? list.map(m => `
         <div class="arow" style="align-items:center;gap:10px">
+          ${MADMIN_TAB === "unpaid" ? `<input type="checkbox" class="feeck" value="${m.id}" style="width:20px;height:20px;flex:none">` : ""}
           <span style="flex:1;min-width:0">
-            <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}${streakTag(m.id)}
+            <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}${streakTag(m.id)}${
+              onLeave[m.id] ? `<span class="tagw">🗓 請假中（${esc(onLeave[m.id].start_date)}～${esc(onLeave[m.id].end_date)}）</span>` : ""}${
+              m.status === null ? (paid.has(m.id) ? `<span class="optbadge">💰 ${r.fee_year} 已繳</span>` : `<span class="tagx">💰 ${r.fee_year} 未繳</span>`) : ""}
             <div class="mnote" style="margin-top:2px">
               ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}${
               m.line_name ? `　｜　LINE：${esc(m.line_name)}` : ""}<br>
@@ -2074,12 +2088,106 @@ async function openMemberAdmin(tab){
                  <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewMember(${m.id},'reject','${escAttr(m.name||"")}')">退回</button>`
             : m.status !== null
               ? `<button class="mbtn" onclick="unretireMember(${m.id}, '${escAttr(m.name||"")}')">加回來</button>`
-              : `${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${escAttr(m.name||"")}')">解綁</button>` : ""}
+              : `${paid.has(m.id)
+                   ? `<button class="mbtn" onclick="feeSet(${m.id}, ${r.fee_year}, false, '${escAttr(m.name||"")}')">取消已繳</button>`
+                   : `<button class="mbtn add" onclick="feeSet(${m.id}, ${r.fee_year}, true, '${escAttr(m.name||"")}')">標記已繳</button>`}
+                 ${m.bound_at ? `<button class="mbtn" onclick="unbindMember(${m.id}, '${escAttr(m.name||"")}')">解綁</button>` : ""}
                  ${m.id !== ME.id ? `<button class="mbtn" onclick="retireMember(${m.id}, '${escAttr(m.name||"")}')">退出</button>
                  <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="deleteMember(${m.id}, '${escAttr(m.name||"")}')">刪除</button>` : ""}`}
           </span>
         </div>`).join("") : `<div class="empty">這個分類沒有人</div>`}</div>
     </div>`;
+}
+
+// 年費標記（2026-09-13）：一人一年一筆，幹部按的
+async function feeSet(id, year, paid, name){
+  if(!paid && !confirm(`確定把「${name}」的 ${year} 年費改回「未繳」？`)) return;
+  const r = await fn("fee_set", {member_id: id, fee_year: year, paid});
+  if(r.error){ alert(r.error); return; }
+  MADMIN = null; await openMemberAdmin();
+}
+async function feeBulk(year){
+  const ids = [...document.querySelectorAll(".feeck:checked")].map(c => Number(c.value));
+  if(!ids.length){ alert("先勾選要標記的人"); return; }
+  if(!confirm(`把勾選的 ${ids.length} 位標記為「${year} 年費已繳」？`)) return;
+  const r = await fn("fee_set", {member_ids: ids, fee_year: year, paid: true});
+  if(r.error){ alert(r.error); return; }
+  MADMIN = null; await openMemberAdmin("unpaid");
+  alert(`已標記 ${r.added} 位${r.skipped ? `（${r.skipped} 位原本就已繳）` : ""}`);
+}
+
+// ── 請假（會籍規則第六條，2026-09-13）────────────────────
+// 夥伴自己填起迄日與原因；幹部核准／退回，畫面上一定顯示是哪位幹部查核的
+const LEAVE_ST = {pending:"🕐 等幹部審核", approved:"✅ 已核准", rejected:"⛔ 未核准"};
+async function openMyLeave(){
+  if(!ME){ go("me"); return; }
+  const r = await fn("leave_mine");
+  const list = r.leaves || [];
+  const hasPending = list.some(l => l.status === "pending");
+  el("v-form").innerHTML = `
+    ${backBar()}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">請假申請</div>
+      <div class="mnote" style="margin-top:6px">因病、出國進修、出差等長期無法出席，可申請請假；核准期間的月例會不算連續缺席。
+        幹部審核後這裡會顯示結果與審核的幹部。</div>
+      ${hasPending ? `<div class="help" style="margin-top:12px">你有一件申請還在等幹部審核，結果出來前不能再送。</div>` : `
+      <div class="field" style="margin-top:14px"><label>開始日<span class="req">*</span></label>
+        <input type="date" id="lv_start" class="dateinput"></div>
+      <div class="field"><label>結束日<span class="req">*</span></label>
+        <input type="date" id="lv_end" class="dateinput"></div>
+      <div class="field"><label>原因<span class="req">*</span></label>
+        <textarea id="lv_reason" rows="3" maxlength="300" style="width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px;font-size:1rem" placeholder="例：10/15 起出差東南亞三個月"></textarea></div>
+      <button class="btn btn-primary" onclick="submitLeave()">送出申請</button>`}
+      ${list.length ? `<div class="field" style="margin-top:22px"><label>我的申請紀錄</label>
+        <div class="rosterwrap"><table class="roster">
+          <thead><tr><th>期間</th><th>原因</th><th>狀態</th><th>審核幹部</th></tr></thead>
+          <tbody>${list.map(l => `<tr>
+            <td>${esc(l.start_date)}～${esc(l.end_date)}</td><td>${esc(l.reason)}</td>
+            <td>${LEAVE_ST[l.status] || l.status}</td>
+            <td>${l.reviewed_by ? `${esc(memberName(l.reviewed_by))}<br><span class="mnote">${esc(payTime(l.reviewed_at))}${l.review_note ? `　${esc(l.review_note)}` : ""}</span>` : "—"}</td>
+          </tr>`).join("")}</tbody></table></div></div>` : ""}
+    </div>`;
+  go("form");
+}
+async function submitLeave(){
+  const start = el("lv_start").value, end = el("lv_end").value, reason = el("lv_reason").value.trim();
+  if(!start || !end){ alert("請填開始與結束日期"); return; }
+  if(end < start){ alert("結束日不能早於開始日"); return; }
+  if(!reason){ alert("請填原因"); return; }
+  const r = await fn("leave_apply", {start_date: start, end_date: end, reason});
+  if(r.error){ alert(r.error); return; }
+  alert("已送出，等幹部審核");
+  openMyLeave();
+}
+// 幹部：審核請假。待審在最上面；每一件都看得到是誰核的
+async function openLeaveAdmin(){
+  if(!isOfficer()) return;
+  const r = await fn("leave_list");
+  if(r.error){ alert(r.error); return; }
+  const list = (r.leaves || []).sort((a,b) => (a.status==="pending"?0:1) - (b.status==="pending"?0:1));
+  el("v-form").innerHTML = `
+    ${backBar()}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">請假審核</div>
+      <div class="mnote" style="margin-top:6px">核准的假期間，月例會不算連續缺席。核准／退回都會記下你的名字給本人看。</div>
+      <div class="card admincard" style="margin-top:12px">${list.length ? list.map(l => `
+        <div class="arow" style="align-items:center;gap:10px">
+          <span style="flex:1;min-width:0"><b>${esc(memberName(l.member_id))}</b>　${LEAVE_ST[l.status]}
+            <div class="mnote" style="margin-top:2px">${esc(l.start_date)}～${esc(l.end_date)}　｜　${esc(l.reason)}<br>
+              申請 ${esc(payTime(l.created_at))}${l.reviewed_by ? `　｜　${esc(memberName(l.reviewed_by))} 於 ${esc(payTime(l.reviewed_at))} 審核${l.review_note ? `：${esc(l.review_note)}` : ""}` : ""}</div></span>
+          ${l.status === "pending" ? `<span class="actions" style="flex:none;gap:6px">
+            <button class="mbtn add" onclick="reviewLeave(${l.id}, 'approve', '${escAttr(memberName(l.member_id))}')">核准</button>
+            <button class="mbtn" style="color:#b4261a;border-color:#e8b4ae" onclick="reviewLeave(${l.id}, 'reject', '${escAttr(memberName(l.member_id))}')">退回</button></span>` : ""}
+        </div>`).join("") : `<div class="empty">還沒有請假申請</div>`}</div>
+    </div>`;
+  go("form");
+}
+async function reviewLeave(id, decision, name){
+  const label = decision === "approve" ? "核准" : "退回";
+  if(!confirm(`確定${label}「${name}」的請假？\n會記錄是你審核的。`)) return;
+  const r = await fn("leave_review", {id, decision});
+  if(r.error){ alert(r.error); return; }
+  openLeaveAdmin();
 }
 
 // 幹部：誰綁了、綁在哪個名字上、綁錯了在這裡解除
@@ -2164,15 +2272,21 @@ async function renderAdmin(){
     <div class="card"><div class="empty">載入中…</div></div>`;
 
   // 先把幾個「需要有人處理」的數字撈出來，讓幹部一眼看到哪裡有事
-  let credit = null, pending = null, applies = 0;
+  let credit = null, pending = null, applies = 0, madmin = null;
   try{
-    const [c, gb] = await Promise.all([
+    const [c, gb, ma] = await Promise.all([
       checkinApi("credit", {all: true}),
       buyApi("pending", {}),
+      fn("member_admin"),
     ]);
     if(c && c.ok) credit = c;
     if(gb && gb.ok) pending = gb.list || [];
+    if(ma && ma.ok) madmin = ma;
   }catch(e){ console.error("分會管理讀取失敗", e); }
+  // 連續 3 次沒到＝紅燈，要有人出面（會籍規則第一條）；2 次黃燈
+  const streakRed = MEMBERS.filter(m => (STREAK[m.id] || 0) >= 3);
+  const leavePending = madmin ? (madmin.leave_pending || 0) : 0;
+  const unpaid = madmin ? madmin.list.filter(m => m.status === null && !madmin.fees.some(f => f.member_id === m.id)).length : null;
   try{ applies = (PENDING || 0); }catch(e){}
 
   const bad = credit ? credit.list.filter(x => x.light !== "ok") : [];
@@ -2185,7 +2299,14 @@ async function renderAdmin(){
       <div class="${bad.length ? "warn" : ""}"><b>${bad.length}</b><span>需要關心的夥伴</span></div>
       <div class="${pending && pending.length ? "warn" : ""}"><b>${pending ? pending.length : "—"}</b><span>待審的團購</span></div>
       <div class="${applies ? "warn" : ""}"><b>${applies}</b><span>新夥伴申請</span></div>
+      <div class="${streakRed.length ? "warn" : ""}"><b>${streakRed.length}</b><span>連續 3 次沒到</span></div>
+      <div class="${leavePending ? "warn" : ""}"><b>${leavePending}</b><span>請假待審</span></div>
+      <div class="${unpaid ? "warn" : ""}"><b>${unpaid == null ? "—" : unpaid}</b><span>年費未繳</span></div>
     </div>
+    ${streakRed.length ? `<div class="card admincard" style="margin-top:10px;border-color:#e5b4ae">
+      <div class="arow" style="cursor:default"><span style="color:#b4261a;font-weight:800">🔴 連續 3 次沒來月例會（會籍規則第一條）</span></div>
+      ${streakRed.map(m => `<div class="arow" onclick="openMember(${m.id})"><span>${esc(m.name)}</span><span class="mnote">連續 ${STREAK[m.id]} 次　›</span></div>`).join("")}
+    </div>` : ""}
 
     ${monthly ? `<div class="sec" style="margin-top:22px"><h2>${esc(monthly.title)}</h2></div>
     <div class="card admincard">
@@ -2204,8 +2325,11 @@ async function renderAdmin(){
         <span>📦 團購（審核・訂購名單・收款）</span>
         ${pending && pending.length ? `<span class="abadge">${pending.length}</span>` : ""}<span class="ago">›</span></div>
       <div class="arow" onclick="openMemberAdmin(${applies ? "'pending'" : "'all'"})">
-        <span>👥 夥伴管理（審核・綁定・退出・刪除）</span>
+        <span>👥 夥伴管理（審核・綁定・退出・刪除・年費）</span>
         ${applies ? `<span class="abadge">${applies}</span>` : ""}<span class="ago">›</span></div>
+      <div class="arow" onclick="openLeaveAdmin()">
+        <span>🗓 請假審核</span>
+        ${leavePending ? `<span class="abadge">${leavePending}</span>` : ""}<span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -2234,7 +2358,7 @@ async function openMyCredit(){
         <div class="clight">${L[0]} ${L[1]}</div></div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:10px;line-height:1.8">
         本會期（${esc(r.since)} 起）計算。<br>
-        <b>只有在活動開始前 4 小時之內臨時取消、或完全沒通知就沒出現</b>，才會扣 12.5 分。<br>
+        <b>只有在活動當日 12:00 之後才取消、或完全沒通知就沒出現</b>，才會扣 12.5 分。<br>
         更早取消、生病意外都不扣分。生病意外一個會期最多免責 2 次。<br>
         <span class="mnote">餐點是提前訂的，太晚說會造成浪費——這就是為什麼有這個分數。</span>
       </div>
@@ -2278,8 +2402,8 @@ async function openCreditAll(){
 let BOARD = null, BOARD_POST = null;
 const ABSENCE = [
   ["early",   "訂餐截止前就取消",        0],
-  ["mid",     "截止後～開始前 4 小時取消", 0],
-  ["late",    "開始前 4 小時內臨時取消",  12.5],
+  ["mid",     "截止後～當日 12:00 前取消", 0],
+  ["late",    "當日 12:00 後才取消",      12.5],
   ["noshow",  "沒通知就沒出現",          12.5],
   ["excused", "生病／意外／家人照護",     0],
 ];
@@ -3415,6 +3539,7 @@ function render(v){
     <div class="card menu" style="margin-top:12px">
       ${MY_ROLE && MY_ROLE.role !== "member" ? `<div class="rolebadge" style="margin:0 0 12px">你目前的身分：${esc(MY_ROLE.label)}</div>` : ""}
       <div class="menurow" onclick="openMyCredit()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的出席信用</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="openMyLeave()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">請假申請</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openProfile()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">改我的基本資料</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-people"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
