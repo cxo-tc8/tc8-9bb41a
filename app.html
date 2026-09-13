@@ -820,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:04</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:19</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -874,6 +874,7 @@ let CMT_COUNTS = {};
 let STREAK = {}, STREAK_SESSIONS = 0;
 let MY_SIGNUPS = new Map();  // post_id → 我那筆報名（含餐點選擇）
 let MY_CONSENTS = new Map(); // post_id → 我的條款簽署 {choice, reason, created_at}
+let MEAL_OWED = 0;           // 我還欠幾次停餐（會籍規則第四條）
 async function reloadConsents(){
   MY_CONSENTS = new Map();
   if(!token()) return;
@@ -1102,7 +1103,7 @@ async function reloadSeats(){
   if(token()){
     try{
       const r = await signupApi("mine", {});
-      if(r && r.ok) MY_SIGNUPS = new Map((r.signups||[]).map(x => [x.post_id, x]));
+      if(r && r.ok){ MY_SIGNUPS = new Map((r.signups||[]).map(x => [x.post_id, x])); MEAL_OWED = r.meal_owed || 0; }
     }catch(e){ console.error("報名狀態讀取失敗", e); }
   }
 }
@@ -2072,7 +2073,8 @@ async function openMemberAdmin(tab){
           <span style="flex:1;min-width:0">
             <b>${esc(m.name)}</b>${m.officer?`<span class="badge">${esc(cleanTitle(m.officer))}</span>`:""}${streakTag(m.id)}${
               onLeave[m.id] ? `<span class="tagw">🗓 請假中（${esc(onLeave[m.id].start_date)}～${esc(onLeave[m.id].end_date)}）</span>` : ""}${
-              m.status === null ? (paid.has(m.id) ? `<span class="optbadge">💰 ${r.fee_year} 已繳</span>` : `<span class="tagx">💰 ${r.fee_year} 未繳</span>`) : ""}
+              m.status === null ? (paid.has(m.id) ? `<span class="optbadge">💰 ${r.fee_year} 已繳</span>`
+                : `<span class="tagx">💰 ${r.fee_year} 未繳${overTwoMonths(m.joined_at) ? "・入會已滿兩個月" : ""}</span>`) : ""}
             <div class="mnote" style="margin-top:2px">
               ${esc([m.company,m.title].filter(Boolean).join(" ・ ")) || "資料待補"}${
               m.line_name ? `　｜　LINE：${esc(m.line_name)}` : ""}<br>
@@ -2099,6 +2101,12 @@ async function openMemberAdmin(tab){
     </div>`;
 }
 
+// 會籍規則第二條：加入分會後兩個月內未繳年費
+function overTwoMonths(joined){
+  if(!joined) return false;
+  const d = new Date(joined); d.setMonth(d.getMonth() + 2);
+  return d < new Date();
+}
 // 年費標記（2026-09-13）：一人一年一筆，幹部按的
 async function feeSet(id, year, paid, name){
   if(!paid && !confirm(`確定把「${name}」的 ${year} 年費改回「未繳」？`)) return;
@@ -2360,6 +2368,7 @@ async function openMyCredit(){
         本會期（${esc(r.since)} 起）計算。<br>
         <b>只有在活動當日 12:00 之後才取消、或完全沒通知就沒出現</b>，才會扣 12.5 分。<br>
         更早取消、生病意外都不扣分。生病意外一個會期最多免責 2 次。<br>
+        <b>累計 2 次臨時取消／未到，下一次報名停止餐點 1 次</b>（會籍規則第四條）。${MEAL_OWED > 0 ? `<br><span style="color:#b4261a;font-weight:700">你目前欠 ${MEAL_OWED} 次停餐，下次報名將不訂餐。</span>` : ""}<br>
         <span class="mnote">餐點是提前訂的，太晚說會造成浪費——這就是為什麼有這個分數。</span>
       </div>
       ${r.records.length ? `<div class="field" style="margin-top:20px"><label>我的紀錄</label>
@@ -2800,7 +2809,10 @@ async function openRoster(postId, backJs){
             <td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.tag||"")}</td>
             ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
             ${cols.map(c2 => `<td>${esc((x.choices||{})[c2] || "—")}</td>`).join("")}
-            ${r.officer ? `<td>${esc(x.diet_note || "")}</td>
+            ${r.officer ? `<td>${x.meal_suspended
+                ? (x.meal_reopened_by ? `<span class="optbadge">停餐・${esc(memberName(x.meal_reopened_by))} 已開放</span>`
+                   : `<span class="tagx">🍱 停餐</span> <button class="cancelbtn" onclick="mealReopen(${postId}, ${x.member_id}, '${escAttr(x.name)}')">另外開放</button>`)
+                : ""}${esc(x.diet_note || "")}</td>
             <td>${cancelCell("member", x.member_id, x.name)}</td>` : ""}</tr>`;
           }).join("")}</tbody>
         </table></div>
@@ -2834,6 +2846,13 @@ async function openRoster(postId, backJs){
     </div>`;
   window.__roster = r;
   go("form");
+}
+// 幹部：停餐的人另外開放餐點（例外處理；那一次停餐仍算執行過）
+async function mealReopen(postId, memberId, name){
+  if(!confirm(`另外開放「${name}」這一場的餐點？\n會記錄是你開放的；他這次停餐仍算執行過。開放後請他自己進「改我的餐點」選餐。`)) return;
+  const r = await signupApi("meal_reopen", {post_id: postId, member_id: memberId});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  openRoster(...window.__rosterArgs);
 }
 // 幹部在名單上取消別人（2026-09-13）。kind = member｜guest
 function cancelCell(kind, id, name){
@@ -3163,7 +3182,9 @@ function openSignup(postId){
   const p = POSTS.find(x => x.id === postId); if(!p) return;
   const mine = MY_SIGNUPS.get(postId);
   SIGNUP_PICK = Object.assign({}, (mine && mine.meal_choices) || {});
-  const groups = mealGroups(postId);
+  // 停餐（會籍規則第四條）：已被停餐且幹部沒另外開放、或還沒報名但欠停餐 → 這場不能選餐
+  const suspended = mine ? (mine.meal_suspended && !mine.meal_reopened_by) : MEAL_OWED > 0;
+  const groups = suspended ? [] : mealGroups(postId);
   const left = seatsLeft(postId);
 
   el("v-form").innerHTML = `
@@ -3174,6 +3195,9 @@ function openSignup(postId){
         ${p.event_at ? esc(fmtDate(p.event_at)) + "　" : ""}${placeChip(p.place)}
         ${left !== null ? `<br>還剩 <b style="color:var(--orange)">${left}</b> 個位子` : ""}
       </div>
+      ${suspended ? `<div class="disclaimer" style="border-top:none;padding-top:0"><div class="dh">🍱 這一場停餐一次</div>
+        <p>依分會會籍規則第四條：當日 12:00 後才取消或未到累計 2 次，下一次停止餐點 1 次。
+        你仍可以報名出席，只是這場不訂餐。若有特殊情況，請跟幹部說明，幹部可以另外開放。</p></div>` : ""}
       ${groups.map((g, gi) => `
         <div class="field" style="margin-top:18px">
           <label>${esc(g)}</label>
