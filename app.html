@@ -820,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:19</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:20</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3224,7 +3224,9 @@ function pickMeal(grp, id, gi, btn){
   btn.classList.add("on");
 }
 async function submitSignup(postId, btn){
-  const groups = mealGroups(postId);
+  const mine0 = MY_SIGNUPS.get(postId);
+  const suspended = mine0 ? (mine0.meal_suspended && !mine0.meal_reopened_by) : MEAL_OWED > 0;
+  const groups = suspended ? [] : mealGroups(postId);   // 停餐的人這場不選餐，不能卡在「還沒選」
   const missing = groups.filter(g => !SIGNUP_PICK[g]);
   if(missing.length){ alert("還沒選：" + missing.join("、")); return; }
   btn.disabled = true; btn.textContent = "送出中…";
