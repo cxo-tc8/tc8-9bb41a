@@ -820,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 18:20</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-14 00:29</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2294,7 +2294,8 @@ async function renderAdmin(){
   // 連續 3 次沒到＝紅燈，要有人出面（會籍規則第一條）；2 次黃燈
   const streakRed = MEMBERS.filter(m => (STREAK[m.id] || 0) >= 3);
   const leavePending = madmin ? (madmin.leave_pending || 0) : 0;
-  const unpaid = madmin ? madmin.list.filter(m => m.status === null && !madmin.fees.some(f => f.member_id === m.id)).length : null;
+  // ⛔ 後端還沒部署新版時 member_admin 沒有 fees 欄位 → 這裡曾經拋錯讓整頁卡在「載入中」（2026-09-14）
+  const unpaid = (madmin && madmin.fees) ? madmin.list.filter(m => m.status === null && !madmin.fees.some(f => f.member_id === m.id)).length : null;
   try{ applies = (PENDING || 0); }catch(e){}
 
   const bad = credit ? credit.list.filter(x => x.light !== "ok") : [];
