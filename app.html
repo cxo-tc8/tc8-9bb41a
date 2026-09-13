@@ -820,7 +820,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-14 00:29</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-14 00:33</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -5271,6 +5271,8 @@ function openPost(kind, id){
     el("p_signupopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_imp")) el("p_imp").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_imp").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+  if(el("p_consent")) el("p_consent").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
+    el("p_consent").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_waitopen")) el("p_waitopen").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
     el("p_waitopen").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_org")) el("p_org").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
