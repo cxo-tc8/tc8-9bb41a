@@ -819,7 +819,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-12 23:10</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-13 17:01</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2592,6 +2592,7 @@ async function removeGuest(id, name){
 // ── 總務：報名名單 ＋ 餐點統計 ────────────────────────
 async function openRoster(postId, backJs){
   if(!ME){ go("me"); return; }
+  window.__rosterArgs = [postId, backJs];
   const r = await signupApi("summary", {post_id: postId});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
   // 幹部看名單時一併帶出信用分數，才能當場核對「這個人常不常放鴿子」
@@ -2642,10 +2643,11 @@ async function openRoster(postId, backJs){
         <label>來賓（${r.guests.length} 位）</label>
         <div class="rosterwrap"><table class="roster">
           <thead><tr><th>#</th><th>姓名</th><th>公司</th><th>介紹人</th>${
-            r.officer ? `<th>餐點</th>` : ""}</tr></thead>
+            r.officer ? `<th>餐點</th><th></th>` : ""}</tr></thead>
           <tbody>${r.guests.map((g,i) => `<tr><td>${i+1}</td><td>${esc(g.name)}</td>
             <td>${esc(g.company||"")}</td><td>${esc(memberName(g.host_id))}</td>
-            ${r.officer ? `<td>${esc(Object.values(g.choices||{}).join("・")||"—")}</td>` : ""}</tr>`).join("")}</tbody>
+            ${r.officer ? `<td>${esc(Object.values(g.choices||{}).join("・")||"—")}</td>
+            <td>${cancelCell("guest", g.id, g.name)}</td>` : ""}</tr>`).join("")}</tbody>
         </table></div></div>` : ""}
 
       <div class="field" style="margin-top:22px">
@@ -2654,7 +2656,7 @@ async function openRoster(postId, backJs){
         <div class="rosterwrap"><table class="roster">
           <thead><tr><th>#</th><th>姓名</th><th>專業別</th>${
             r.officer ? `<th>信用</th>` : ""}${
-            cols.map(c => `<th>${esc(c)}</th>`).join("")}${r.officer ? `<th>備註</th>` : ""}</tr></thead>
+            cols.map(c => `<th>${esc(c)}</th>`).join("")}${r.officer ? `<th>備註</th><th></th>` : ""}</tr></thead>
           <tbody>${r.list.map((x,i) => {
             const c = credit[x.member_id];
             const L = c ? (LIGHT[c.light] || LIGHT.ok) : null;
@@ -2662,7 +2664,8 @@ async function openRoster(postId, backJs){
             <td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.tag||"")}</td>
             ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
             ${cols.map(c2 => `<td>${esc((x.choices||{})[c2] || "—")}</td>`).join("")}
-            ${r.officer ? `<td>${esc(x.diet_note || "")}</td>` : ""}</tr>`;
+            ${r.officer ? `<td>${esc(x.diet_note || "")}</td>
+            <td>${cancelCell("member", x.member_id, x.name)}</td>` : ""}</tr>`;
           }).join("")}</tbody>
         </table></div>
         ${r.officer ? `<button class="mbtn add" onclick='downloadRoster(${JSON.stringify(cols)}, ${postId})'>⬇︎ 下載成 Excel 可開的檔（CSV）</button>
@@ -2673,20 +2676,51 @@ async function openRoster(postId, backJs){
           餐點與飲食備註只有幹部看得到。</div>`}
       </div>
 
-      ${r.officer && (r.cancelled || []).length ? `
+      ${r.officer && ((r.cancelled || []).length + (r.cancelled_guests || []).length) ? (() => {
+        // 夥伴與來賓的取消放同一張表；來賓在姓名後標「（來賓）」
+        const all = [
+          ...(r.cancelled || []).map(c => ({...c, label: c.name})),
+          ...(r.cancelled_guests || []).map(g => ({...g, label: `${g.name}（來賓・${memberName(g.host_id)} 介紹）`})),
+        ].sort((a, b) => String(b.cancelled_at).localeCompare(String(a.cancelled_at)));
+        return `
       <div class="field" style="margin-top:22px">
-        <label>已取消（${r.cancelled.length} 位）</label>
-        <div class="help">餐是提前訂的——看得到「什麼時候縮手的」才知道那一份便當有沒有白訂</div>
+        <label>已取消（${all.length} 位）</label>
+        <div class="help">餐是提前訂的——看得到「什麼時候縮手的」才知道那一份便當有沒有白訂。
+          「取消者／原因」空白＝本人自己取消。</div>
         <div class="rosterwrap"><table class="roster">
-          <thead><tr><th>#</th><th>姓名</th><th>取消時間</th></tr></thead>
-          <tbody>${r.cancelled.map((c, i) => `<tr>
-            <td>${i+1}</td><td>${esc(c.name)}</td>
-            <td>${esc(payTime(c.cancelled_at))}</td></tr>`).join("")}</tbody>
+          <thead><tr><th>#</th><th>姓名</th><th>取消時間</th><th>取消者／原因</th></tr></thead>
+          <tbody>${all.map((c, i) => `<tr>
+            <td>${i+1}</td><td>${esc(c.label)}</td>
+            <td>${esc(payTime(c.cancelled_at))}</td>
+            <td>${c.cancelled_by ? `${esc(memberName(c.cancelled_by))}：${esc(c.cancel_reason || "")}` : ""}</td></tr>`).join("")}</tbody>
         </table></div>
-      </div>` : ""}
+      </div>`; })() : ""}
     </div>`;
   window.__roster = r;
   go("form");
+}
+// 幹部在名單上取消別人（2026-09-13）。kind = member｜guest
+function cancelCell(kind, id, name){
+  return `<button class="cancelbtn" onclick="askCancel(this, '${kind}', ${id}, '${escAttr(name)}')">取消</button>`;
+}
+function askCancel(btn, kind, id, name){
+  const td = btn.parentElement;
+  td.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:260px">
+    <input type="text" class="cancelreason" placeholder="原因（必填）" maxlength="200" style="flex:1;min-width:160px">
+    <button class="cancelbtn" onclick="doOfficerCancel(this, '${kind}', ${id}, '${escAttr(name)}')">確定取消</button>
+    <button class="cancelbtn" onclick="openRoster(...window.__rosterArgs)">算了</button></div>`;
+  td.querySelector("input").focus();
+}
+async function doOfficerCancel(btn, kind, id, name){
+  const reason = (btn.parentElement.querySelector("input").value || "").trim();
+  if(!reason){ alert("請填取消原因"); return; }
+  if(!confirm(`確定取消「${name}」？\n原因：${reason}`)) return;
+  const r = kind === "guest"
+    ? await guestApi("remove", {id, reason})
+    : await signupApi("cancel", {post_id: window.__rosterArgs[0], member_id: id, reason});
+  if(!r || !r.ok){ alert((r && r.message) || "取消失敗"); return; }
+  await reloadSeats();
+  openRoster(...window.__rosterArgs);
 }
 function downloadRoster(cols, postId){
   const r = window.__roster; if(!r) return;
