@@ -223,16 +223,14 @@ a{color:inherit;text-decoration:none}
 .ckinfo{flex:1;min-width:0;font-size:1.02rem}
 .ckhead{display:flex;align-items:baseline;gap:7px;flex-wrap:nowrap}
 /* 姓名優先：不參與壓縮（柏萍認人靠名字），只用 max-width 擋住極長的名字 */
-.ckhead>b{flex:0 0 auto;max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ckhead>b{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 餐點靠右對齊——柏萍對名單就是在對餐，靠右才會排成一直條好掃。
    ⛔ 不能用 flex:none：真實餐名長達 20 幾個字，會直接撐到按鈕底下被蓋掉（2026-09-26 截圖）。 */
-.ckmeal{margin-left:auto;flex:0 1 auto;min-width:0;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+/* 餐點自己一行、完整顯示不截斷——柏萍就是照這一行發餐盒，
+   而且未來一個人可能訂餐＋飲料兩項以上，擠在姓名旁邊一定放不下 */
+.ckmealline{font-weight:600;margin-top:2px;line-height:1.45}
+.ckmealline.none{font-weight:400;color:var(--muted)}
 .cksub{font-size:.94rem;color:var(--muted);margin-top:3px}
-/* 產業·公司只佔一行：長公司名換兩行會讓每一列高度不一，掃名單時很難對 */
-.cksub.one{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* 「｜ 內容」整組一起換行，分隔符才不會孤零零落在行首 */
-.cksub .seg{white-space:nowrap}
 .cksub b.far{color:#c0392b}
 /* 領餐盒：橘色，跟報到的綠色分開——會場上是兩件事（人到了 vs 餐盒交出去了）*/
 .ckmealbtn{flex:none;min-height:34px;min-width:52px;padding:0 6px;border:1.5px solid var(--line);
@@ -838,7 +836,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-26 22:15</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-26 22:29</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2513,13 +2511,10 @@ function renderBoard(){
           <div class="ckrow${g.checked ? " done" : ""}">
             ${mealBtn(null, g.id, g.meals, g.meal_taken)}
             <div class="ckinfo">
-              <div class="ckhead"><b>${esc(g.name)}</b>
-                <span class="ckmeal" title="${g.meals ? escAttr(g.meals) : ""}">${
-                  g.meals ? esc(mealShort(g.meals)) : "沒訂餐"}</span></div>
-              ${[g.industry, g.company].filter(Boolean).length
-                ? `<div class="cksub one">${[g.industry, g.company].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
-              <div class="cksub">${subLine([`介紹人：${esc(memberName(g.host_id))}`,
-                g.phone ? esc(g.phone) : "", g.diet_note ? `⚠️ ${esc(g.diet_note)}` : ""])}</div>
+              <div class="ckhead"><b>${esc(g.name)}</b></div>
+              <div class="ckmealline${g.meals ? "" : " none"}">${
+                g.meals ? esc(mealShort(g.meals)) : "沒訂餐"}</div>
+              <div class="cksub">介紹人：${esc(memberName(g.host_id))}</div>
             </div>
             <button class="ckbtn${g.checked ? " on" : ""}" onclick="markCheck(null, ${g.id}, ${g.checked})">${
               g.checked ? "✓ 到了" : "打勾"}</button>
@@ -2536,15 +2531,6 @@ function renderBoard(){
             "現場出現就直接打勾，系統會記成現場加入（已經來的排在最前面）", "")}
       </div>
     </div>`;
-}
-
-// 小標的「A ｜ B ｜ C」。兩條規則都是踩出來的（2026-09-26）：
-//   ⛔ 分隔符要留在「上一段的尾端」——放下一段開頭的話，換行後「｜」會孤零零落在行首。
-//   ⛔ 段與段之間要有 <wbr>——每段自己是 nowrap，段之間若無斷點，整行會變成
-//      一條不可斷的長串直接溢出畫面（而且不會有任何錯誤）。
-function subLine(parts){
-  const p = parts.filter(Boolean);
-  return p.map((t, i) => `<span class="seg">${t}${i < p.length - 1 ? "　｜　" : ""}</span>`).join("<wbr>");
 }
 
 // 餐名顯示用：後端給的是「群組名：品項名」（多組用全形空格接）。
@@ -2587,23 +2573,15 @@ function boardSection(title, list, help, emptyText){
 // ⛔ 報到台不放出席信用燈號——他說那是幹部在後台看的東西，會場上不需要。
 // 公司要從全站名冊 MEMBERS 撈：報到 API 只回報到相關欄位，沒有 company。
 function boardRow(m){
-  const info = MEMBERS.find(x => x.id === m.id) || {};
-  const sub  = [m.tag || info.tag, info.company].filter(Boolean).map(esc).join(" · ");
-  const far  = m.checked && m.distance_m != null;
+  const meal = m.signed ? (mealShort(m.meals) || "沒訂餐") : "—";
   return `
           <div class="ckrow${m.checked ? " done" : ""}${!m.signed ? " nosign" : ""}">
             ${mealBtn(m.id, null, m.signed && m.meals, m.meal_taken)}
             <div class="ckinfo">
               <div class="ckhead"><b>${esc(m.name)}</b>
                 ${!m.signed ? `<span class="tagx">沒報名</span>` : ""}
-                ${m.status === "waitlist" ? `<span class="tagw">候補</span>` : ""}
-                <span class="ckmeal" title="${m.signed && m.meals ? escAttr(m.meals) : ""}">${
-                  m.signed ? esc(mealShort(m.meals) || "沒訂餐") : "—"}</span></div>
-              ${sub ? `<div class="cksub one">${sub}</div>` : ""}
-              ${(m.diet_note || far) ? `<div class="cksub">${subLine([
-                m.diet_note ? `⚠️ ${esc(m.diet_note)}` : "",
-                far ? `報到時距離會場 <b class="${m.distance_m > 500 ? "far" : ""}">${m.distance_m} 公尺</b>${
-                      m.accuracy != null ? `（誤差 ±${Math.round(m.accuracy)} 公尺）` : ""}` : ""])}</div>` : ""}
+                ${m.status === "waitlist" ? `<span class="tagw">候補</span>` : ""}</div>
+              <div class="ckmealline${m.signed && m.meals ? "" : " none"}">${esc(meal)}</div>
               ${m.signed && !m.checked ? `
                 <select class="absel" onchange="setAbsence(${m.id}, this.value)">
                   <option value="">沒到的話，選一個原因…</option>
