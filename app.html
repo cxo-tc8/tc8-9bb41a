@@ -221,15 +221,28 @@ a{color:inherit;text-decoration:none}
 .ckrow.done{background:#f0f9f3}
 .ckrow.nosign .ckinfo b{color:var(--orange-dark)}
 .ckinfo{flex:1;min-width:0;font-size:1.02rem}
-.ckhead{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
-/* 餐點靠右對齊——柏萍對名單就是在對餐，靠右才會排成一直條好掃 */
-.ckmeal{margin-left:auto;flex:none;font-weight:700}
+.ckhead{display:flex;align-items:baseline;gap:7px;flex-wrap:nowrap}
+/* 姓名優先：不參與壓縮（柏萍認人靠名字），只用 max-width 擋住極長的名字 */
+.ckhead>b{flex:0 0 auto;max-width:58%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 餐點靠右對齊——柏萍對名單就是在對餐，靠右才會排成一直條好掃。
+   ⛔ 不能用 flex:none：真實餐名長達 20 幾個字，會直接撐到按鈕底下被蓋掉（2026-09-26 截圖）。 */
+.ckmeal{margin-left:auto;flex:0 1 auto;min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .cksub{font-size:.94rem;color:var(--muted);margin-top:3px}
+/* 產業·公司只佔一行：長公司名換兩行會讓每一列高度不一，掃名單時很難對 */
+.cksub.one{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 「｜ 內容」整組一起換行，分隔符才不會孤零零落在行首 */
 .cksub .seg{white-space:nowrap}
 .cksub b.far{color:#c0392b}
-.ckbtn{flex:none;min-height:42px;min-width:74px;border:1.5px solid var(--line);background:var(--card);
-  border-radius:var(--r-sm);font-weight:700;font-size:.88rem;cursor:pointer}
+/* 領餐盒：橘色，跟報到的綠色分開——會場上是兩件事（人到了 vs 餐盒交出去了）*/
+.ckmealbtn{flex:none;min-height:34px;min-width:52px;padding:0 6px;border:1.5px solid var(--line);
+  background:var(--card);border-radius:var(--r-sm);font-weight:700;font-size:.78rem;
+  line-height:1.2;cursor:pointer}
+.ckmealbtn.on{background:#b26a00;color:#fff;border-color:#b26a00}
+/* 沒訂餐的人不用領，但位置留著，整排才不會參差、掃名單才對得齊 */
+.ckmealbtn.ghost{visibility:hidden}
+.ckbtn{flex:none;min-height:34px;min-width:58px;padding:0 8px;border:1.5px solid var(--line);
+  background:var(--card);border-radius:var(--r-sm);font-weight:700;font-size:.8rem;cursor:pointer}
 .ckbtn.on{background:#1f7a4d;color:#fff;border-color:#1f7a4d}
 .tagx{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fde8e8;color:#c0392b;font-size:.72rem;font-weight:700}
 .tagw{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fff2dd;color:#a06010;font-size:.72rem;font-weight:700}
@@ -825,7 +838,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-26 17:21</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-26 22:15</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2498,14 +2511,15 @@ function renderBoard(){
         <div class="help">來賓不必自己操作，點一下就完成報到</div>
         ${r.guests.length ? r.guests.map(g => `
           <div class="ckrow${g.checked ? " done" : ""}">
+            ${mealBtn(null, g.id, g.meals, g.meal_taken)}
             <div class="ckinfo">
               <div class="ckhead"><b>${esc(g.name)}</b>
-                <span class="ckmeal">${g.meals ? esc(g.meals) : "沒訂餐"}</span></div>
+                <span class="ckmeal" title="${g.meals ? escAttr(g.meals) : ""}">${
+                  g.meals ? esc(mealShort(g.meals)) : "沒訂餐"}</span></div>
               ${[g.industry, g.company].filter(Boolean).length
-                ? `<div class="cksub">${[g.industry, g.company].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
-              <div class="cksub"><span class="seg">介紹人：${esc(memberName(g.host_id))}</span>${
-                g.phone ? `<span class="seg">　｜　${esc(g.phone)}</span>` : ""}${
-                g.diet_note ? `<span class="seg">　｜　⚠️ ${esc(g.diet_note)}</span>` : ""}</div>
+                ? `<div class="cksub one">${[g.industry, g.company].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
+              <div class="cksub">${subLine([`介紹人：${esc(memberName(g.host_id))}`,
+                g.phone ? esc(g.phone) : "", g.diet_note ? `⚠️ ${esc(g.diet_note)}` : ""])}</div>
             </div>
             <button class="ckbtn${g.checked ? " on" : ""}" onclick="markCheck(null, ${g.id}, ${g.checked})">${
               g.checked ? "✓ 到了" : "打勾"}</button>
@@ -2522,6 +2536,37 @@ function renderBoard(){
             "現場出現就直接打勾，系統會記成現場加入（已經來的排在最前面）", "")}
       </div>
     </div>`;
+}
+
+// 小標的「A ｜ B ｜ C」。兩條規則都是踩出來的（2026-09-26）：
+//   ⛔ 分隔符要留在「上一段的尾端」——放下一段開頭的話，換行後「｜」會孤零零落在行首。
+//   ⛔ 段與段之間要有 <wbr>——每段自己是 nowrap，段之間若無斷點，整行會變成
+//      一條不可斷的長串直接溢出畫面（而且不會有任何錯誤）。
+function subLine(parts){
+  const p = parts.filter(Boolean);
+  return p.map((t, i) => `<span class="seg">${t}${i < p.length - 1 ? "　｜　" : ""}</span>`).join("<wbr>");
+}
+
+// 餐名顯示用：後端給的是「群組名：品項名」（多組用全形空格接）。
+// 報到台只顯示品項名——群組名同一場所有人都一樣，留著只會把「葷食／素食」擠出畫面。
+function mealShort(s){
+  if(!s) return "";
+  return s.split("　").map(x => {
+    const i = x.indexOf("：");
+    return i < 0 ? x : x.slice(i + 1);
+  }).filter(Boolean).join(" / ");
+}
+
+// 領餐盒按鈕。只有訂了餐的人才按得到；沒訂餐的留一個等寬的空位。
+function mealBtn(memberId, guestId, meals, taken){
+  if(!meals) return `<span class="ckmealbtn ghost"></span>`;
+  return `<button class="ckmealbtn${taken ? " on" : ""}"
+    onclick="markMeal(${memberId}, ${guestId}, ${!!taken})">${taken ? "✓已領" : "餐盒"}</button>`;
+}
+async function markMeal(memberId, guestId, undo){
+  const r = await checkinApi("meal", {post_id: BOARD_POST, member_id: memberId, guest_id: guestId, undo: !!undo});
+  if(!r || !r.ok){ alert((r && r.message) || "失敗"); return; }
+  await openBoard(BOARD_POST);
 }
 
 // 報到台的一段名單。空的就不出現，不佔版面。
@@ -2547,17 +2592,18 @@ function boardRow(m){
   const far  = m.checked && m.distance_m != null;
   return `
           <div class="ckrow${m.checked ? " done" : ""}${!m.signed ? " nosign" : ""}">
+            ${mealBtn(m.id, null, m.signed && m.meals, m.meal_taken)}
             <div class="ckinfo">
               <div class="ckhead"><b>${esc(m.name)}</b>
                 ${!m.signed ? `<span class="tagx">沒報名</span>` : ""}
                 ${m.status === "waitlist" ? `<span class="tagw">候補</span>` : ""}
-                <span class="ckmeal">${m.signed ? esc(m.meals || "沒訂餐") : "—"}</span></div>
-              ${sub ? `<div class="cksub">${sub}</div>` : ""}
-              ${(m.diet_note || far) ? `<div class="cksub">${
-                m.diet_note ? `<span class="seg">⚠️ ${esc(m.diet_note)}</span>` : ""}${
-                far ? `<span class="seg">${m.diet_note ? "　｜　" : ""}報到時距離會場 <b class="${
-                      m.distance_m > 500 ? "far" : ""}">${m.distance_m} 公尺</b></span>${
-                      m.accuracy != null ? `<span class="seg">（誤差 ±${Math.round(m.accuracy)} 公尺）</span>` : ""}` : ""}</div>` : ""}
+                <span class="ckmeal" title="${m.signed && m.meals ? escAttr(m.meals) : ""}">${
+                  m.signed ? esc(mealShort(m.meals) || "沒訂餐") : "—"}</span></div>
+              ${sub ? `<div class="cksub one">${sub}</div>` : ""}
+              ${(m.diet_note || far) ? `<div class="cksub">${subLine([
+                m.diet_note ? `⚠️ ${esc(m.diet_note)}` : "",
+                far ? `報到時距離會場 <b class="${m.distance_m > 500 ? "far" : ""}">${m.distance_m} 公尺</b>${
+                      m.accuracy != null ? `（誤差 ±${Math.round(m.accuracy)} 公尺）` : ""}` : ""])}</div>` : ""}
               ${m.signed && !m.checked ? `
                 <select class="absel" onchange="setAbsence(${m.id}, this.value)">
                   <option value="">沒到的話，選一個原因…</option>
