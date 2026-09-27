@@ -836,7 +836,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-26 22:29</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-27 09:05</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3603,11 +3603,17 @@ function render(v){
     ${officerBlock()}
     ${myCasesBlock()}
     <div class="card menu" style="margin-top:12px">
-      ${MY_ROLE && MY_ROLE.role !== "member" ? `<div class="rolebadge" style="margin:0 0 12px">你目前的身分：${esc(MY_ROLE.label)}</div>` : ""}
+      ${isCxo() ? `<div class="rolebadge" style="margin:0 0 12px">你目前的身分：CXO 夥伴</div>
+        <div class="mnote" style="margin:0 0 12px;line-height:1.8">
+          你已經通過幹部核可，<b>還不是 TC8 分會夥伴</b>。<br>
+          現在可以：瀏覽夥伴名冊與公開貼文、隨時更新自己的資料。<br>
+          分會有位子時，幹部會從這裡邀請入會。</div>`
+        : MY_ROLE && MY_ROLE.role !== "member" ? `<div class="rolebadge" style="margin:0 0 12px">你目前的身分：${esc(MY_ROLE.label)}</div>` : ""}
       <div class="menurow" onclick="openMyCredit()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">我的出席信用</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openMyLeave()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">請假申請</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openProfile()"><svg class="ic" width="19" height="19"><use href="#i-me"/></svg><div class="t">改我的基本資料</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="openMember(${ME.id})"><svg class="ic" width="19" height="19"><use href="#i-people"/></svg><div class="t">我的公開頁面</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="openCxoList()"><svg class="ic" width="19" height="19"><use href="#i-people"/></svg><div class="t">CXO 夥伴</div><svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       <div class="menurow" onclick="logout()"><svg class="ic" width="19" height="19"><use href="#i-back"/></svg><div class="t">登出</div></div>
     </div>` : `
     <div class="center">
@@ -3675,6 +3681,10 @@ function officerBlock(){
         <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-people"/></svg>
         <div class="t">新夥伴審核${PENDING?`<span class="reqbadge" style="margin-left:7px;margin-right:0">${PENDING}</span>`:""}</div>
         <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
+      <div class="menurow" onclick="openCxoList()">
+        <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-people"/></svg>
+        <div class="t">CXO 夥伴</div>
+        <svg class="go" width="18" height="18"><use href="#i-go"/></svg></div>
       ${[["monthly","發布月例會"],["notice","發布公告"],["survey","放一份問卷"],["event","發布小活動"]]
         .map(([k,l])=>`<div class="menurow" onclick="openPost('${k}')">
           <svg class="ic" width="19" height="19" style="color:var(--orange)"><use href="#i-plus"/></svg>
@@ -3702,6 +3712,17 @@ function myCasesBlock(){
 const KIND_LABEL = {monthly:"月例會", event:"CXO & TC8 活動", notice:"公告", survey:"問卷",
   member_event:"夥伴的近期活動", wish:"想聽的主題", issue:"跟幹部說一件事"};
 const isOfficer = () => ME && ME.role === "officer";
+// CXO 夥伴：已經是 CXO 會員、幹部核可過，但**還不是 TC8 分會夥伴**。
+// 只看得到夥伴名冊與公開貼文；報名訂餐、團購、Q&A 這些分會內部事務都不開放。
+const isCxo = () => ME && ME.status === "cxo";
+// CXO 夥伴進站時把分會內部的分頁收起來。
+// ⛔ 用 style.display，不要用 hidden 屬性——[hidden]{display:none} 優先度最低，
+//    會被 .nav button 既有的 display 規則蓋掉：屬性設了、不報錯、畫面照顯示。
+function applyCxoGate(){
+  if(!isCxo()) return;
+  document.querySelectorAll('.nav [data-v="buys"], .nav [data-v="needs"]')
+    .forEach(b => { b.style.display = "none"; });
+}
 // 依日期排：活動看「什麼時候」，公告看「什麼時候發的」
 const byKind = k => {
   // 過期的夥伴活動不進首頁；主辦人自己在「我的張貼」還是找得到，可以改可以刪
@@ -4382,6 +4403,11 @@ function linkRow(p, showAuthor){
 function signupArea(p){
   if(!["monthly","event","member_event"].includes(p.kind)) return "";
   if(!p.signup_open) return "";
+  // CXO 夥伴還不是分會夥伴，報名訂餐走的是會籍那一套（年費、停餐、缺席扣分），不適用。
+  // ⛔ 要講出原因——只是讓按鈕消失，對方會以為系統壞了。
+  if(isCxo()) return `<div class="card" style="padding:14px 16px">
+    <div class="mnote">你目前是 <b>CXO 夥伴</b>，還不是 TC8 分會夥伴，所以看得到活動但不能自己報名。
+    想參加的話，跟你的推薦人或幹部說一聲。</div></div>`;
   const n = (SEATS[p.id] || {}).taken || 0;
   return `<div class="card signupcard">
     ${signupBlock(p)}
@@ -4548,6 +4574,148 @@ async function sendApply(){
     </div></div>`;
 }
 
+// ── CXO 夥伴名冊（登入的夥伴都看得到，才有合作的機會）────────────
+// ⛔ 走 Edge Function，不走 MEMBERS：CXO 夥伴不是分會夥伴，混進全站共用的
+//    MEMBERS 陣列會污染講者選單、推薦人選單、統計數字與卡片牆。
+async function openCxoList(){
+  el("v-form").innerHTML = '<div class="busy">載入 CXO 夥伴…</div>';
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-form").classList.add("on"); window.scrollTo(0,0);
+  const r = await fn("cxo_list");
+  if(r.error){ el("v-form").innerHTML = `<div class="center"><div class="err">${esc(r.error)}</div></div>`; return; }
+  const list = r.members || [];
+  el("v-form").innerHTML = `
+    <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>我的</button>
+    <div class="sec"><h2>CXO 夥伴</h2>${list.length?`<span class="more">${list.length}</span>`:""}</div>
+    <div class="hint" style="margin-bottom:8px">
+      已經是 CXO 會員、想加入 TC8，幹部核可過的人。<b>還不是分會夥伴</b>，
+      但歡迎認識、合作——有人退會或特殊情況時，會從這裡邀請入會。</div>
+    <div class="card">${list.length ? list.map(m=>`
+      <div class="mrow" style="align-items:flex-start;flex-direction:column;gap:9px">
+        <div style="display:flex;gap:11px;width:100%;align-items:flex-start">
+          ${avatar(m.name)}
+          <div style="flex:1;min-width:0">
+            <div class="n">${esc(m.name)}${m.tag?`　<span class="mnote">${esc(m.tag)}</span>`:""}</div>
+            <div class="c">${esc([m.title,m.company].filter(Boolean).join(" ・ "))||"沒填公司職稱"}</div>
+            ${m.referred_by?`<div class="c" style="margin-top:4px">推薦人：<b>${esc(memberName(m.referred_by))}</b></div>`:""}
+            ${m.intro?`<div class="c" style="color:var(--blue-700);font-style:italic;margin-top:4px">「${esc(m.intro)}」</div>`:""}
+            ${m.description?`<div class="mdesc" style="margin-top:6px">${esc(m.description)}</div>`:""}
+            ${m.web?`<div class="c" style="margin-top:4px"><a href="${escAttr(m.web)}" target="_blank" rel="noopener">${esc(m.web)}</a></div>`:""}
+          </div>
+        </div>
+        ${isOfficer() ? `<div style="display:flex;gap:8px;width:100%">
+          <button class="btn btn-primary btn-sm" onclick="promoteCxo(${m.id},'${escAttr(m.name)}')">升成正式夥伴</button>
+        </div>` : ""}
+      </div>`).join("") : `<div class="empty">還沒有 CXO 夥伴</div>`}</div>
+    ${isOfficer() ? `<div class="hint" style="margin-top:10px">
+      「升成正式夥伴」會讓他立刻出現在夥伴名冊上，<b>會籍規則（年費、簽署、訂餐）也一併適用</b>。
+      確定分會有位子、也談好了再按。</div>` : ""}`;
+}
+
+async function promoteCxo(id, name){
+  if(!confirm(`確定把「${name}」升成 TC8 正式夥伴嗎？\n\n` +
+    `他會立刻出現在夥伴名冊上，年費、條款簽署、訂餐這些會籍規則也開始適用。\n` +
+    `這件事建議先線下談好再按。`)) return;
+  const r = await fn("promote", {id});
+  if(r.error) return alert(r.error);
+  MEMBERS = await loadMembers();
+  alert(`${r.name} 已經是 TC8 正式夥伴了`);
+  openCxoList();
+}
+
+// ── CXO 夥伴登記（隱藏連結 ?join=cxo，幹部自己傳給人）──────────
+// 這些人**已經是 CXO 會員**、可能現在隸屬其他分會，因為有意願加入 TC8 才來登記。
+// 核可後停在「CXO 夥伴」區，不直接進分會——有人退會才升成正式夥伴。
+function openCxoApply(){
+  if(!ME && !token()){
+    // 要綁 LINE 才能之後自己維護資料。登入會把網址參數洗掉，先記下來。
+    localStorage.setItem("tc8_join", "cxo");
+    el("v-claim").innerHTML = `<div class="center">
+      <div class="card" style="padding:26px 20px;text-align:center">
+        <div style="font-size:2rem">👋</div>
+        <div style="font-weight:800;font-size:1.05rem;margin-top:8px">加入 TC8 登記</div>
+        <div style="color:var(--muted);font-size:.9rem;margin-top:10px;line-height:1.8">
+          請先用 LINE 登入，登入後就會回到登記表。<br>
+          綁定之後，你的資料由你自己維護。</div>
+        <button class="linebtn" style="margin-top:18px" onclick="lineLogin()">用 LINE 登入</button>
+      </div></div>`;
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+    el("v-claim").classList.add("on"); window.scrollTo(0,0);
+    return;
+  }
+  localStorage.removeItem("tc8_join");
+  const industryOpts = Object.entries(industryNames)
+    .map(([k,label])=>`<option value="${k}">${esc(label)}</option>`).join("");
+  // 推薦人只列現任夥伴（MEMBERS 本來就只有現任，CXO 夥伴走另一支不在裡面）
+  const hostOpts = MEMBERS.slice().sort((a,b)=>(a.sort||0)-(b.sort||0))
+    .map(m=>`<option value="${m.id}">${esc(m.name)}${m.company?`（${esc(m.company)}）`:""}</option>`).join("");
+  el("v-claim").innerHTML = `
+    <div class="center">
+      <div style="font-weight:800;font-size:1.1rem">加入 TC8 登記</div>
+      <div style="color:var(--muted);font-size:.86rem;margin:6px 0 14px;line-height:1.7">
+        這份登記給<b>已經是 CXO 會員</b>、想加入 TC8 分會的夥伴。<br>
+        送出後由幹部審核；核可後你會進入<b>「CXO 夥伴」</b>——
+        大家看得到你、可以合作，等分會有位子再談正式入會。</div>
+
+      <div class="field"><label>姓名<span class="req">*</span></label>
+        <input type="text" id="cx_name" maxlength="40" placeholder="可以帶小名"></div>
+      <div class="field"><label>推薦人<span class="req">*</span></label>
+        <div class="help">TC8 哪一位夥伴認識你、可以幫你說話</div>
+        <select id="cx_host" class="dateinput" style="width:100%">
+          <option value="">請選擇…</option>${hostOpts}</select></div>
+      <div class="field"><label>公司</label><input type="text" id="cx_company" maxlength="60"></div>
+      <div class="field"><label>職稱</label><input type="text" id="cx_title" maxlength="40"></div>
+      <div class="field"><label>產業分類</label>
+        <select id="cx_industry" class="dateinput" style="width:100%">${industryOpts}</select></div>
+      <div class="field"><label>一句話自介</label>
+        <input type="text" id="cx_intro" maxlength="100" placeholder="讓大家記得你的一句話"></div>
+      <div class="field"><label>簡介</label>
+        <div class="help">你在做什麼、幫誰解決什麼問題</div>
+        <textarea id="cx_description" maxlength="800"></textarea></div>
+      <div class="field"><label>為什麼想加入 TC8<span class="req">*</span></label>
+        <div class="help">幹部主要看這一題</div>
+        <textarea id="cx_why" maxlength="500"></textarea></div>
+      <div class="field">
+        <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer">
+          <input type="checkbox" id="cx_iscxo" style="margin-top:3px;flex:none;width:19px;height:19px">
+          <span>我確認我已經是 <b>CXO 會員</b><span class="req">*</span></span></label>
+        <div class="help">要先是 CXO 會員才能登記加入分會。幹部會核對。</div></div>
+      <div id="cx_err"></div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-ghost" onclick="go('home')">取消</button>
+        <button class="btn btn-primary" id="cx_save" onclick="sendCxoApply()">送出登記</button>
+      </div>
+    </div>`;
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  el("v-claim").classList.add("on"); window.scrollTo(0,0);
+}
+
+async function sendCxoApply(){
+  const g = k => el("cx_"+k).value;
+  const err = t => { el("cx_err").innerHTML = `<div class="err">${t}</div>`; };
+  const name = (g("name")||"").trim();
+  if(!name) return err("請先填姓名");
+  if(!g("host")) return err("請選推薦人");
+  if(!(g("why")||"").trim()) return err("請說明為什麼想加入 TC8");
+  if(!el("cx_iscxo").checked) return err("要先是 CXO 會員才能登記");
+  if(!confirm(`請問你是「${name}」嗎？\n\n送出後這個 LINE 就代表你，要更改需要請幹部處理。`)) return;
+
+  const b = el("cx_save"); b.disabled = true; b.textContent = "送出中…";
+  const r = await fn("apply", {kind:"cxo", name, referred_by: g("host"), why: g("why"),
+    company:g("company"), title:g("title"), industry:g("industry"),
+    intro:g("intro"), description:g("description")});
+  if(r.error){ err(esc(r.error)); b.disabled = false; b.textContent = "送出登記"; return; }
+  el("v-claim").innerHTML = `<div class="center">
+    <div class="card" style="padding:26px 20px;text-align:center">
+      <div style="font-size:2rem">📮</div>
+      <div style="font-weight:800;font-size:1.05rem;margin-top:8px">登記送出了</div>
+      <div style="color:var(--muted);font-size:.88rem;margin-top:8px;line-height:1.8">
+        幹部核可後，你會出現在「CXO 夥伴」名冊上。<br>
+        在那之前你已經可以瀏覽網站內容。</div>
+      <button class="btn btn-primary" style="margin-top:18px" onclick="location.reload()">開始瀏覽</button>
+    </div></div>`;
+}
+
 // ── 幹部：審核新夥伴 ──
 async function openReview(){
   el("v-form").innerHTML = '<div class="busy">載入待審名單…</div>';
@@ -4555,28 +4723,51 @@ async function openReview(){
   el("v-form").classList.add("on"); window.scrollTo(0,0);
   const r = await fn("pending_list");
   if(r.error){ el("v-form").innerHTML = `<div class="center"><div class="err">${esc(r.error)}</div></div>`; return; }
-  const list = r.members || [];
+  const all = r.members || [];
+  // 兩種待審意思完全不同，不能混在一起看：
+  //   新夥伴＝已經入會、只是名單上沒有他 → 核可＝上線成正式夥伴
+  //   CXO 夥伴＝還沒入會、想加入 → 核可＝進 CXO 夥伴區「等位子」，不進分會
+  const newbies = all.filter(m => m.status !== "pending_cxo");
+  const cxos    = all.filter(m => m.status === "pending_cxo");
   el("v-form").innerHTML = `
     <button class="back" onclick="go('me')"><svg width="17" height="17"><use href="#i-back"/></svg>我的</button>
-    <div class="sec"><h2>新夥伴審核</h2>${list.length?`<span class="more">${list.length}</span>`:""}</div>
-    <div class="card">${list.length ? list.map(m=>`
+    <div class="sec"><h2>新夥伴審核</h2>${newbies.length?`<span class="more">${newbies.length}</span>`:""}</div>
+    <div class="hint" style="margin-bottom:8px">已經入會、只是名單上沒有他。核可＝直接上線成正式夥伴。</div>
+    <div class="card">${newbies.length ? newbies.map(m => reviewRow(m, false)).join("")
+      : `<div class="empty">目前沒有待審核的新夥伴</div>`}</div>
+
+    <div class="sec" style="margin-top:22px"><h2>加入 TC8 登記</h2>${cxos.length?`<span class="more">${cxos.length}</span>`:""}</div>
+    <div class="hint" style="margin-bottom:8px">
+      已經是 CXO 會員、想加入 TC8。<b>核可＝進「CXO 夥伴」區，不會直接成為分會夥伴</b>——
+      等有人退會或特殊情況再升。</div>
+    <div class="card">${cxos.length ? cxos.map(m => reviewRow(m, true)).join("")
+      : `<div class="empty">目前沒有人登記加入</div>`}</div>
+    <div class="hint" style="margin-top:10px">四位幹部任何一位都可以核可，不必等會長</div>`;
+}
+
+// 一列待審。isCxo 決定按鈕字樣與要不要顯示推薦人／為什麼想加入。
+function reviewRow(m, isCxo){
+  return `
       <div class="mrow" style="align-items:flex-start;flex-direction:column;gap:9px">
         <div style="display:flex;gap:11px;width:100%;align-items:flex-start">
           ${avatar(m.name)}
           <div style="flex:1;min-width:0">
             <div class="n">${esc(m.name)}</div>
             <div class="c">${esc([m.title,m.company].filter(Boolean).join(" ・ "))||"沒填公司職稱"}</div>
+            ${isCxo && m.referred_by ? `<div class="c" style="margin-top:4px">推薦人：<b>${esc(memberName(m.referred_by))}</b></div>` : ""}
             ${m.intro?`<div class="c" style="color:var(--blue-700);font-style:italic;margin-top:4px">「${esc(m.intro)}」</div>`:""}
             ${m.description?`<div class="mdesc" style="margin-top:6px">${esc(m.description)}</div>`:""}
+            ${isCxo && m.q_why_tc8 ? `<div class="mdesc" style="margin-top:8px;padding:8px 10px;background:var(--chip);border-radius:var(--r-sm)">
+              <b>為什麼想加入：</b>${esc(m.q_why_tc8)}</div>` : ""}
             <div class="c" style="margin-top:5px">${ago(m.bound_at)} 送出</div>
           </div>
         </div>
         <div style="display:flex;gap:8px;width:100%">
-          <button class="btn btn-primary btn-sm" onclick="reviewMember(${m.id},'approve','${escAttr(m.name)}')">核可上線</button>
+          <button class="btn btn-primary btn-sm" onclick="reviewMember(${m.id},'approve','${escAttr(m.name)}')">${
+            isCxo ? "核可，進 CXO 夥伴" : "核可上線"}</button>
           <button class="btn btn-ghost btn-sm" style="color:#b4261a" onclick="reviewMember(${m.id},'reject','${escAttr(m.name)}')">退回</button>
         </div>
-      </div>`).join("") : `<div class="empty">目前沒有待審核的新夥伴</div>`}</div>
-    <div class="hint" style="margin-top:10px">四位幹部任何一位都可以核可，不必等會長</div>`;
+      </div>`;
 }
 
 async function reviewMember(id, act, name){
@@ -5786,6 +5977,20 @@ async function loadMe(){
     reloadConsents(), // 我簽過哪些條款
   ]);
   syncNewBadges();       // 資料到齊才算得出「有幾則新的」
+  applyCxoGate();
+
+  // 加入 TC8 登記的隱藏連結 ?join=cxo。
+  // ⛔ LINE 登入的 callback 會 replaceState 把網址參數洗掉，所以未登入時先存進
+  //    localStorage，登入回來才接得上（否則登完就掉回首頁，對方會以為連結壞了）。
+  const joinParam = new URLSearchParams(location.search).get("join");
+  if(joinParam === "cxo" || localStorage.getItem("tc8_join") === "cxo"){
+    if(joinParam) history.replaceState({}, "", REDIRECT);
+    // 已經是夥伴或已登記過的人點到這條連結，不該再看到登記表
+    if(ME && !ME.status){ localStorage.removeItem("tc8_join"); alert("你已經是 TC8 夥伴了"); go("home"); return; }
+    if(ME && ME.status === "cxo"){ localStorage.removeItem("tc8_join"); openCxoList(); return; }
+    openCxoApply(); return;
+  }
+
   if(!jumped && st==="unbound"){ go("claim"); return; }
   if(el("v-claim").classList.contains("on")) return renderClaim();
   // 有還沒簽的條款就直接開那一則（登入當下、或已登入的人每次打開都會遇到），
