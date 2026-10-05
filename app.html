@@ -838,7 +838,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 19:28</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 22:39</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3758,7 +3758,7 @@ const fmtDate = iso => { if(!iso) return ""; const d=new Date(iso);
   return `${d.getMonth()+1}/${d.getDate()}（${"日一二三四五六"[d.getDay()]}）${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 
 /* HELP_START —— ⛔ 這一段是機器產生的，不要手改。
-   真實來源是 4_tc8-docs/使用說明_夥伴版.md 與 使用說明_幹部版.md，
+   真實來源是 4_tc8-文件與規格/使用說明_夥伴版.md 與 使用說明_幹部版.md，
    改完跑 `python3 產生說明頁.py` 再上線。手改這裡＝多一份會過期的真實來源。 */
 const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <blockquote>
@@ -3794,11 +3794,7 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <li>主講者的宣傳照與講題</li>
 <li>活動詳細內容與照片</li>
 <li><strong>📋 誰報名了</strong></li>
-<li><strong>我要帶來賓</strong>：首頁月例會卡片上，「報到」右邊那顆
-  <strong>來賓登記　1/5</strong> 按下去就能登記（填姓名、公司、電話、餐點）。
-  數字是<strong>全場已登記／名額上限</strong>，滿了會變成「來賓額滿」按不下去。
-  <strong>自己還沒報名也可以幫來賓登記。</strong>
-  要改資料或取消，點進那則月例會、在下面的來賓區改。
+<li><strong>我要帶來賓</strong>（填姓名、公司、電話）。
   ⭐ 來賓名額是<strong>整場合計</strong>、預設 10 位，不是每人 10 位——額滿了就登記不了，要帶請早</li>
 </ul>
 
@@ -3824,6 +3820,8 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 <p>不用寫得很厲害。「我用 AI 把 LINE 群訊息整理成客戶名單」就是很好的案例。
 別人是照「問題」在搜尋的，不是照工具。</p>
 </blockquote>
+<p><strong>要附連結</strong>（成品、範例檔、教學影片），把網址直接貼在<strong>「補充細節／相關連結」</strong>那一格，
+送出後會自動變成可以點的連結。留言裡貼網址也一樣可以點。</p>
 
 </section><section class="hcard"><h2><span class="hico">🙋</span>Q&amp;A：卡住了就問</h2>
 <p>「Q&amp;A」→「我要提問」。寫你卡在哪、已經試過什麼。</p>
@@ -3902,14 +3900,8 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 
 </section><section class="hcard"><h2>2　餐點選項</h2>
 <p>月例會那塊 →「🍱 餐點選項」。用「群組」分類（例如 主餐／飲品），
-一個選項一張卡，名稱、價格、份數上限各自標在框框上面。改完<strong>那張卡要按自己的「儲存」</strong>。</p>
-<ul>
-<li><strong>份數上限</strong>：平常勾「不限量」就好，訂幾份就幾份。真的限量才取消勾選填數字（手工甜點只做 10 份），選完自動變「已額滿」。</li>
-<li><strong>↑ ↓ 調順序</strong>：卡片上的箭頭排選項，群組標題旁的箭頭排群組（想讓主餐排在飲品前面就把主餐整組往上移）。</li>
-<li><strong>刪除</strong>：<strong>沒有人選過</strong>的選項可以直接刪掉——載入範本載重複了就是用這個清。</li>
-<li>⛔ <strong>已經有人選過的只能「停用」</strong>，刪除鍵會是灰的——刪掉之後，過去報名的人點了什麼就查不到了。</li>
-<li>停用的選項會自動收進「已停用 N 項」，點開才看得到，畫面不會被劃線的舊品項塞滿。</li>
-</ul>
+每個選項可以設價格與數量上限。</p>
+<p>⛔ <strong>選項只能停用不能刪除</strong>——刪掉之後，過去報名的人點了什麼就查不到了。</p>
 <h3>餐點範本：建好一次，之後每個月直接載入</h3>
 <p>品項多的時候，一道一道建很花時間。餐點頁最上面有「🍱 餐點範本」：</p>
 <ol>
@@ -3918,7 +3910,7 @@ const HELP_OFFICER = `<h1>TC8 網站 使用說明（幹部版）</h1>
 <li>載入後直接改菜名、改價格，改的是這一場，<strong>不會動到範本</strong></li>
 </ol>
 <ul>
-<li><strong>載入是「加上去」</strong>，不會蓋掉這一場已經有的選項——因為可能已經有人照著報名了。所以<strong>載入前先把不要的刪掉</strong>，才不會出現一堆重複的。</li>
+<li><strong>載入是「加上去」</strong>，不會蓋掉這一場已經有的選項——因為可能已經有人照著報名了。</li>
 <li>用<strong>同一個名字</strong>再存一次＝覆蓋那套範本。</li>
 <li>刪範本不會影響任何已經辦過的活動。</li>
 </ul>
@@ -5690,8 +5682,8 @@ function openForm(id){
         <div class="pills" id="f_tags">${TAGS.map(t=>`<button type="button" class="pill${c&&(c.tags||[]).includes(t.slug)?" on":""}" data-t="${t.slug}">${esc(t.label)}</button>`).join("")}</div>
       </div>
 
-      <div class="field"><label>補充細節</label>
-        <div class="help">踩過的坑、沒做成的部分，這段常常最有價值</div>
+      <div class="field"><label>補充細節／相關連結</label>
+        <div class="help">踩過的坑、沒做成的部分，這段常常最有價值。<b>要附連結就把網址貼進來</b>（成品、範例檔、教學影片都可以），送出後會自動變成可以點的</div>
         <textarea id="f_detail" maxlength="3000" placeholder="選填">${c?esc(c.detail||""):""}</textarea>
       </div>
 
