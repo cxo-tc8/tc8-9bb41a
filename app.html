@@ -838,7 +838,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 22:39</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 23:38</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -930,6 +930,9 @@ const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&
 const escAttr = s => esc(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 // 文章裡貼的網址要能點。先 esc 再找網址——順序反了會把 <a> 自己逃脫掉變成文字。
 // 句尾的標點不算網址的一部分；分號不剝，否則 ?a=1&amp;b=2 會被剝成壞掉的 &amp
+// 只有 http/https 才准變成可以點的東西。寫入端（cases 函式）已經擋過一次，
+// 這是第二道——哪天有別的路徑寫進資料庫，畫面上也不會長出可點的攻擊連結
+const safeUrl = u => /^https?:\/\//i.test((u||"").trim()) ? u.trim() : null;
 const linkify = s => esc(s).replace(/https?:\/\/[^\s<>"）)、，。]+/g, u => {
   const t = u.replace(/[.,:!?]+$/, "");
   return `<a href="${t}" target="_blank" rel="noopener" class="inlink">${t}</a>` + u.slice(t.length);
@@ -3814,14 +3817,18 @@ const HELP_MEMBER = `<h1>TC8 網站 使用說明</h1>
 </blockquote>
 
 </section><section class="hcard"><h2><span class="hico">💡</span>AI 案例：把你做過的事寫下來</h2>
-<p>「AI 案例」→「＋ 分享我的案例」。四個欄位：
-<strong>解決什麼問題／用什麼工具／怎麼做的／補充細節</strong>。</p>
+<p>「AI 案例」→「＋ 分享我的案例」。欄位：
+<strong>解決什麼問題／用什麼工具／怎麼做的／相關連結／補充細節</strong>。</p>
 <blockquote>
 <p>不用寫得很厲害。「我用 AI 把 LINE 群訊息整理成客戶名單」就是很好的案例。
 別人是照「問題」在搜尋的，不是照工具。</p>
 </blockquote>
-<p><strong>要附連結</strong>（成品、範例檔、教學影片），把網址直接貼在<strong>「補充細節／相關連結」</strong>那一格，
-送出後會自動變成可以點的連結。留言裡貼網址也一樣可以點。</p>
+<p><strong>要附連結</strong>（成品、範例檔、教學影片），貼在<strong>「相關連結」</strong>那一格，
+案例內頁會出現一顆「前往連結」按鈕。只打 <code>www.</code> 開頭也可以，系統會自動補完。</p>
+<blockquote>
+<p>第二、第三個連結直接貼在「補充細節」的文字裡就行，一樣會變成可以點的。
+留言裡貼網址也可以點。</p>
+</blockquote>
 
 </section><section class="hcard"><h2><span class="hico">🙋</span>Q&amp;A：卡住了就問</h2>
 <p>「Q&amp;A」→「我要提問」。寫你卡在哪、已經試過什麼。</p>
@@ -5634,6 +5641,9 @@ function openCase(id){
       ${(c.tools||[]).length?`<div class="block"><div class="lbl">用什麼工具</div><div class="tags">${c.tools.map(t=>`<span class="tag free">${esc(t)}</span>`).join("")}</div></div>`:""}
       <div class="block"><div class="lbl">怎麼做的</div><p>${linkify(c.how)}</p></div>
       ${c.detail?`<div class="block"><div class="lbl">補充細節</div><p>${linkify(c.detail)}</p></div>`:""}
+      ${safeUrl(c.link)?`<div class="block"><div class="lbl">相關連結</div>
+        <div class="actions"><a class="btn btn-primary" href="${esc(safeUrl(c.link))}" target="_blank" rel="noopener">前往連結</a></div>
+        <div class="hint" style="text-align:center;margin-top:7px;word-break:break-all">${esc(c.link)}</div></div>`:""}
       ${(c.tags||[]).length?`<div class="block"><div class="lbl">分類</div><div class="tags">${c.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div></div>`:""}
       ${share?`<div class="share"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
         <div style="flex:1"><div class="t">願意分享：${esc(share)}</div>
@@ -5677,13 +5687,18 @@ function openForm(id){
         <textarea id="f_how" maxlength="1000" placeholder="例：把報價邏輯講給 AI 聽，請它做成一張表，填三個數字就出價">${c?esc(c.how):""}</textarea>
       </div>
 
+      <div class="field"><label>相關連結</label>
+        <div class="help">成品、範例檔、教學影片都可以。只打 www 開頭也行，會自動補完</div>
+        <input type="url" id="f_link" maxlength="300" value="${c?esc(c.link||""):""}" placeholder="https://docs.google.com/…">
+      </div>
+
       <div class="field"><label>分類</label>
         <div class="help">最多選 3 個。選項是固定的——大家各寫各的，之後就配對不起來</div>
         <div class="pills" id="f_tags">${TAGS.map(t=>`<button type="button" class="pill${c&&(c.tags||[]).includes(t.slug)?" on":""}" data-t="${t.slug}">${esc(t.label)}</button>`).join("")}</div>
       </div>
 
-      <div class="field"><label>補充細節／相關連結</label>
-        <div class="help">踩過的坑、沒做成的部分，這段常常最有價值。<b>要附連結就把網址貼進來</b>（成品、範例檔、教學影片都可以），送出後會自動變成可以點的</div>
+      <div class="field"><label>補充細節</label>
+        <div class="help">踩過的坑、沒做成的部分，這段常常最有價值</div>
         <textarea id="f_detail" maxlength="3000" placeholder="選填">${c?esc(c.detail||""):""}</textarea>
       </div>
 
@@ -5714,6 +5729,7 @@ async function saveCase(id){
   const body={
     id, title: el("f_title").value, problem: el("f_problem").value, how: el("f_how").value,
     detail: el("f_detail").value,
+    link: el("f_link").value,
     tools: el("f_tools").value.split(/[,，]/).map(x=>x.trim()).filter(Boolean),
     tags: [...el("f_tags").querySelectorAll(".pill.on")].map(x=>x.dataset.t),
     share_level: el("f_share").querySelector(".pill.on")?.dataset.s || null,
@@ -5733,7 +5749,7 @@ async function delCase(id){
 }
 
 async function reloadCases(){
-  CASES = await rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,tags,term,share_level,created_at&order=created_at.desc");
+  CASES = await rest("ai_cases?select=id,member_id,title,problem,tools,how,detail,link,tags,term,share_level,created_at&order=created_at.desc");
 }
 
 function memberCard(m){
