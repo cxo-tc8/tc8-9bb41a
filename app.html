@@ -735,9 +735,12 @@ a.btn{text-decoration:none}
 .field label{display:block;font-weight:700;font-size:.9rem;margin-bottom:5px}
 .field .req{color:var(--orange);margin-left:3px}
 .field .help{font-size:.79rem;color:var(--muted);margin-bottom:6px;line-height:1.6}
-.field input[type=text],.field textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);
+.field input[type=text],.field input[type=url],.field textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);
   padding:11px 12px;font-size:16px;background:var(--card);min-height:48px;font-family:inherit;line-height:1.6}
 .field textarea{min-height:280px;resize:vertical;line-height:1.8}
+/* 網址欄：從一行高開始，內容變長就折行並自己長高。
+   ⛔ 不能用單行 <input>——長網址會往左捲出畫面，使用者只看得到尾巴（手機上特別嚴重） */
+.field textarea.url{min-height:48px;line-height:1.6;resize:none;word-break:break-all;overflow:hidden}
 .field input:focus,.field textarea:focus{outline:none;border-color:var(--blue-500)}
 .pills{display:flex;flex-wrap:wrap;gap:7px}
 .pill{background:var(--card);border:1.5px solid var(--line);color:var(--muted);font-size:.84rem;font-weight:700;
@@ -838,7 +841,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 23:38</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 23:53</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -5376,7 +5379,7 @@ function openPost(kind, id){
             <button type="button" class="pill${!p||!p.required?" on":""}" data-r="0">選填</button>
           </div></div>
         <div class="field"><label>Google 表單連結</label>
-          <input type="text" id="p_link" value="${val("link")}" placeholder="https://forms.gle/…"></div>
+          <textarea class="url" id="p_link" rows="1" placeholder="https://forms.gle/…">${val("link")}</textarea></div>
         <div class="field"><label>截止日</label>
           <input type="date" id="p_deadline" value="${val("deadline")}" class="dateinput"></div>
         <div class="field"><label>已完成人數</label>
@@ -5386,7 +5389,7 @@ function openPost(kind, id){
           <input type="text" id="p_done_count" value="${val("done_count")}" placeholder="例：34"></div>
         <div class="field"><label>表單後台連結</label>
           <div class="help">⚠️ 只有幹部看得到，公開頁面不會出現</div>
-          <input type="text" id="p_admin_link" value="${val("admin_link")}" placeholder="https://docs.google.com/…/edit"></div>
+          <textarea class="url" id="p_admin_link" rows="1" placeholder="https://docs.google.com/…/edit">${val("admin_link")}</textarea></div>
       </div>`:""}
 
       <div class="field"><label>標題<span class="req">*</span></label>
@@ -5432,7 +5435,7 @@ function openPost(kind, id){
       ${has("place")?`<div class="field"><label>地點</label>
         <div class="help">寫地名就好，詳情頁的地點會自動接到 Google 地圖。<br>
           想指定精確位置，把地圖網址接在後面：<b>台中金典酒店 https://maps.app.goo.gl/…</b></div>
-        <input type="text" id="p_place" value="${val("place")}" placeholder="例：台中金典酒店 12F"></div>`:""}
+        <textarea class="url" id="p_place" rows="1" placeholder="例：台中金典酒店 12F">${val("place")}</textarea></div>`:""}
       ${has("event_at")?`<div class="field"><label>日期與時間</label>
         <div class="help">分開選比較好按。時間一律以台灣時間為準</div>
         <div style="display:flex;gap:8px">
@@ -5477,9 +5480,9 @@ function openPost(kind, id){
         <textarea id="p_body" maxlength="3000">${val("body")}</textarea></div>`:""}
       ${has("signup_link")?`<div class="field"><label>報名連結</label>
         <div class="help">貼上報名表單或活動頁網址，首頁會出現「我要報名」按鈕。四位幹部都可以貼、都可以改</div>
-        <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
+        <textarea class="url" id="p_link" rows="1" placeholder="https://…">${val("link")}</textarea></div>`:""}
       ${has("link")?`<div class="field"><label>${kind==="survey"?"Google 表單連結":"外部連結"}</label>
-        <input type="text" id="p_link" value="${val("link")}" placeholder="https://…"></div>`:""}
+        <textarea class="url" id="p_link" rows="1" placeholder="https://…">${val("link")}</textarea></div>`:""}
 
       ${has("album")?`<div class="field"><label>活動照片</label>
         <div class="help">最多 3 張，第一張會當封面顯示在首頁。手機拍的會自動縮小再上傳</div>
@@ -5689,7 +5692,7 @@ function openForm(id){
 
       <div class="field"><label>相關連結</label>
         <div class="help">成品、範例檔、教學影片都可以。只打 www 開頭也行，會自動補完</div>
-        <input type="url" id="f_link" maxlength="300" value="${c?esc(c.link||""):""}" placeholder="https://docs.google.com/…">
+        <textarea class="url" id="f_link" rows="1" maxlength="300" placeholder="https://docs.google.com/…">${c?esc(c.link||""):""}</textarea>
       </div>
 
       <div class="field"><label>分類</label>
@@ -6019,11 +6022,26 @@ const _go = go;
 // 多行輸入框自動長高——內容超過目前高度就自己撐開，不用在小框裡捲
 function autoGrow(t){
   if(!t) return;
+  // ⛔ 不可寫死 280：網址欄的起始高度是一行（48px），寫死會讓它變成一個大空框
+  const min = parseInt(getComputedStyle(t).minHeight) || 280;
   t.style.height = "auto";
-  t.style.height = Math.max(t.scrollHeight + 2, 280) + "px";
+  t.style.height = Math.max(t.scrollHeight + 2, min) + "px";
 }
 document.addEventListener("input", e => {
-  if(e.target && e.target.matches && e.target.matches(".field textarea")) autoGrow(e.target);
+  const t = e.target;
+  if(!t || !t.matches) return;
+  // 網址欄雖然是 textarea（為了折行），但語意上仍是一行。
+  // 從 LINE 或信件貼過來常常夾帶換行，存進去就是一個開不了的網址——當場吃掉。
+  if(t.matches(".field textarea.url") && t.value.indexOf("\n") >= 0){
+    const at = t.selectionStart;
+    t.value = t.value.replace(/[\r\n]+/g, " ");
+    t.setSelectionRange(at, at);
+  }
+  if(t.matches(".field textarea")) autoGrow(t);
+});
+// 在網址欄按 Enter 不該換行（使用者多半是想送出）
+document.addEventListener("keydown", e => {
+  if(e.key === "Enter" && e.target && e.target.matches && e.target.matches(".field textarea.url")) e.preventDefault();
 });
 
 go = function(v, b){ _go(v,b); if(v==="claim") renderClaim(); };
