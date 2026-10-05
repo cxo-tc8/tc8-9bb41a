@@ -7,7 +7,7 @@
 import io, re, sys, pathlib
 
 HERE = pathlib.Path(__file__).resolve().parent
-DOCS = HERE.parent / "4_tc8-docs"
+DOCS = HERE.parent / "4_tc8-文件與規格"
 APP  = HERE / "app.html"
 SRC  = {"HELP_MEMBER": DOCS / "使用說明_夥伴版.md",
         "HELP_OFFICER": DOCS / "使用說明_幹部版.md"}
@@ -49,7 +49,7 @@ s = io.open(APP, encoding="utf-8").read()
 start, end = s.index("/* HELP_START"), s.index("/* HELP_END */")
 head = s[:start]
 block = ["/* HELP_START —— ⛔ 這一段是機器產生的，不要手改。",
-         "   真實來源是 4_tc8-docs/使用說明_夥伴版.md 與 使用說明_幹部版.md，",
+         "   真實來源是 4_tc8-文件與規格/使用說明_夥伴版.md 與 使用說明_幹部版.md，",
          "   改完跑 `python3 產生說明頁.py` 再上線。手改這裡＝多一份會過期的真實來源。 */"]
 for name, path in SRC.items():
     body = to_html(path)

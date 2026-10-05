@@ -708,6 +708,8 @@ a.btn{text-decoration:none}
 .cmtname{font-weight:700;font-size:.88rem}
 .cmttime{font-size:.75rem;color:var(--muted)}
 .cmtbody{font-size:.9rem;line-height:1.7;margin-top:3px;white-space:pre-wrap;word-break:break-word}
+/* 文章與留言裡自動變成連結的網址 */
+.inlink{color:var(--blue-500);text-decoration:underline;word-break:break-all}
 .cmtdel{border:none;background:none;color:var(--muted);font-size:17px;cursor:pointer;
   width:30px;height:30px;border-radius:50%;flex:none}
 .cmtdel:hover{background:var(--line-soft);color:#b4261a}
@@ -836,7 +838,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-09-27 09:05</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-05 19:28</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -926,6 +928,12 @@ const esc = s => (s??"").toString().replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&
 //    ⚠️ 不能改用 HTML 實體 &#39;——瀏覽器會先把實體解回單引號才交給 JS，等於沒防。
 //    只有反斜線跳脫才有效（2026-08-26 用 Chrome headless 實測確認過兩種寫法）。
 const escAttr = s => esc(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+// 文章裡貼的網址要能點。先 esc 再找網址——順序反了會把 <a> 自己逃脫掉變成文字。
+// 句尾的標點不算網址的一部分；分號不剝，否則 ?a=1&amp;b=2 會被剝成壞掉的 &amp
+const linkify = s => esc(s).replace(/https?:\/\/[^\s<>"）)、，。]+/g, u => {
+  const t = u.replace(/[.,:!?]+$/, "");
+  return `<a href="${t}" target="_blank" rel="noopener" class="inlink">${t}</a>` + u.slice(t.length);
+});
 const el  = id => document.getElementById(id);
 const token = () => localStorage.getItem("tc8_token");
 
@@ -4944,7 +4952,7 @@ function commentBlock(kind, targetId){
       <div style="flex:1;min-width:0">
         <div class="cmthead"><span class="cmtname">${esc(memberName(c.member_id))}</span>
           <span class="cmttime">${ago(c.created_at)}</span></div>
-        <div class="cmtbody">${esc(c.body)}</div>
+        <div class="cmtbody">${linkify(c.body)}</div>
       </div>
       ${canDel?`<button class="cmtdel" onclick="delComment(${c.id},'${kind}',${targetId})" aria-label="刪除">×</button>`:""}
     </div>`;
@@ -5630,10 +5638,10 @@ function openCase(id){
           <div style="font-size:.79rem;color:var(--muted)">${esc(c.term)} 會期　・　${ago(c.created_at)}</div></div>
         ${mine?`<button class="btn btn-ghost btn-sm" onclick="openForm(${c.id})">${c.member_id===ME.id?"修改":"幹部修改"}</button>`:""}
       </div>
-      <div class="block"><div class="lbl">解決什麼問題</div><p>${esc(c.problem)}</p></div>
+      <div class="block"><div class="lbl">解決什麼問題</div><p>${linkify(c.problem)}</p></div>
       ${(c.tools||[]).length?`<div class="block"><div class="lbl">用什麼工具</div><div class="tags">${c.tools.map(t=>`<span class="tag free">${esc(t)}</span>`).join("")}</div></div>`:""}
-      <div class="block"><div class="lbl">怎麼做的</div><p>${esc(c.how)}</p></div>
-      ${c.detail?`<div class="block"><div class="lbl">補充細節</div><p>${esc(c.detail)}</p></div>`:""}
+      <div class="block"><div class="lbl">怎麼做的</div><p>${linkify(c.how)}</p></div>
+      ${c.detail?`<div class="block"><div class="lbl">補充細節</div><p>${linkify(c.detail)}</p></div>`:""}
       ${(c.tags||[]).length?`<div class="block"><div class="lbl">分類</div><div class="tags">${c.tags.map(t=>`<span class="tag">${esc(tagLabel(t))}</span>`).join("")}</div></div>`:""}
       ${share?`<div class="share"><svg width="20" height="20" style="color:var(--chip-text);flex:none"><use href="#i-spark"/></svg>
         <div style="flex:1"><div class="t">願意分享：${esc(share)}</div>
