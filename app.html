@@ -242,6 +242,29 @@ a{color:inherit;text-decoration:none}
 .ckbtn{flex:none;min-height:34px;min-width:58px;padding:0 8px;border:1.5px solid var(--line);
   background:var(--card);border-radius:var(--r-sm);font-weight:700;font-size:.8rem;cursor:pointer}
 .ckbtn.on{background:#1f7a4d;color:#fff;border-color:#1f7a4d}
+/* 團購發貨點名：柏萍站著單手操作，字與按鈕都放大 */
+.pkbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.pkbar input,.pkbar select{min-height:46px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:17px;background:var(--card)}
+.pkbar input{flex:1 1 100%}
+.pkbar select{flex:1 1 140px;min-width:0}
+.pkcount{margin-top:10px;font-size:15px;color:var(--muted)}
+.pkcount b{color:var(--blue-900);font-size:17px}
+.pkcard{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.pkname{font-size:19px;font-weight:800}
+.pkbuy{display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--line-soft);margin-top:8px}
+.pkbuy.done .pklines{color:var(--muted)}
+.pkinfo{flex:1;min-width:0}
+.pktitle{font-size:15px;color:var(--muted)}
+.pklines{font-size:17px;font-weight:600;line-height:1.5}
+.pkby{font-size:15px;color:var(--muted)}
+.pkbtn{flex:none;min-height:52px;min-width:96px;padding:0 12px;border:2px solid #1f7a4d;background:var(--card);
+  color:#1f7a4d;border-radius:999px;font-size:17px;font-weight:800;line-height:1.2;cursor:pointer}
+.pkbtn.on{background:#1f7a4d;color:#fff}
+.pkbtn:disabled{opacity:.5}
+.pkundo{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:10px;
+  max-width:520px;margin:0 auto;padding:12px 14px;border-radius:var(--r);background:#1d2a24;color:#fff;font-size:16px}
+.pkundo span{flex:1;min-width:0}
+.pkundo button{flex:none;min-height:42px;padding:0 16px;border:1.5px solid #fff;border-radius:999px;background:transparent;color:#fff;font-size:16px;font-weight:700}
 .tagx{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fde8e8;color:#c0392b;font-size:.72rem;font-weight:700}
 .tagw{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#fff2dd;color:#a06010;font-size:.72rem;font-weight:700}
 .absel{margin-top:6px;width:100%;min-height:38px;padding:0 8px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:.84rem}
@@ -841,7 +864,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-10 08:53</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-17 22:45</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1406,7 +1429,8 @@ function renderBuys(){
       ME ? `<span class="more" onclick="openBuyForm()">＋ 我要開團</span>` : ""}</div>
     ${!ME ? `<div class="card"><div class="empty">用 LINE 登入之後就能訂購與開團</div></div>` : ""}
     ${isOfficer() ? `<div class="card" style="padding:12px 16px">
-      <span class="more" onclick="openBuyOverview()">管理團購（審核・名單・收款）→</span></div>` : ""}
+      <span class="more" onclick="openBuyOverview()">管理團購（審核・名單・收款）→</span>
+      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('buys')">📦 發貨點名（點一下＝已取）</button></div>` : ""}
 
     ${(() => {
       const S = {draft:"📝 還沒送審", pending:"🕐 等幹部核可", rejected:"⛔ 已退回，可修改後再送"};
@@ -2009,6 +2033,86 @@ async function openBuyDetail(buyId, from){
   go("form");
 }
 
+// ── 發貨點名（幹部）：所有團購合在一起、以「人」為單位 ─────
+// 現場是一個人走過來，團服＋背包一起拿——找到名字，每一團各點一下「已取」。
+let PK = null, PK_SHOW = "todo", PK_BUY = "", PK_Q = "", PK_FROM = "buys", PK_UNDO = null;
+const pkShort = t => (t || "").split(/[｜(（]/)[0].trim() || t;
+async function openPickup(from){
+  if(!isOfficer()) return;
+  if(from) PK_FROM = from;
+  const r = await buyApi("pickups", {});
+  if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
+  PK = r;
+  const back = PK_FROM === "overview" ? backTo("openBuyOverview()", "回所有團購") : backTo("go('buys')", "回團購");
+  el("v-form").innerHTML = `${back}
+    <div class="form">
+      <div style="font-weight:800;font-size:1.15rem">📦 發貨點名</div>
+      <div class="mnote" style="margin-top:6px;font-size:15px;white-space:normal;line-height:1.6">夥伴來拿東西時，找到名字點一下「已取」。點錯了按下面的「復原」。</div>
+      <div class="pkbar">
+        <input type="search" id="pk_q" placeholder="搜尋姓名" value="${esc(PK_Q)}" oninput="PK_Q=this.value;drawPickup()">
+        <select onchange="PK_SHOW=this.value;drawPickup()">
+          ${[["todo","還沒取的"],["done","已取完的"],["all","全部的人"]].map(([v,t]) =>
+            `<option value="${v}"${PK_SHOW === v ? " selected" : ""}>${t}</option>`).join("")}</select>
+        <select onchange="PK_BUY=this.value;drawPickup()">
+          <option value="">全部團購</option>
+          ${r.buys.map(b => `<option value="${b.id}"${String(PK_BUY) === String(b.id) ? " selected" : ""}>${esc(pkShort(b.title))}</option>`).join("")}</select>
+      </div>
+      <div id="pk_list"></div>
+    </div>`;
+  go("form");
+  drawPickup();
+}
+function drawPickup(){
+  const box = el("pk_list"); if(!box || !PK) return;
+  const T = {}; PK.buys.forEach(b => T[b.id] = pkShort(b.title));
+  // 先套「哪一團」，再看這個人在這些團裡還有沒有沒拿的
+  const rows = PK.people.map(p => ({...p, buys: p.buys.filter(g => !PK_BUY || String(g.buy_id) === String(PK_BUY))}))
+                        .filter(p => p.buys.length);
+  const left = rows.filter(p => p.buys.some(g => !g.picked));
+  const q = PK_Q.trim();
+  const shown = rows.filter(p => (PK_SHOW === "all" || (PK_SHOW === "todo") === p.buys.some(g => !g.picked))
+                              && (!q || p.name.includes(q)));
+  box.innerHTML = `<div class="pkcount">還沒取 <b>${left.length}</b> 人　｜　已取完 <b>${rows.length - left.length}</b> 人　｜　共 ${rows.length} 人</div>
+    ${shown.length ? shown.map(p => `<div class="pkcard">
+      <div class="pkname">${esc(p.name)}</div>
+      ${p.buys.map(g => `<div class="pkbuy${g.picked ? " done" : ""}">
+        <div class="pkinfo">
+          <div class="pktitle">${esc(T[g.buy_id] || "")}${g.paid ? "" : `<span class="tagw">未收款</span>`}</div>
+          <div class="pklines">${g.lines.map(esc).join("<br>")}</div>
+          ${g.picked ? `<div class="pkby">${esc(g.picked_by)} ${payTime(g.picked_at)} 發</div>` : ""}
+        </div>
+        <button class="pkbtn${g.picked ? " on" : ""}" onclick="markPickup(${g.buy_id},${p.member_id},${g.picked},this)">${
+          g.picked ? "✓ 已取" : "點一下<br>＝已取"}</button>
+      </div>`).join("")}
+    </div>`).join("")
+    : `<div class="mnote" style="padding:18px 0;font-size:15px;white-space:normal">${
+        q ? "找不到這個名字" : PK_SHOW === "todo" ? "✅ 都發完了" : "沒有符合的人"}</div>`}`;
+}
+async function markPickup(buyId, memberId, picked, btn, fromUndo){
+  const p = PK.people.find(x => x.member_id === memberId);
+  const g = p && p.buys.find(x => x.buy_id === buyId);
+  if(!g) return;
+  // 取消已取要問一句；「復原」本身就是使用者剛按的，不再問
+  if(picked && !fromUndo && !confirm(`確定要把「${p.name}」改回還沒取嗎？`)) return;
+  if(btn) btn.disabled = true;
+  const r = await buyApi("pickup", {buy_id: buyId, member_id: memberId, picked: !picked});
+  if(!r || !r.ok){ alert((r && r.message) || "沒有登記成功，請再按一次"); if(btn) btn.disabled = false; return; }
+  g.picked = !picked;
+  g.picked_at = g.picked ? new Date().toISOString() : null;
+  g.picked_by = g.picked ? (r.by || "") : "";
+  drawPickup();
+  if(g.picked) showPkUndo(buyId, memberId, p.name);
+}
+// 點了之後人會從「還沒取的」清單消失——給 6 秒反悔
+function showPkUndo(buyId, memberId, name){
+  clearTimeout(PK_UNDO);
+  let bar = el("pk_undo");
+  if(!bar){ bar = document.createElement("div"); bar.id = "pk_undo"; bar.className = "pkundo"; document.body.appendChild(bar); }
+  bar.innerHTML = `<span>✓ ${esc(name)} 已取</span><button>復原</button>`;
+  bar.querySelector("button").onclick = () => { bar.remove(); markPickup(buyId, memberId, true, null, true); };
+  PK_UNDO = setTimeout(() => bar.remove(), 6000);
+}
+
 // 幹部總覽：一頁看完每一團、每一樣商品訂到幾件，點商品就進去看是誰訂的
 // 講者本人（或幹部）看得到的入口：更新自己的講題與照片
 function myTalkBtn(p){
@@ -2249,6 +2353,7 @@ async function openBuyOverview(){
       <div style="font-weight:800;font-size:1.15rem">所有團購</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
         每一樣商品各自算門檻。點商品名稱可以看是誰訂的、訂了什麼規格。</div>
+      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('overview')">📦 發貨點名（點一下＝已取）</button>
       ${r.list.length ? [...r.list].sort((x,y) =>
           (x.status === "pending" ? 0 : 1) - (y.status === "pending" ? 0 : 1)).map(b => `
         <div class="itemcard"${b.status === "pending" ? ' style="border-color:var(--orange)"' : ""}>
