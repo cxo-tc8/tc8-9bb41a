@@ -247,6 +247,11 @@ a{color:inherit;text-decoration:none}
 .pkbar input,.pkbar select{min-height:46px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:17px;background:var(--card)}
 .pkbar input{flex:1 1 100%}
 .pkbar select{flex:1 1 140px;min-width:0}
+.pkset{margin-top:10px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.pkset summary{font-size:17px;font-weight:700;cursor:pointer;min-height:32px;line-height:32px}
+.pksetrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line-soft);margin-top:8px;font-size:17px}
+.pksetrow span{flex:1 1 160px;min-width:0}
+.pksetrow input{flex:0 0 auto;min-height:46px;padding:0 10px;border:1.5px solid var(--line);border-radius:var(--r-sm);font-size:17px;background:var(--card)}
 .pkcount{margin-top:10px;font-size:15px;color:var(--muted)}
 .pkcount b{color:var(--blue-900);font-size:17px}
 .pkcard{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
@@ -254,7 +259,6 @@ a{color:inherit;text-decoration:none}
 .pkbuy{display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--line-soft);margin-top:8px}
 .pkbuy.done .pklines{color:var(--muted)}
 .pkinfo{flex:1;min-width:0}
-.pktitle{font-size:15px;color:var(--muted)}
 .pklines{font-size:17px;font-weight:600;line-height:1.5}
 .pkby{font-size:15px;color:var(--muted)}
 .pkbtn{flex:none;min-height:52px;min-width:96px;padding:0 12px;border:2px solid #1f7a4d;background:var(--card);
@@ -864,7 +868,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-18 08:21</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-18 08:29</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2035,7 +2039,10 @@ async function openBuyDetail(buyId, from){
 
 // ── 發貨點名（幹部）：所有團購合在一起、以「人」為單位 ─────
 // 現場是一個人走過來，團服＋背包一起拿——找到名字，每一團各點一下「已取」。
-let PK = null, PK_SHOW = "todo", PK_BUY = "", PK_Q = "", PK_FROM = "buys", PK_UNDO = null;
+let PK = null, PK_SHOW = "todo", PK_DAY = null, PK_Q = "", PK_FROM = "buys", PK_UNDO = null;
+// 交付日：同一天交付的團合在同一個人名底下（羅伯特 2026-10-18）。"none"＝還沒排日期、"all"＝全部
+const pkDayText = d => d === "none" ? "還沒排交付日" : d === "all" ? "全部交付日"
+  : new Date(d + "T00:00:00+08:00").toLocaleDateString("zh-TW", {timeZone:"Asia/Taipei", month:"numeric", day:"numeric", weekday:"narrow"}) + " 交付";
 const pkShort = t => (t || "").split(/[｜(（]/)[0].trim() || t;
 async function openPickup(from){
   if(!isOfficer()) return;
@@ -2043,6 +2050,11 @@ async function openPickup(from){
   const r = await buyApi("pickups", {});
   if(!r || !r.ok){ alert((r && r.message) || "讀取失敗"); return; }
   PK = r;
+  // 預設：今天（含）之後最近的交付日；都過了或都沒排，就看全部
+  const days = [...new Set(r.buys.map(b => b.deliver_date).filter(Boolean))].sort();
+  const today = new Date().toLocaleDateString("sv-SE", {timeZone:"Asia/Taipei"});
+  const opts = [...days, ...(r.buys.some(b => !b.deliver_date) ? ["none"] : []), "all"];
+  if(!opts.includes(PK_DAY)) PK_DAY = days.find(d => d >= today) || "all";
   const back = PK_FROM === "overview" ? backTo("openBuyOverview()", "回所有團購") : backTo("go('buys')", "回團購");
   el("v-form").innerHTML = `${back}
     <div class="form">
@@ -2053,10 +2065,14 @@ async function openPickup(from){
         <select onchange="PK_SHOW=this.value;drawPickup()">
           ${[["todo","還沒取的"],["done","已取完的"],["all","全部的人"]].map(([v,t]) =>
             `<option value="${v}"${PK_SHOW === v ? " selected" : ""}>${t}</option>`).join("")}</select>
-        <select onchange="PK_BUY=this.value;drawPickup()">
-          <option value="">全部團購</option>
-          ${r.buys.map(b => `<option value="${b.id}"${String(PK_BUY) === String(b.id) ? " selected" : ""}>${esc(pkShort(b.title))}</option>`).join("")}</select>
+        <select onchange="PK_DAY=this.value;drawPickup()">
+          ${opts.map(d => `<option value="${d}"${PK_DAY === d ? " selected" : ""}>${pkDayText(d)}</option>`).join("")}</select>
       </div>
+      <details class="pkset"><summary>📅 設定交付日期</summary>
+        <div class="mnote" style="font-size:15px;white-space:normal;margin-top:6px">同一天交付的團，會合在同一個人名底下一起發。隨時可以改。</div>
+        ${r.buys.map(b => `<div class="pksetrow"><span>${esc(pkShort(b.title))}</span>
+          <input type="date" value="${b.deliver_date || ""}" onchange="setDeliver(${b.id}, this.value, this)"></div>`).join("")}
+      </details>
       <div id="pk_list"></div>
     </div>`;
   go("form");
@@ -2064,9 +2080,9 @@ async function openPickup(from){
 }
 function drawPickup(){
   const box = el("pk_list"); if(!box || !PK) return;
-  const T = {}; PK.buys.forEach(b => T[b.id] = pkShort(b.title));
   // 先套「哪一團」，再看這個人在這些團裡還有沒有沒拿的
-  const rows = PK.people.map(p => ({...p, buys: p.buys.filter(g => !PK_BUY || String(g.buy_id) === String(PK_BUY))}))
+  const D = {}; PK.buys.forEach(b => D[b.id] = b.deliver_date || "none");
+  const rows = PK.people.map(p => ({...p, buys: p.buys.filter(g => PK_DAY === "all" || D[g.buy_id] === PK_DAY)}))
                         .filter(p => p.buys.length);
   const left = rows.filter(p => p.buys.some(g => !g.picked));
   const q = PK_Q.trim();
@@ -2077,8 +2093,7 @@ function drawPickup(){
       <div class="pkname">${esc(p.name)}</div>
       ${p.buys.map(g => `<div class="pkbuy${g.picked ? " done" : ""}">
         <div class="pkinfo">
-          <div class="pktitle">${esc(T[g.buy_id] || "")}${g.paid ? "" : `<span class="tagw">未收款</span>`}</div>
-          <div class="pklines">${g.lines.map(esc).join("<br>")}</div>
+          <div class="pklines">${g.lines.map(esc).join("<br>")}${g.paid ? "" : `<span class="tagw">未收款</span>`}</div>
           ${g.picked ? `<div class="pkby">${esc(g.picked_by)} ${payTime(g.picked_at)} 發</div>` : ""}
         </div>
         <button class="pkbtn${g.picked ? " on" : ""}" onclick="markPickup(${g.buy_id},${p.member_id},${g.picked},this)">${
@@ -2102,6 +2117,14 @@ async function markPickup(buyId, memberId, picked, btn, fromUndo){
   g.picked_by = g.picked ? (r.by || "") : "";
   drawPickup();
   if(g.picked) showPkUndo(buyId, memberId, p.name);
+}
+async function setDeliver(buyId, date, inp){
+  inp.disabled = true;
+  const r = await buyApi("set_deliver", {buy_id: buyId, date: date || null});
+  if(!r || !r.ok){ inp.disabled = false; alert((r && r.message) || "沒有存成功，請再試一次"); return; }
+  if(date) PK_DAY = date;   // 剛排好的那天直接顯示出來
+  await openPickup();
+  const d = document.querySelector(".pkset"); if(d) d.open = true;
 }
 // 點了之後人會從「還沒取的」清單消失——給 6 秒反悔
 function showPkUndo(buyId, memberId, name){
