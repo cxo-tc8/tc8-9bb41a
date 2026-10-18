@@ -864,7 +864,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-17 22:45</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-18 08:21</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1430,7 +1430,7 @@ function renderBuys(){
     ${!ME ? `<div class="card"><div class="empty">用 LINE 登入之後就能訂購與開團</div></div>` : ""}
     ${isOfficer() ? `<div class="card" style="padding:12px 16px">
       <span class="more" onclick="openBuyOverview()">管理團購（審核・名單・收款）→</span>
-      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('buys')">📦 發貨點名（點一下＝已取）</button></div>` : ""}
+      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('buys')">📦 發貨點名</button></div>` : ""}
 
     ${(() => {
       const S = {draft:"📝 還沒送審", pending:"🕐 等幹部核可", rejected:"⛔ 已退回，可修改後再送"};
@@ -2047,7 +2047,7 @@ async function openPickup(from){
   el("v-form").innerHTML = `${back}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">📦 發貨點名</div>
-      <div class="mnote" style="margin-top:6px;font-size:15px;white-space:normal;line-height:1.6">夥伴來拿東西時，找到名字點一下「已取」。點錯了按下面的「復原」。</div>
+      <div class="mnote" style="margin-top:6px;font-size:15px;white-space:normal;line-height:1.6">找到名字，交給他的那一團按「已取」。按錯了按下面的「復原」。</div>
       <div class="pkbar">
         <input type="search" id="pk_q" placeholder="搜尋姓名" value="${esc(PK_Q)}" oninput="PK_Q=this.value;drawPickup()">
         <select onchange="PK_SHOW=this.value;drawPickup()">
@@ -2082,7 +2082,7 @@ function drawPickup(){
           ${g.picked ? `<div class="pkby">${esc(g.picked_by)} ${payTime(g.picked_at)} 發</div>` : ""}
         </div>
         <button class="pkbtn${g.picked ? " on" : ""}" onclick="markPickup(${g.buy_id},${p.member_id},${g.picked},this)">${
-          g.picked ? "✓ 已取" : "點一下<br>＝已取"}</button>
+          g.picked ? "✓ 已取" : "已取"}</button>
       </div>`).join("")}
     </div>`).join("")
     : `<div class="mnote" style="padding:18px 0;font-size:15px;white-space:normal">${
@@ -2353,7 +2353,7 @@ async function openBuyOverview(){
       <div style="font-weight:800;font-size:1.15rem">所有團購</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
         每一樣商品各自算門檻。點商品名稱可以看是誰訂的、訂了什麼規格。</div>
-      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('overview')">📦 發貨點名（點一下＝已取）</button>
+      <button class="mbtn add" style="font-size:17px;min-height:48px;border-radius:999px" onclick="openPickup('overview')">📦 發貨點名</button>
       ${r.list.length ? [...r.list].sort((x,y) =>
           (x.status === "pending" ? 0 : 1) - (y.status === "pending" ? 0 : 1)).map(b => `
         <div class="itemcard"${b.status === "pending" ? ' style="border-color:var(--orange)"' : ""}>
