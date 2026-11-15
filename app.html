@@ -869,7 +869,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-10-18 08:40</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-15 10:10</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1379,7 +1379,7 @@ function renderActs(){
     </div></div>
     ${ACT_TAB === "member" ? `<div class="tabnote">這一頁的活動由<b>夥伴自行主辦</b>，TC8 僅提供張貼平台。
       涉及費用請自行向主辦人確認；日後如有糾紛，請自行協商或循法律途徑處理。</div>` : ""}
-    ${top.length ? `<div class="featured">${top.map(featuredBanner).join("")}</div>` : ""}
+    ${top.length ? `<div class="featured">${top.map(p => featuredBanner(p)).join("")}</div>` : ""}
     ${groups.length ? groups.map(([k, ps]) => `
       <div class="monthsec${k === twNow ? " now" : ""}">
         <div class="monthlbl">${monthLabel(k)}${k === twNow ? "　<span class='nowtag'>本月</span>" : ""}
