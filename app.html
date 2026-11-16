@@ -743,6 +743,8 @@ a.btn{text-decoration:none}
 .cmtdel:hover{background:var(--line-soft);color:#b4261a}
 .cmtbox{margin-top:10px}
 /* 活動分享題：一題一張卡，題目放大放粗，回答沿用留言的樣子 */
+.qfrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.qfrow input{flex:1;min-width:0}
 .qacard{padding:15px 16px;margin-bottom:12px}
 .qahead{display:flex;gap:10px;align-items:flex-start}
 .qatitle{flex:1;font-weight:800;font-size:1.02rem;line-height:1.5}
@@ -874,7 +876,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-16 19:32</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-16 23:54</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -3207,7 +3209,7 @@ function renderMeals(postId){
         ${sh.map(sharedCard).join("")}
         <div class="opadd">
           <input type="text" id="m_new_${gi}" placeholder="新增一個「${esc(g)}」選項，例如：雞排飯"
-            onkeydown="if(event.key==='Enter'){event.preventDefault();addMeal('${escAttr(g)}',${postId},'m_new_${gi}')}">
+            onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();addMeal('${escAttr(g)}',${postId},'m_new_${gi}')}">
           <button class="mbtn add" style="margin-top:0;width:auto;flex:none" onclick="addMeal('${escAttr(g)}',${postId},'m_new_${gi}')">＋ 新增</button>
         </div>
         ${off.length ? `
@@ -5082,7 +5084,8 @@ async function confirmClose(needId){
 // ── 活動分享題（2026-11-16 羅伯特）──────────────────────────
 // 「一格問題、下面一格回答」：幹部在活動頁直接加題／刪題（不必進編輯表單，按了就存）；
 // 登入的夥伴不必報名就能寫，每題一人一則，再寫＝改自己的。全部夥伴看得到、掛名字。
-// 只開月例會與 CXO & TC8 活動。後端在 posts 函式 q_add / q_delete / ans_list / ans_save / ans_hide。
+// 只開月例會與 CXO & TC8 活動。後端在 posts 函式 q_sync / ans_list / ans_save / ans_hide。
+// 題目在「編輯」表單裡改、按儲存才存（2026-11-16 羅伯特）；活動頁只負責看與寫分享。
 let QUESTIONS = [], ANSWERS = [];
 async function reloadQA(){
   // ⚠️ 資料表還沒套用時讀取會失敗：吞掉、整塊不顯示，不能讓整站卡住
@@ -5099,7 +5102,7 @@ function qaBlock(p){
   if(!["monthly","event"].includes(p.kind)) return "";
   const qs = QUESTIONS.filter(q => q.post_id === p.id);
   const officer = isOfficer();
-  if(!qs.length && !officer) return "";
+  if(!qs.length) return "";
   // CXO 夥伴登入了也不是分會夥伴，後端會擋，這裡先不給寫並講原因
   const canWrite = ME && !isCxo();
   const cards = qs.map(q => {
@@ -5117,7 +5120,6 @@ function qaBlock(p){
     return `<div class="card qacard">
       <div class="qahead">
         <div class="qatitle">${esc(q.label)}</div>
-        ${officer ? `<button class="btn btn-ghost btn-sm" style="flex:none" onclick="qaDelQ(${q.id},${p.id})">刪除這題</button>` : ""}
       </div>
       ${canWrite ? `<div class="cmtbox" style="margin:10px 0 4px">
         <textarea id="qa_in_${q.id}" rows="3" maxlength="2000" placeholder="寫下你的分享…">${mine ? esc(mine.body) : ""}</textarea>
@@ -5129,30 +5131,9 @@ function qaBlock(p){
       ${ME ? (rows ? `<div class="qalist">${rows}</div>` : `<div class="mnote" style="margin-top:6px">還沒有人分享，當第一個吧</div>`) : ""}
     </div>`;
   }).join("");
-  // ⛔ 新增一律用頁面內的輸入框，不用 prompt()（LINE 內建瀏覽器不會跳、也不報錯）
-  const adder = officer ? `<div class="card qacard">
-      <div class="mnote" style="margin-bottom:8px">幹部才看得到這格：加一題讓大家回答</div>
-      <div class="field" style="display:flex;gap:8px;flex-wrap:wrap;margin:0">
-        <input type="text" id="qa_newq" maxlength="200" style="flex:1;min-width:240px" placeholder="例：加入 TC8 後，AI 在你生活、工作上帶來什麼改變？"
-          onkeydown="if(event.key==='Enter'){event.preventDefault();qaAddQ(${p.id})}">
-        <button class="btn btn-primary btn-sm" style="flex:none" onclick="qaAddQ(${p.id})">＋ 新增題目</button>
-      </div></div>` : "";
-  return `<div class="sec"><h2>大家的分享</h2></div>${cards}${adder}`;
+  return `<div class="sec"><h2>大家的分享</h2></div>${cards}`;
 }
 async function qaAfter(postId){ await reloadQA(); openPostDetail(postId); }
-async function qaAddQ(postId){
-  const box = el("qa_newq"), label = (box.value || "").trim();
-  if(!label){ alert("請先寫題目"); box.focus(); return; }
-  const r = await postApi("q_add", {post_id: postId, label});
-  if(!r || !r.ok) return alert((r && r.error) || "新增失敗");
-  await qaAfter(postId);
-}
-async function qaDelQ(id, postId){
-  if(!confirm("確定刪除這一題嗎？\n大家已經寫的分享會一起從畫面上收起來（資料庫還留著，刪錯了可以請 Claude 救回）。")) return;
-  const r = await postApi("q_delete", {id});
-  if(!r || !r.ok) return alert((r && r.error) || "刪不掉");
-  await qaAfter(postId);
-}
 async function qaSave(qid, postId){
   const btn = el("qa_btn_"+qid), body = (el("qa_in_"+qid).value || "").trim();
   const had = ANSWERS.some(a => a.question_id === qid && ME && a.member_id === ME.id);
@@ -5710,6 +5691,10 @@ function openPost(kind, id){
       ${has("link")?`<div class="field"><label>${kind==="survey"?"Google 表單連結":"外部連結"}</label>
         <textarea class="url" id="p_link" rows="1" placeholder="https://…">${val("link")}</textarea></div>`:""}
 
+      ${["monthly","event"].includes(kind)?`<div class="field"><label>請大家分享的題目</label>
+        <div class="help">一格一題，夥伴會在活動頁每一題下面寫自己的分享。<b>按最下面的「${p?"儲存":"發布"}」才會存</b>，四位幹部都能改。</div>
+        <div id="p_qs"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="qfAdd()">＋ 新增一題</button></div>`:""}
       ${has("album")?`<div class="field"><label>活動照片</label>
         <div class="help">最多 3 張，第一張會當封面顯示在首頁。手機拍的會自動縮小再上傳</div>
         <div class="album" id="p_album"></div>
@@ -5745,6 +5730,8 @@ function openPost(kind, id){
     el("p_org").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
   if(el("p_msgtype")) MSGKIND = kind==="survey" ? "survey" : "notice";
   if(el("p_album")) renderAlbum();
+  if(el("p_qs")){ QF_ORIG = p ? QUESTIONS.filter(q => q.post_id === p.id).length : 0;
+    (p ? QUESTIONS.filter(q => q.post_id === p.id) : []).forEach(q => qfAdd(q)); }
   if(el("p_required")){
     el("p_required").onclick = e => { const b=e.target.closest(".pill"); if(!b) return;
       el("p_required").querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
@@ -5808,7 +5795,37 @@ async function savePost(kind, id){
   const r = await postApi(id?"update":"create", body);
   if(r.error){ el("p_err").innerHTML=`<div class="err">${esc(r.error)}</div>`;
     b.disabled=false; b.textContent=id?"儲存":"發布"; return; }
+  // 題目要等活動存好才存：新發布的活動要先拿到編號，題目才知道掛在哪一場
+  if(el("p_qs")){
+    const qs = qfCollect(), pid = id || (r.post && r.post.id);
+    if(pid && (qs.length || QF_ORIG)){
+      const q = await postApi("q_sync", {post_id: pid, questions: qs}).catch(e => ({error: String(e)}));
+      if(!q || !q.ok) alert("活動已經存好，但題目沒有存成功：" + ((q && q.error) || "不明原因") +
+        "\n請再打開這場活動的「編輯」，把題目重新填一次後按儲存。");
+      await reloadQA();
+    }
+  }
   await reloadPosts(); go("home");
+}
+// ── 編輯表單裡的分享題目：畫面上加加減減，按儲存才一次送出 ──
+let QF_ORIG = 0;   // 打開表單時原本有幾題：全刪光也要送，後端才知道要停用
+function qfAdd(q){
+  const row = document.createElement("div");
+  row.className = "qfrow"; row.dataset.id = q ? q.id : "";
+  row.innerHTML = `<input type="text" maxlength="200" placeholder="例：加入 TC8 後，AI 在你生活、工作上帶來什麼改變？">
+    <button type="button" class="btn btn-ghost btn-sm" style="flex:none;color:#b4261a">刪除</button>`;
+  row.querySelector("input").value = q ? q.label : "";
+  row.querySelector("button").onclick = () => {
+    const n = q ? ANSWERS.filter(a => a.question_id === q.id).length : 0;
+    if(n && !confirm(`這一題已經有 ${n} 則分享。\n刪掉之後活動頁會收起來（資料庫還留著）。\n按「儲存」才會生效，要刪嗎？`)) return;
+    row.remove();
+  };
+  el("p_qs").appendChild(row);
+  if(!q) row.querySelector("input").focus();
+}
+function qfCollect(){
+  return [...el("p_qs").querySelectorAll(".qfrow")].map(r => ({
+    id: Number(r.dataset.id) || null, label: r.querySelector("input").value.trim() })).filter(x => x.label);
 }
 async function delPost(id){
   if(!confirm("確定刪除嗎？")) return;
