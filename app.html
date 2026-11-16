@@ -742,6 +742,11 @@ a.btn{text-decoration:none}
   width:30px;height:30px;border-radius:50%;flex:none}
 .cmtdel:hover{background:var(--line-soft);color:#b4261a}
 .cmtbox{margin-top:10px}
+/* 活動分享題：一題一張卡，題目放大放粗，回答沿用留言的樣子 */
+.qacard{padding:15px 16px;margin-bottom:12px}
+.qahead{display:flex;gap:10px;align-items:flex-start}
+.qatitle{flex:1;font-weight:800;font-size:1.02rem;line-height:1.5}
+.qalist{margin:8px -16px -15px;border-top:1px solid var(--line-soft)}
 .cmtbox textarea{width:100%;border:1.5px solid var(--line);border-radius:var(--r-sm);
   padding:11px 12px;font-size:16px;font-family:inherit;line-height:1.6;background:var(--card);resize:vertical;min-height:64px}
 .cmtbox textarea:focus{outline:none;border-color:var(--blue-500)}
@@ -869,7 +874,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-15 10:10</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-16 19:32</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -4623,6 +4628,7 @@ function openPostDetail(id){
       </div>`:""}
     </article>
     ${signupArea(p)}
+    ${qaBlock(p)}
     ${likeBar("post", p.id)}
     ${commentBlock("post", p.id)}
     <div class="hint" style="text-align:center;margin-top:12px">這一頁有自己的網址，可以直接轉給人看</div>`;
@@ -5071,6 +5077,98 @@ async function confirmClose(needId){
   const r = await api("need_close", {id: needId, helpers: HELPERS});
   if(r.error) return alert(r.error);
   await reloadNeeds(); openNeedDetail(needId);
+}
+
+// ── 活動分享題（2026-11-16 羅伯特）──────────────────────────
+// 「一格問題、下面一格回答」：幹部在活動頁直接加題／刪題（不必進編輯表單，按了就存）；
+// 登入的夥伴不必報名就能寫，每題一人一則，再寫＝改自己的。全部夥伴看得到、掛名字。
+// 只開月例會與 CXO & TC8 活動。後端在 posts 函式 q_add / q_delete / ans_list / ans_save / ans_hide。
+let QUESTIONS = [], ANSWERS = [];
+async function reloadQA(){
+  // ⚠️ 資料表還沒套用時讀取會失敗：吞掉、整塊不顯示，不能讓整站卡住
+  try{ QUESTIONS = await rest("post_questions?select=id,post_id,label,sort&order=sort.asc"); }
+  catch(e){ QUESTIONS = []; console.warn("分享題讀取失敗（資料表可能還沒建）", e); }
+  ANSWERS = [];
+  if(!token()) return;
+  try{
+    const r = await postApi("ans_list", {});
+    if(r && r.ok) ANSWERS = r.answers || [];
+  }catch(e){ console.error("分享讀取失敗", e); }
+}
+function qaBlock(p){
+  if(!["monthly","event"].includes(p.kind)) return "";
+  const qs = QUESTIONS.filter(q => q.post_id === p.id);
+  const officer = isOfficer();
+  if(!qs.length && !officer) return "";
+  // CXO 夥伴登入了也不是分會夥伴，後端會擋，這裡先不給寫並講原因
+  const canWrite = ME && !isCxo();
+  const cards = qs.map(q => {
+    const all = ANSWERS.filter(a => a.question_id === q.id);
+    const mine = ME && all.find(a => a.member_id === ME.id);
+    const rows = all.map(a => `<div class="cmt">
+        ${avatar(memberName(a.member_id))}
+        <div style="flex:1;min-width:0">
+          <div class="cmthead"><span class="cmtname">${esc(memberName(a.member_id))}</span>
+            <span class="cmttime">${ago(a.updated_at)}</span></div>
+          <div class="cmtbody">${linkify(a.body)}</div>
+        </div>
+        ${officer && !(ME && a.member_id === ME.id) ? `<button class="btn btn-ghost btn-sm" style="flex:none" onclick="qaHide(${a.id},${p.id})">下架</button>` : ""}
+      </div>`).join("");
+    return `<div class="card qacard">
+      <div class="qahead">
+        <div class="qatitle">${esc(q.label)}</div>
+        ${officer ? `<button class="btn btn-ghost btn-sm" style="flex:none" onclick="qaDelQ(${q.id},${p.id})">刪除這題</button>` : ""}
+      </div>
+      ${canWrite ? `<div class="cmtbox" style="margin:10px 0 4px">
+        <textarea id="qa_in_${q.id}" rows="3" maxlength="2000" placeholder="寫下你的分享…">${mine ? esc(mine.body) : ""}</textarea>
+        <div id="qa_err_${q.id}"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn-primary btn-sm" id="qa_btn_${q.id}" onclick="qaSave(${q.id},${p.id})">${mine ? "更新我的分享" : "送出"}</button>
+        </div></div>`
+        : !ME ? `<div class="hint" style="margin-top:8px">用 LINE 登入後就看得到大家的分享，也可以寫</div>` : ""}
+      ${ME ? (rows ? `<div class="qalist">${rows}</div>` : `<div class="mnote" style="margin-top:6px">還沒有人分享，當第一個吧</div>`) : ""}
+    </div>`;
+  }).join("");
+  // ⛔ 新增一律用頁面內的輸入框，不用 prompt()（LINE 內建瀏覽器不會跳、也不報錯）
+  const adder = officer ? `<div class="card qacard">
+      <div class="mnote" style="margin-bottom:8px">幹部才看得到這格：加一題讓大家回答</div>
+      <div class="field" style="display:flex;gap:8px;flex-wrap:wrap;margin:0">
+        <input type="text" id="qa_newq" maxlength="200" style="flex:1;min-width:240px" placeholder="例：加入 TC8 後，AI 在你生活、工作上帶來什麼改變？"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();qaAddQ(${p.id})}">
+        <button class="btn btn-primary btn-sm" style="flex:none" onclick="qaAddQ(${p.id})">＋ 新增題目</button>
+      </div></div>` : "";
+  return `<div class="sec"><h2>大家的分享</h2></div>${cards}${adder}`;
+}
+async function qaAfter(postId){ await reloadQA(); openPostDetail(postId); }
+async function qaAddQ(postId){
+  const box = el("qa_newq"), label = (box.value || "").trim();
+  if(!label){ alert("請先寫題目"); box.focus(); return; }
+  const r = await postApi("q_add", {post_id: postId, label});
+  if(!r || !r.ok) return alert((r && r.error) || "新增失敗");
+  await qaAfter(postId);
+}
+async function qaDelQ(id, postId){
+  if(!confirm("確定刪除這一題嗎？\n大家已經寫的分享會一起從畫面上收起來（資料庫還留著，刪錯了可以請 Claude 救回）。")) return;
+  const r = await postApi("q_delete", {id});
+  if(!r || !r.ok) return alert((r && r.error) || "刪不掉");
+  await qaAfter(postId);
+}
+async function qaSave(qid, postId){
+  const btn = el("qa_btn_"+qid), body = (el("qa_in_"+qid).value || "").trim();
+  const had = ANSWERS.some(a => a.question_id === qid && ME && a.member_id === ME.id);
+  if(!body && !had){ el("qa_err_"+qid).innerHTML = '<div class="err">還沒寫東西</div>'; return; }
+  if(!body && !confirm("內容清空了，要刪掉你這則分享嗎？")) return;
+  btn.disabled = true; btn.textContent = "送出中…";
+  const r = await postApi("ans_save", {question_id: qid, body});
+  if(!r || !r.ok){ el("qa_err_"+qid).innerHTML = `<div class="err">${esc((r && r.error) || "送出失敗")}</div>`;
+    btn.disabled = false; btn.textContent = "送出"; return; }
+  await qaAfter(postId);
+}
+async function qaHide(id, postId){
+  if(!confirm("確定下架這則分享嗎？下架後所有人都看不到（資料庫還留著）。")) return;
+  const r = await postApi("ans_hide", {id});
+  if(!r || !r.ok) return alert((r && r.error) || "下架失敗");
+  await qaAfter(postId);
 }
 
 function commentBlock(kind, targetId){
@@ -6120,6 +6218,7 @@ async function loadMe(){
     reloadReacts(),   // MY_REACTS 需要通行證才知道我按過哪些
     reloadStreak(),   // 連續缺席也要通行證
     reloadComments(), // 留言內容要通行證；則數是公開的
+    reloadQA(),       // 活動分享題：題目公開、回答要通行證
     reloadBuys(),
     reloadConsents(), // 我簽過哪些條款
   ]);
