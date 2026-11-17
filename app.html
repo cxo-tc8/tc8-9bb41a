@@ -342,6 +342,9 @@ a{color:inherit;text-decoration:none}
       表頭列在手機上一定得隱藏，總務就看不懂哪一格是什麼。 */
 .opgroup{margin-top:22px}
 .opghead{display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+.opmerge{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.94rem;color:var(--muted)}
+.opmerge select{font-size:.94rem;padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.mealsub{font-size:.94rem;font-weight:700;color:var(--muted);margin:10px 0 6px}
 .opgname{font-weight:800;font-size:1.06rem;flex:1;min-width:0}
 /* 餐點管理 2026-11-17 改版：一行一項（名稱｜價格｜上限｜⋯），底部固定一顆「儲存變更」 */
 .oplist{margin-top:8px;display:flex;flex-direction:column;gap:8px}
@@ -886,7 +889,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-17 12:55</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-17 23:09</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -1196,6 +1199,52 @@ const mealGroups = postId => {
   const ms = mealsFor(postId), min = {};
   ms.forEach(m => { min[m.grp] = Math.min(min[m.grp] ?? 9e9, m.sort); });
   return [...new Set(ms.map(m => m.grp))].sort((a, b) => (min[a] - min[b]) || a.localeCompare(b));
+};
+// ── 二選一（2026-11-17 羅伯特：兩家餐廳不要都必選）──────────
+// 群組名「主餐／店名」＝同一題：店名當小標、整題只能選一個。名稱由餐點管理的「跟哪一組二選一」自動改，總務不用自己打。
+// meal_choices 的鍵仍是完整群組名，所以統計、報到台、CSV 都照舊一家一欄，向總務訂餐時兩家分開算。
+const mealQ = g => g.includes("／") ? g.slice(0, g.indexOf("／")) : g;
+const mealSub = g => g.includes("／") ? g.slice(g.indexOf("／") + 1) : "";
+const mealQuestions = postId => {
+  const qs = [];
+  mealGroups(postId).forEach(g => {
+    let x = qs.find(y => y.q === mealQ(g));
+    if(!x) qs.push(x = {q: mealQ(g), groups: []});
+    x.groups.push(g);
+  });
+  return qs;
+};
+// 報名與來賓表單共用；fn＝點選時呼叫的全域函式名
+function mealPicker(postId, pick, pre, fn){
+  return mealQuestions(postId).map((Q, qi) => {
+    const box = pre + qi;
+    const pill = (g, m) => {
+      const on = String(pick[g]) === String(m.id), out = soldOut(m);
+      return `<button type="button" class="pill${on ? " on" : ""}${out && !on ? " sold" : ""}" ${out && !on ? "disabled" : ""}
+        onclick="${fn}('${escAttr(g)}', ${m.id}, '${box}', this)">${esc(m.label)}${
+          m.price > 0 ? `<span class="mealprice">$${m.price}</span>` : ""}${out ? "（已額滿）" : ""}</button>`;
+    };
+    const items = g => mealsFor(postId).filter(m => m.grp === g);
+    let body;
+    if(!Q.groups.some(g => g.includes("／"))){
+      body = `<div class="pills mealopt">${items(Q.groups[0]).map(m => pill(Q.groups[0], m)).join("")}</div>`;
+    }else{
+      const none = [];   // 「不訂…」不屬於哪一家，統一放最後、不掛店名
+      body = Q.groups.map(g => {
+        const its = items(g).filter(m => m.label.startsWith("不訂") ? (none.push([g, m]), false) : true);
+        return its.length ? `<div class="mealsub">${esc(mealSub(g))}</div>
+          <div class="pills mealopt">${its.map(m => pill(g, m)).join("")}</div>` : "";
+      }).join("") + (none.length ? `<div class="pills mealopt" style="margin-top:10px">${none.map(([g, m]) => pill(g, m)).join("")}</div>` : "");
+    }
+    return `<div class="field" style="margin-top:18px"><label>${esc(Q.q)}</label><div id="${box}">${body}</div></div>`;
+  }).join("");
+}
+function mealPick(pick, grp, id, box, btn){
+  // 同一題的其他店家要清掉，否則兩家都會被送出
+  Object.keys(pick).forEach(k => { if(k !== grp && grp.includes("／") && mealQ(k) === mealQ(grp)) delete pick[k]; });
+  pick[grp] = String(id);
+  document.querySelectorAll(`#${box} .pill`).forEach(x => x.classList.remove("on"));
+  btn.classList.add("on");
 };
 const soldOut = m => m.stock >= 0 && (MEAL_TAKEN[m.id] || 0) >= m.stock;
 const mealLabel = id => (MEALS.find(m => m.id === Number(id)) || {}).label || "";
@@ -2896,27 +2945,14 @@ function openGuest(postId, guestId){
         <input type="tel" id="g_phone" maxlength="30" value="${v("phone")}"></div>
       <div class="field"><label>產業</label>
         <input type="text" id="g_industry" maxlength="40" value="${v("industry")}"></div>
-      ${groups.map((grp, gi) => `
-        <div class="field" style="margin-top:16px"><label>${esc(grp)}</label>
-          <div class="pills mealopt" id="gg${gi}">
-            ${mealsFor(postId).filter(m => m.grp === grp).map(m => {
-              const on = String(GUEST_PICK[grp]) === String(m.id), out = soldOut(m);
-              return `<button type="button" class="pill${on?" on":""}${out&&!on?" sold":""}" ${out&&!on?"disabled":""}
-                onclick="pickGuestMeal('${escAttr(grp)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
-                  m.price>0?`<span class="mealprice">$${m.price}</span>`:""}${out?"（已額滿）":""}</button>`;
-            }).join("")}
-          </div></div>`).join("")}
+      ${mealPicker(postId, GUEST_PICK, "gg", "pickGuestMeal")}
       <div class="formbar">
         <button class="btn btn-primary" onclick="submitGuest(${postId}, ${guestId || "null"}, this)">${g ? "存起來" : "登記"}</button>
       </div>
     </div>`;
   go("form");
 }
-function pickGuestMeal(grp, id, gi, btn){
-  GUEST_PICK[grp] = String(id);
-  document.querySelectorAll(`#gg${gi} .pill`).forEach(x => x.classList.remove("on"));
-  btn.classList.add("on");
-}
+function pickGuestMeal(grp, id, box, btn){ mealPick(GUEST_PICK, grp, id, box, btn); }
 async function submitGuest(postId, guestId, btn){
   const name = (el("g_name").value || "").trim();
   if(!name){ alert("請填來賓姓名"); return; }
@@ -2959,6 +2995,7 @@ async function openRoster(postId, backJs){
   const grps = [...new Set([...Object.keys(r.tally || {}), ...Object.keys(r.tally_guest || {})])];
   const hasGuest = (r.guest_total || 0) > 0;
   const cols = [...new Set(r.list.flatMap(x => Object.keys(x.choices || {})))];
+  const qcols = [...new Set(cols.map(mealQ))];   // 畫面上二選一的兩家併成一欄（CSV 仍一家一欄）
 
   el("v-form").innerHTML = `
     ${backJs ? backTo(backJs, "回這則活動") : backBar()}
@@ -3006,15 +3043,14 @@ async function openRoster(postId, backJs){
         ${r.officer ? `<div class="help">信用欄可以當場核對：🔴 是本會期臨時取消 3 次以上的人</div>` : ""}
         <div class="rosterwrap"><table class="roster">
           <thead><tr><th>#</th><th>姓名</th>${
-            cols.map(c => `<th>${esc(c)}</th>`).join("")}<th>專業別</th>${
+            qcols.map(c => `<th>${esc(c)}</th>`).join("")}${
             r.officer ? `<th>信用</th>` : ""}${r.officer ? `<th>備註</th><th></th>` : ""}</tr></thead>
           <tbody>${r.list.map((x,i) => {
             const c = credit[x.member_id];
             const L = c ? (LIGHT[c.light] || LIGHT.ok) : null;
             return `<tr>
             <td>${i+1}</td><td>${esc(x.name)}</td>
-            ${cols.map(c2 => `<td>${esc((x.choices||{})[c2] || "—")}</td>`).join("")}
-            <td>${esc(x.tag||"")}</td>
+            ${qcols.map(q => `<td>${esc(Object.entries(x.choices||{}).filter(([k]) => mealQ(k) === q).map(([, v]) => v).join("・") || "—")}</td>`).join("")}
             ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
             ${r.officer ? `<td>${x.meal_suspended
                 ? (x.meal_reopened_by ? `<span class="optbadge">停餐・${esc(memberName(x.meal_reopened_by))} 已開放</span>`
@@ -3259,6 +3295,36 @@ async function mealSaveAll(postId, quiet){
 // 結構性動作之前先存：有沒存的就先存，存失敗就不往下做
 async function mealFlush(postId){ return mealPending() ? await mealSaveAll(postId, true) : true; }
 
+// 二選一＝把群組改名成「主餐／店名」；拆開＝改回店名
+async function mealMerge(a, b, postId){
+  const q = b.includes("／") ? mealQ(b) : "主餐";
+  const plan = [[a, q + "／" + a]];
+  if(!b.includes("／")) plan.push([b, q + "／" + b]);
+  await mealRegroup(plan, postId);
+}
+async function mealUnmerge(g, postId){ await mealRegroup([[g, mealSub(g)]], postId); }
+async function mealRegroup(plan, postId){
+  if(!(await mealFlush(postId))) return;
+  for(const [from, to] of plan){
+    if(to.length > 20){ alert(`「${to}」超過 20 個字存不進去，請把店名縮短一點`); await openMeals(postId); return; }
+    if(MEAL_ALL.some(m => m.grp === from && m.post_id === null)){
+      alert(`「${from}」裡有每場通用的品項，不能改成二選一`); await openMeals(postId); return; }
+    // ⛔ 報名紀錄是用群組名當鍵記「點了什麼」，有人選了再改群組名，他點的餐就對不上
+    const used = MEAL_ALL.filter(m => m.grp === from && m.post_id === postId && (MEAL_TAKEN[m.id] || 0) > 0);
+    if(used.length){
+      alert(`「${from}」已經有人報名選了（${used.map(m => m.label).join("、")}），現在改會讓他們點的餐對不上。`);
+      await openMeals(postId); return; }
+  }
+  for(const [from, to] of plan){
+    for(const m of MEAL_ALL.filter(x => x.grp === from && x.post_id === postId)){
+      const r = await signupApi("opt_save", {id: m.id, post_id: postId, grp: to,
+        label: m.label, price: m.price, stock: m.stock, sort: m.sort});
+      if(!r || !r.ok){ alert(`「${m.label}」沒改成功：${(r && r.message) || "請再試一次"}`); break; }
+    }
+  }
+  await reloadSeats(); await openMeals(postId);
+}
+
 function renderMeals(postId){
   const p = POSTS.find(x => x.id === postId);
   if(!MEAL_DRAFT){ MEAL_DRAFT = mealDraftFrom(postId); MEAL_BASE = JSON.stringify(MEAL_DRAFT); }
@@ -3307,6 +3373,12 @@ function renderMeals(postId){
           <button type="button" class="mbtn ico" aria-label="把「${esc(g)}」整組往後"${own === d.groups.length - 1 ? " disabled" : ""} onclick="mealMoveGroup('${escAttr(g)}',1,${postId})">↓</button>
         </span>` : ""}
       </div>
+      ${own >= 0 ? (g.includes("／")
+        ? `<div class="opmerge">跟同一題的其他店家二選一　<button type="button" class="mbtn" onclick="mealUnmerge('${escAttr(g)}',${postId})">拆開</button></div>`
+        : d.groups.length > 1 ? `<div class="opmerge"><select onchange="if(this.value)mealMerge('${escAttr(g)}',this.value,${postId})">
+            <option value="">跟哪一組二選一…</option>
+            ${d.groups.filter(x => x !== g).map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join("")}
+          </select></div>` : "") : ""}
       <div class="oplist">
         ${on.map((it, i) => row(it, i, on)).join("")}
         ${sh.map(sharedRow).join("")}
@@ -3435,36 +3507,20 @@ function openSignup(postId){
       ${suspended ? `<div class="disclaimer" style="border-top:none;padding-top:0"><div class="dh">🍱 這一場停餐一次</div>
         <p>依分會會籍規則第四條：當日 12:00 後才取消或未到累計 2 次，下一次停止餐點 1 次。
         你仍可以報名出席，只是這場不訂餐。若有特殊情況，請跟幹部說明，幹部可以另外開放。</p></div>` : ""}
-      ${groups.map((g, gi) => `
-        <div class="field" style="margin-top:18px">
-          <label>${esc(g)}</label>
-          <div class="pills mealopt" id="g${gi}">
-            ${mealsFor(postId).filter(m => m.grp === g).map(m => {
-              const out = soldOut(m), on = String(SIGNUP_PICK[g]) === String(m.id);
-              return `<button type="button" class="pill${on ? " on" : ""}${out && !on ? " sold" : ""}"
-                ${out && !on ? "disabled" : ""}
-                onclick="pickMeal('${escAttr(g)}', ${m.id}, ${gi}, this)">${esc(m.label)}${
-                  m.price > 0 ? `<span class="mealprice">$${m.price}</span>` : ""
-                }${out ? "（已額滿）" : ""}</button>`;
-            }).join("")}
-          </div>
-        </div>`).join("")}
+      ${suspended ? "" : mealPicker(postId, SIGNUP_PICK, "g", "pickMeal")}
       <div class="formbar">
         <button class="btn btn-primary" onclick="submitSignup(${postId}, this)">${mine ? "存起來" : "送出報名"}</button>
       </div>
     </div>`;
   go("form");
 }
-function pickMeal(grp, id, gi, btn){
-  SIGNUP_PICK[grp] = String(id);
-  document.querySelectorAll(`#g${gi} .pill`).forEach(x => x.classList.remove("on"));
-  btn.classList.add("on");
-}
+function pickMeal(grp, id, box, btn){ mealPick(SIGNUP_PICK, grp, id, box, btn); }
 async function submitSignup(postId, btn){
   const mine0 = MY_SIGNUPS.get(postId);
   const suspended = mine0 ? (mine0.meal_suspended && !mine0.meal_reopened_by) : MEAL_OWED > 0;
-  const groups = suspended ? [] : mealGroups(postId);   // 停餐的人這場不選餐，不能卡在「還沒選」
-  const missing = groups.filter(g => !SIGNUP_PICK[g]);
+  // 停餐的人這場不選餐，不能卡在「還沒選」；二選一的題目任一家選了就算
+  const missing = (suspended ? [] : mealQuestions(postId))
+    .filter(Q => !Q.groups.some(g => SIGNUP_PICK[g])).map(Q => Q.q);
   if(missing.length){ alert("還沒選：" + missing.join("、")); return; }
   btn.disabled = true; btn.textContent = "送出中…";
   const r = await signupApi("register", {
