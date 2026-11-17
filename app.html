@@ -343,26 +343,40 @@ a{color:inherit;text-decoration:none}
 .opgroup{margin-top:22px}
 .opghead{display:flex;align-items:center;gap:10px;padding-bottom:7px;border-bottom:2px solid var(--line)}
 .opgname{font-weight:800;font-size:1.06rem;flex:1;min-width:0}
-.opcard{border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);
-  padding:12px 13px 11px;margin-top:10px}
-.opcard.off{background:var(--chip);opacity:.62}
-.opcard.shared{background:var(--chip)}
-.opfields{display:flex;flex-wrap:wrap;gap:11px}
-.opf{display:flex;flex-direction:column;gap:4px;flex:0 0 auto}
-.opf.name{flex:1 1 100%;min-width:0}
-.opf > span{font-size:.94rem;font-weight:700;color:var(--muted)}
-.opf input[type=text],.opf input[type=number]{border:1.5px solid var(--line);border-radius:var(--r-sm);
-  padding:0 11px;min-height:48px;font-size:17px;background:var(--card);font-family:inherit;width:100%;
-  font-variant-numeric:tabular-nums}
-.opf input:focus{outline:none;border-color:var(--blue-500)}
-.opf.name input{width:100%}
-.opf.price input{width:110px}
-.opstock{display:flex;align-items:center;gap:9px}
-.opstock input[type=number]{width:96px}
-.opck{display:flex;align-items:center;gap:5px;font-size:.94rem;font-weight:700;white-space:nowrap;cursor:pointer}
-.opck input{width:19px;height:19px;accent-color:var(--blue-500)}
-.opbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:11px}
-.opact{display:flex;gap:8px;margin-left:auto}
+/* 餐點管理 2026-11-17 改版：一行一項（名稱｜價格｜上限｜⋯），底部固定一顆「儲存變更」 */
+.oplist{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+.oprow{display:grid;grid-template-columns:minmax(0,1fr) 112px 112px 44px;gap:8px;align-items:center;
+  border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);padding:8px 8px 8px 10px}
+.oprow.chg{border-color:var(--orange);box-shadow:inset 4px 0 0 var(--orange)}
+.oprow.off{background:var(--chip)}
+.oprow.off .opname{color:var(--muted);text-decoration:line-through}
+.oprow.shared{grid-template-columns:minmax(0,1fr) auto;background:var(--chip)}
+.oprow input{border:1.5px solid var(--line);border-radius:var(--r-sm);padding:0 10px;min-height:46px;
+  font-size:17px;background:var(--card);font-family:inherit;width:100%;min-width:0;font-variant-numeric:tabular-nums}
+.oprow input:focus{outline:none;border-color:var(--blue-500)}
+.oprow input:disabled{background:transparent;border-color:transparent;color:var(--text)}
+.opnum{display:flex;align-items:center;gap:6px;min-width:0}
+.opnum span{font-size:.85rem;font-weight:700;color:var(--muted);flex:none}
+.optaken{grid-column:1/-1;font-size:.85rem;color:var(--muted);margin-top:-2px}
+.opmore{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:8px;border-top:1px dashed var(--line)}
+.opmore .mbtn{min-height:44px}
+.opshared{white-space:nowrap}
+.opfold{margin-top:16px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);padding:0 14px}
+.opfold > summary{cursor:pointer;font-weight:700;padding:13px 0;min-height:44px}
+.opfold[open]{padding-bottom:14px}
+/* 底部固定的儲存列：手機要讓出底部導覽的高度，桌機導覽在側邊 */
+.opsave{position:sticky;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 10px);z-index:50;margin-top:22px;
+  display:flex;align-items:center;gap:12px;background:var(--card);border:1.5px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--shadow);padding:10px 12px 10px 16px}
+.opsave .btn{flex:none;width:auto;min-height:48px;padding:0 24px;white-space:nowrap}
+@media (min-width:1024px){ .opsave{bottom:16px} }
+@media (max-width:640px){
+  /* 手機：名稱獨佔第一行（旁邊留 ⋯），價格、上限並排在第二行 */
+  .oprow{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px}
+  .oprow .opname{grid-column:1/3;grid-row:1}
+  .oprow .opmorebtn{grid-column:3;grid-row:1}
+  .oprow .opnum{grid-row:2}
+}
 .opord{display:flex;gap:5px}
 .mbtn.ico{min-width:44px;min-height:44px;padding:0;font-size:1.1rem;line-height:1}
 /* 刪除是不可逆的，跟「儲存／停用」之間留一段距離，不要排成一排等人誤按 */
@@ -376,7 +390,6 @@ a{color:inherit;text-decoration:none}
   padding:0 11px;min-height:48px;font-size:17px;background:var(--card);font-family:inherit}
 .opoff{margin-top:10px}
 .opoff summary{cursor:pointer;font-size:.94rem;font-weight:700;color:var(--muted);padding:5px 0}
-.opsaved{font-size:.9rem;font-weight:700;color:#1b7a45}
 .mbtn{min-height:40px;padding:0 12px;white-space:nowrap;border:1.5px solid var(--line);background:var(--card);border-radius:var(--r-sm);font-size:.85rem;font-weight:600;cursor:pointer}
 .mbtn.save{background:var(--blue-500);color:#fff;border-color:var(--blue-500)}
 .mbtn.add{margin-top:8px;width:100%;color:var(--blue-500);border-style:dashed}
@@ -677,9 +690,6 @@ a.btn{text-decoration:none}
   font-size:.8rem;line-height:1.75;color:var(--muted)}
 .disclaimer .dh{font-weight:800;color:var(--text);font-size:.86rem;margin-bottom:6px}
 .disclaimer p{margin:0 0 6px}
-.tplbox{margin-top:18px;border:1px solid var(--line);background:var(--chip);
-  border-radius:var(--r-sm);padding:12px 13px}
-.tplhead{font-weight:800;font-size:.92rem;display:flex;gap:9px;align-items:baseline;margin-bottom:8px}
 .tplrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
 .tplrow .tn{font-weight:700;font-size:.9rem}
 .tplsave{display:flex;gap:8px;margin-top:10px}
@@ -876,7 +886,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-16 23:54</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-17 12:55</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -896,6 +906,12 @@ a.btn{text-decoration:none}
 </nav>
 
 <script>
+// 餐點管理有沒存的變更時，關分頁／重新整理要跳瀏覽器的確認
+window.addEventListener("beforeunload", e => {
+  if(typeof MEAL_DRAFT !== "undefined" && MEAL_DRAFT && el("m_bar") && mealPending()){ e.preventDefault(); e.returnValue = ""; }
+});
+// 打開時網址帶的 #post/49 之類，要在任何換頁之前先記下來（換頁會改寫網址）
+const START_HASH = location.hash;
 const SB   = "https://fehubnmhohnkftjbozls.supabase.co";
 const KEY  = "sb_publishable_2jEktDbnpORi6Tl0qE6Bvw_55_marVz";  // 公開金鑰，設計上就是要放前端
 const LINE_CHANNEL_ID = "2011250229";
@@ -2977,28 +2993,29 @@ async function openRoster(postId, backJs){
       ${r.guests && r.guests.length ? `<div class="field" style="margin-top:20px">
         <label>來賓（${r.guests.length} 位）</label>
         <div class="rosterwrap"><table class="roster">
-          <thead><tr><th>#</th><th>姓名</th><th>公司</th><th>介紹人</th>${
-            r.officer ? `<th>餐點</th><th></th>` : ""}</tr></thead>
+          <thead><tr><th>#</th><th>姓名</th>${r.officer ? `<th>餐點</th>` : ""}<th>公司</th><th>介紹人</th>${
+            r.officer ? `<th></th>` : ""}</tr></thead>
           <tbody>${r.guests.map((g,i) => `<tr><td>${i+1}</td><td>${esc(g.name)}</td>
+            ${r.officer ? `<td>${esc(Object.values(g.choices||{}).join("・")||"—")}</td>` : ""}
             <td>${esc(g.company||"")}</td><td>${esc(memberName(g.host_id))}</td>
-            ${r.officer ? `<td>${esc(Object.values(g.choices||{}).join("・")||"—")}</td>
-            <td>${cancelCell("guest", g.id, g.name)}</td>` : ""}</tr>`).join("")}</tbody>
+            ${r.officer ? `<td>${cancelCell("guest", g.id, g.name)}</td>` : ""}</tr>`).join("")}</tbody>
         </table></div></div>` : ""}
 
       <div class="field" style="margin-top:22px">
         <label>報名的夥伴（${r.list.length} 位）</label>
         ${r.officer ? `<div class="help">信用欄可以當場核對：🔴 是本會期臨時取消 3 次以上的人</div>` : ""}
         <div class="rosterwrap"><table class="roster">
-          <thead><tr><th>#</th><th>姓名</th><th>專業別</th>${
-            r.officer ? `<th>信用</th>` : ""}${
-            cols.map(c => `<th>${esc(c)}</th>`).join("")}${r.officer ? `<th>備註</th><th></th>` : ""}</tr></thead>
+          <thead><tr><th>#</th><th>姓名</th>${
+            cols.map(c => `<th>${esc(c)}</th>`).join("")}<th>專業別</th>${
+            r.officer ? `<th>信用</th>` : ""}${r.officer ? `<th>備註</th><th></th>` : ""}</tr></thead>
           <tbody>${r.list.map((x,i) => {
             const c = credit[x.member_id];
             const L = c ? (LIGHT[c.light] || LIGHT.ok) : null;
             return `<tr>
-            <td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.tag||"")}</td>
-            ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
+            <td>${i+1}</td><td>${esc(x.name)}</td>
             ${cols.map(c2 => `<td>${esc((x.choices||{})[c2] || "—")}</td>`).join("")}
+            <td>${esc(x.tag||"")}</td>
+            ${r.officer ? `<td>${c ? `${L[0]} ${c.score}` : "—"}</td>` : ""}
             ${r.officer ? `<td>${x.meal_suspended
                 ? (x.meal_reopened_by ? `<span class="optbadge">停餐・${esc(memberName(x.meal_reopened_by))} 已開放</span>`
                    : `<span class="tagx">🍱 停餐</span> <button class="cancelbtn" onclick="mealReopen(${postId}, ${x.member_id}, '${escAttr(x.name)}')">另外開放</button>`)
@@ -3023,12 +3040,13 @@ async function openRoster(postId, backJs){
         return `
       <div class="field" style="margin-top:22px">
         <label>已取消（${all.length} 位）</label>
-        <div class="help">餐是提前訂的——看得到「什麼時候縮手的」才知道那一份便當有沒有白訂。
+        <div class="help">餐是提前訂的——看得到「什麼時候縮手的」和「原本點了什麼」，才知道哪一份餐白訂了、能不能讓給別人。
           「取消者／原因」空白＝本人自己取消。</div>
         <div class="rosterwrap"><table class="roster">
-          <thead><tr><th>#</th><th>姓名</th><th>取消時間</th><th>取消者／原因</th></tr></thead>
+          <thead><tr><th>#</th><th>姓名</th><th>原本點的餐</th><th>取消時間</th><th>取消者／原因</th></tr></thead>
           <tbody>${all.map((c, i) => `<tr>
             <td>${i+1}</td><td>${esc(c.label)}</td>
+            <td>${esc(Object.values(c.choices || {}).join("・") || "—")}</td>
             <td>${esc(payTime(c.cancelled_at))}</td>
             <td>${c.cancelled_by ? `${esc(memberName(c.cancelled_by))}：${esc(c.cancel_reason || "")}` : ""}</td></tr>`).join("")}</tbody>
         </table></div>
@@ -3094,6 +3112,7 @@ async function openMeals(postId){
   ]);
   MEAL_ALL = (r && r.options) || [];
   MEAL_TPL = (t && t.templates) || [];
+  MEAL_DRAFT = null;   // 伺服器的資料剛讀回來，草稿從這份重建
   // ⚠️ 每一個動作（存、停用、↑↓）都是重畫整頁，而 go() 會把畫面捲回最上面。
   //    總務改到第八個品項按儲存，畫面就彈回標題——一定要把捲動位置留住。
   const wasOpen = el("v-form").classList.contains("on");
@@ -3111,6 +3130,7 @@ async function saveTpl(postId){
   if(!name){ alert("請先填範本名稱"); return; }
   if(MEAL_TPL.some(t => t.name === name) &&
      !confirm(`已經有一套叫「${name}」的範本，要覆蓋掉嗎？`)) return;
+  if(!(await mealFlush(postId))) return;   // 範本存的是伺服器上的樣子，沒存的要先存
   const r = await signupApi("tpl_save", {name, post_id: postId});
   if(!r || !r.ok){ alert((r && r.message) || "存檔失敗"); return; }
   alert(`已存成範本「${name}」，共 ${r.saved} 個選項`);
@@ -3119,6 +3139,7 @@ async function saveTpl(postId){
 async function loadTpl(name, postId){
   const cur = MEAL_ALL.filter(m => m.post_id === postId && m.active).length;
   if(cur && !confirm(`這一場已經有 ${cur} 個選項。\n載入會把範本的品項「加上去」，不會蓋掉現有的。\n要繼續嗎？`)) return;
+  if(!(await mealFlush(postId))) return;
   const r = await signupApi("tpl_load", {name, post_id: postId});
   if(!r || !r.ok){ alert((r && r.message) || "載入失敗"); return; }
   await reloadSeats(); await openMeals(postId);
@@ -3130,215 +3151,241 @@ async function delTpl(name, postId){
   if(!r || !r.ok){ alert("刪除失敗"); return; }
   await openMeals(postId);
 }
-// 排序不再叫總務填數字，改成 ↑ ↓：一次把整場的順序重排（opt_reorder）。
-// 「已存過」的視覺回饋要跨越 re-render，所以記在這裡而不是按鈕上。
-let MEAL_SAVED = 0;
+// ── 餐點管理（2026-11-17 改版：一行一項＋底部一顆「儲存變更」）──────────
+// 羅伯特：「管理餐點頁面很難用」。舊版一項一大張卡、每張各按一次「儲存」，漏按一張就沒存到，
+// 手機上 7 個品項要滑好幾頁。現在：名稱／價格／上限、↑↓、停用都先改在畫面上（MEAL_DRAFT），
+// 底部固定一顆「儲存變更」一次送出。
+// 新增／刪除／新群組／範本這種會改清單結構的動作照舊立刻做，但做之前先把沒存的變更存掉
+// （mealFlush），否則重畫會把剛打的字洗掉。
+let MEAL_DRAFT = null;   // {groups:[群組名…], items:[{id,grp,label,price,stock,active}…]}，順序＝畫面順序
+let MEAL_BASE = "";      // 打開時的樣子（JSON），比對出「還有幾項沒存」
+let MEAL_MORE = 0;       // 哪一行的「⋯」展開了
+let MEAL_FLASH = false;  // 剛存好：底部那條顯示「✓ 已儲存」
+function mealDraftFrom(postId){
+  const mine = MEAL_ALL.filter(m => m.post_id === postId), gmin = {};
+  // ⚠️ 群組排序跟報名表單同一套規則（各群組最小的 sort），只改一邊會兩邊對不上
+  mine.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
+  const groups = [...new Set(mine.map(m => m.grp))].sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
+  const items = groups.flatMap(g => mine.filter(m => m.grp === g).sort((a, b) => a.sort - b.sort)
+    .map(m => ({id: m.id, grp: m.grp, label: m.label, price: m.price, stock: m.stock, active: !!m.active})));
+  return {groups, items};
+}
+const mealOrderKey = d => d.groups.flatMap(g => d.items.filter(i => i.grp === g).map(i => i.id)).join(",");
+// 還沒存的有幾項（每個改過的品項算一項；順序有動再算一項）
+function mealPending(){
+  if(!MEAL_DRAFT || !MEAL_BASE) return 0;
+  const base = JSON.parse(MEAL_BASE), bm = Object.fromEntries(base.items.map(x => [x.id, x]));
+  let n = MEAL_DRAFT.items.filter(i => { const b = bm[i.id];
+    return !b || b.label !== i.label || b.price !== i.price || b.stock !== i.stock || b.active !== i.active; }).length;
+  if(mealOrderKey(MEAL_DRAFT) !== mealOrderKey(base)) n++;
+  return n;
+}
+function mealRowChanged(id){
+  const b = JSON.parse(MEAL_BASE).items.find(x => x.id === id), i = MEAL_DRAFT.items.find(x => x.id === id);
+  return !b || !i || b.label !== i.label || b.price !== i.price || b.stock !== i.stock || b.active !== i.active;
+}
+function mealBar(){
+  const n = mealPending(), msg = el("m_barmsg"), btn = el("m_savebtn"); if(!msg) return;
+  if(n) MEAL_FLASH = false;
+  msg.innerHTML = n ? `<b style="color:var(--orange)">有 ${n} 項還沒存</b>`
+    : MEAL_FLASH ? `<span style="color:#1b7a45;font-weight:700">✓ 已儲存</span>` : `<span style="color:var(--muted)">沒有要存的變更</span>`;
+  btn.disabled = !n;
+}
+// 打字只改草稿、不重畫：重畫會讓游標跳掉
+function mealSet(id, field, input){
+  const it = MEAL_DRAFT.items.find(x => x.id === id); if(!it) return;
+  const v = input.value;
+  if(field === "label") it.label = v;
+  if(field === "price") it.price = Math.max(0, Math.floor(Number(v) || 0));
+  // 上限空白＝不限量（存成 -1）；總務不必知道 -1 這個約定
+  if(field === "stock") it.stock = v.trim() === "" ? -1 : Math.max(0, Math.floor(Number(v) || 0));
+  input.closest(".oprow").classList.toggle("chg", mealRowChanged(id));
+  mealBar();
+}
+function mealMore(id, postId){ MEAL_MORE = MEAL_MORE === id ? 0 : id; renderMeals(postId); }
+function mealMove(id, dir, postId){
+  const d = MEAL_DRAFT, it = d.items.find(x => x.id === id); if(!it) return;
+  const same = d.items.filter(x => x.grp === it.grp), i = same.indexOf(it), j = i + dir;
+  if(j < 0 || j >= same.length) return;
+  const a = d.items.indexOf(same[i]), b = d.items.indexOf(same[j]);
+  [d.items[a], d.items[b]] = [d.items[b], d.items[a]];
+  renderMeals(postId);
+}
+function mealMoveGroup(grp, dir, postId){
+  const g = MEAL_DRAFT.groups, i = g.indexOf(grp), j = i + dir;
+  if(i < 0 || j < 0 || j >= g.length) return;
+  [g[i], g[j]] = [g[j], g[i]];
+  renderMeals(postId);
+}
+function mealToggle(id, postId){
+  const it = MEAL_DRAFT.items.find(x => x.id === id); if(!it) return;
+  it.active = !it.active; MEAL_MORE = 0;
+  renderMeals(postId);
+}
+async function mealSaveAll(postId, quiet){
+  const d = MEAL_DRAFT; if(!d) return true;
+  const blank = d.items.find(i => !i.label.trim());
+  if(blank){ alert("有一個品項的名稱是空白的，請填上名稱"); const x = document.querySelector(`.oprow[data-id="${blank.id}"] .opname`); if(x) x.focus(); return false; }
+  const base = JSON.parse(MEAL_BASE), bm = Object.fromEntries(base.items.map(x => [x.id, x]));
+  const btn = el("m_savebtn"); if(btn){ btn.disabled = true; btn.textContent = "儲存中…"; }
+  try{
+    for(const i of d.items){
+      const b = bm[i.id], m = MEAL_ALL.find(x => x.id === i.id);
+      if(b.label !== i.label || b.price !== i.price || b.stock !== i.stock){
+        const r = await signupApi("opt_save", {id: i.id, post_id: postId, grp: i.grp, sort: m.sort,
+          label: i.label.trim(), price: i.price, stock: i.stock});
+        if(!r || !r.ok) throw new Error(`「${i.label}」：${(r && r.message) || "存檔失敗"}`);
+      }
+      if(b.active !== i.active){
+        const r = await signupApi("opt_toggle", {id: i.id, active: i.active});
+        if(!r || !r.ok) throw new Error(`「${i.label}」${i.active ? "啟用" : "停用"}失敗`);
+      }
+    }
+    if(mealOrderKey(d) !== mealOrderKey(base)){
+      const ids = mealOrderKey(d).split(",").filter(Boolean).map(Number);
+      const r = await signupApi("opt_reorder", {post_id: postId, ids});
+      if(!r || !r.ok) throw new Error((r && r.message) || "順序沒改成功");
+    }
+  }catch(e){
+    // 已經送出的幾項是存好的；畫面上的草稿留著，再按一次會把剩下的補上（重送同樣的值不會出事）
+    alert("有一部分沒存成功：" + e.message + "\n畫面上的內容還在，請再按一次「儲存變更」。");
+    if(btn){ btn.textContent = "儲存變更"; mealBar(); }
+    return false;
+  }
+  MEAL_DRAFT = null; MEAL_FLASH = !quiet;
+  await reloadSeats(); await openMeals(postId);
+  return true;
+}
+// 結構性動作之前先存：有沒存的就先存，存失敗就不往下做
+async function mealFlush(postId){ return mealPending() ? await mealSaveAll(postId, true) : true; }
+
 function renderMeals(postId){
   const p = POSTS.find(x => x.id === postId);
-  const mine = MEAL_ALL.filter(m => m.post_id === postId);
+  if(!MEAL_DRAFT){ MEAL_DRAFT = mealDraftFrom(postId); MEAL_BASE = JSON.stringify(MEAL_DRAFT); }
+  const d = MEAL_DRAFT;
   const shared = MEAL_ALL.filter(m => m.post_id === null);
-  // ⚠️ 用跟報名表單同一套排序規則。原本這裡各寫一份，結果只改到一邊，
-  //    幹部後台的「飲品」還是排在「餐點」前面。
-  const all = [...mine, ...shared], gmin = {};
-  all.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
-  const groups = [...new Set(all.map(m => m.grp))]
-    .sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
+  // 只有「通用選項」的群組也要列出來
+  const groups = [...d.groups, ...[...new Set(shared.map(m => m.grp))].filter(g => !d.groups.includes(g))];
+  const taken = id => MEAL_TAKEN[id] || 0;
 
-  const taken = m => MEAL_TAKEN[m.id] || 0;
-
-  // 一個選項一張卡，四個欄位各自把標籤貼在自己框框的正上方
-  const card = (m, i, arr) => {
-    const t = taken(m);
-    return `
-    <div class="opcard${m.active ? "" : " off"}">
-      <div class="opfields">
-        <label class="opf name"><span>名稱</span>
-          <input type="text" class="mi-label" value="${esc(m.label)}" placeholder="例如：雞排飯"></label>
-        <label class="opf price"><span>價格（元）</span>
-          <input type="number" class="mi-price" inputmode="numeric" min="0" value="${m.price}"></label>
-        <div class="opf"><span>份數上限</span>
-          <div class="opstock">
-            <label class="opck"><input type="checkbox" class="mi-nolimit" ${m.stock < 0 ? "checked" : ""}
-              onchange="stockToggle(this)">不限量</label>
-            <input type="number" class="mi-stock" inputmode="numeric" min="0" placeholder="例如 10"
-              value="${m.stock < 0 ? "" : m.stock}"${m.stock < 0 ? ' disabled style="display:none"' : ""}>
-          </div>
-        </div>
-      </div>
-      <div class="opbar">
-        <span class="opord">
-          <button class="mbtn ico" title="往上移" aria-label="把「${esc(m.label)}」往上移"${i === 0 ? " disabled" : ""} onclick="moveMeal(${m.id},-1,${postId})">↑</button>
-          <button class="mbtn ico" title="往下移" aria-label="把「${esc(m.label)}」往下移"${i === arr.length - 1 ? " disabled" : ""} onclick="moveMeal(${m.id},1,${postId})">↓</button>
-        </span>
-        ${MEAL_SAVED === m.id ? `<span class="opsaved" role="status">✓ 已儲存</span>` : ""}
-        ${t ? `<span class="mnote">已有 ${t} 人選這項</span>` : ""}
-        <span class="opact">
-          <button class="mbtn save" onclick="saveMeal(${m.id},${postId},this)">儲存</button>
-          <button class="mbtn" onclick="toggleMeal(${m.id},${!m.active},${postId})">${m.active ? "停用" : "啟用"}</button>
-          ${t ? `<button class="mbtn" disabled title="已經有人選了，刪掉他們的紀錄就會對不上，只能停用">刪除</button>`
-               : `<button class="mbtn del" onclick="delMeal(${m.id},'${escAttr(m.label)}',${postId})">刪除</button>`}
-        </span>
-      </div>
+  const row = (it, idx, arr) => {
+    const t = taken(it.id), open = MEAL_MORE === it.id;
+    return `<div class="oprow${it.active ? "" : " off"}${mealRowChanged(it.id) ? " chg" : ""}" data-id="${it.id}">
+      <input type="text" class="opname" value="${esc(it.label)}" maxlength="60" aria-label="品項名稱"
+        oninput="mealSet(${it.id},'label',this)">
+      <label class="opnum"><span>價格</span><input type="number" inputmode="numeric" min="0" value="${it.price}"
+        aria-label="「${esc(it.label)}」價格" oninput="mealSet(${it.id},'price',this)"></label>
+      <label class="opnum"><span>上限</span><input type="number" inputmode="numeric" min="0" placeholder="不限"
+        value="${it.stock < 0 ? "" : it.stock}" aria-label="「${esc(it.label)}」份數上限，空白＝不限量"
+        oninput="mealSet(${it.id},'stock',this)"></label>
+      <button type="button" class="mbtn ico opmorebtn" aria-label="「${esc(it.label)}」更多動作" aria-expanded="${open}"
+        onclick="mealMore(${it.id},${postId})">⋯</button>
+      ${t ? `<div class="optaken">已有 ${t} 人選這項</div>` : ""}
+      ${open ? `<div class="opmore">
+        ${it.active ? `<button type="button" class="mbtn" ${idx === 0 ? "disabled" : ""} onclick="mealMove(${it.id},-1,${postId})">↑ 上移</button>
+        <button type="button" class="mbtn" ${idx === arr.length - 1 ? "disabled" : ""} onclick="mealMove(${it.id},1,${postId})">↓ 下移</button>` : ""}
+        <button type="button" class="mbtn" onclick="mealToggle(${it.id},${postId})">${it.active ? "停用" : "啟用"}</button>
+        ${t ? `<span class="mnote">已經有人選，只能停用不能刪</span>`
+            : `<button type="button" class="mbtn del" onclick="delMeal(${it.id},'${escAttr(it.label)}',${postId})">刪除</button>`}
+      </div>` : ""}
     </div>`;
   };
-
-  const sharedCard = m => `
-    <div class="opcard shared">
-      <div class="opfields">
-        <label class="opf name"><span>名稱（每場通用，要改請到通用設定）</span>
-          <input type="text" value="${esc(m.label)}" disabled></label>
-        <label class="opf price"><span>價格（元）</span>
-          <input type="number" value="${m.price}" disabled></label>
-      </div>
-    </div>`;
+  const sharedRow = m => `<div class="oprow shared">
+      <input type="text" class="opname" value="${esc(m.label)}" disabled aria-label="通用品項">
+      <span class="mnote opshared">每場通用</span></div>`;
 
   const section = (g, gi) => {
-    const items = mine.filter(m => m.grp === g).sort((a, b) => a.sort - b.sort);
-    const on = items.filter(m => m.active), off = items.filter(m => !m.active);
+    const items = d.items.filter(i => i.grp === g);
+    const on = items.filter(i => i.active), off = items.filter(i => !i.active);
     const sh = shared.filter(m => m.grp === g);
-    return `
-      <div class="opgroup">
-        <div class="opghead">
-          <div class="opgname">${esc(g)}<span class="mnote">　可選 ${on.length} 項</span></div>
-          <span class="opord">
-            <button class="mbtn ico" title="這個群組往前" aria-label="把「${esc(g)}」整組往前"${gi === 0 ? " disabled" : ""} onclick="moveGroup('${escAttr(g)}',-1,${postId})">↑</button>
-            <button class="mbtn ico" title="這個群組往後" aria-label="把「${esc(g)}」整組往後"${gi === groups.length - 1 ? " disabled" : ""} onclick="moveGroup('${escAttr(g)}',1,${postId})">↓</button>
-          </span>
-        </div>
-        ${on.map(m => card(m, items.indexOf(m), items)).join("")}
-        ${sh.map(sharedCard).join("")}
+    const own = d.groups.indexOf(g);
+    return `<div class="opgroup">
+      <div class="opghead">
+        <div class="opgname">${esc(g)}<span class="mnote">　可選 ${on.length + sh.length} 項</span></div>
+        ${own >= 0 ? `<span class="opord">
+          <button type="button" class="mbtn ico" aria-label="把「${esc(g)}」整組往前"${own === 0 ? " disabled" : ""} onclick="mealMoveGroup('${escAttr(g)}',-1,${postId})">↑</button>
+          <button type="button" class="mbtn ico" aria-label="把「${esc(g)}」整組往後"${own === d.groups.length - 1 ? " disabled" : ""} onclick="mealMoveGroup('${escAttr(g)}',1,${postId})">↓</button>
+        </span>` : ""}
+      </div>
+      <div class="oplist">
+        ${on.map((it, i) => row(it, i, on)).join("")}
+        ${sh.map(sharedRow).join("")}
         <div class="opadd">
-          <input type="text" id="m_new_${gi}" placeholder="新增一個「${esc(g)}」選項，例如：雞排飯"
+          <input type="text" id="m_new_${gi}" placeholder="新增一個「${esc(g)}」選項"
             onkeydown="if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();addMeal('${escAttr(g)}',${postId},'m_new_${gi}')}">
-          <button class="mbtn add" style="margin-top:0;width:auto;flex:none" onclick="addMeal('${escAttr(g)}',${postId},'m_new_${gi}')">＋ 新增</button>
+          <button type="button" class="mbtn add" style="margin-top:0;width:auto;flex:none" onclick="addMeal('${escAttr(g)}',${postId},'m_new_${gi}')">＋ 新增</button>
         </div>
-        ${off.length ? `
-        <details class="opoff">
-          <summary>已停用 ${off.length} 項（點開來看，可以啟用或刪除）</summary>
-          ${off.map(m => card(m, items.indexOf(m), items)).join("")}
-        </details>` : ""}
-      </div>`;
+      </div>
+      ${off.length ? `<details class="opoff"${off.some(i => i.id === MEAL_MORE || mealRowChanged(i.id)) ? " open" : ""}>
+        <summary>已停用 ${off.length} 項（點開可以啟用或刪除）</summary>
+        <div class="oplist">${off.map((it, i) => row(it, i, off)).join("")}</div>
+      </details>` : ""}
+    </div>`;
   };
 
   el("v-form").innerHTML = `
     ${backBar()}
     <div class="form">
       <div style="font-weight:800;font-size:1.15rem">餐點選項　${esc(p ? p.title : "")}</div>
-      <div style="color:var(--muted);font-size:.95rem;margin-top:8px;line-height:1.75">
-        每個月的菜色不一樣，在這裡改就好，不必找人改程式。改完<b>每一張卡都要按自己的「儲存」</b>。<br>
-        <b>份數上限</b>平常就讓它「不限量」，訂幾份就幾份；只有真的限量才取消勾選並填數字（例如手工甜點只做 10 份），選完會自動變「已額滿」。<br>
-        <b>↑ ↓</b> 調順序：卡片上的箭頭排選項，群組標題旁的箭頭排群組（餐點要排在飲品前面就把餐點整組往上移）。<br>
-        <b>已經有人選過的選項只能「停用」不能刪</b>——刪了以前報名的人點了什麼就查不到。沒人選過的可以直接刪掉。
-      </div>
-      <div class="tplbox">
-        <div class="tplhead">🍱 餐點範本<span class="mnote">建好一次，之後每個月直接載入</span></div>
+      <div class="help" style="margin-top:6px">直接在格子裡改，改完按最下面的<b>「儲存變更」</b>一次存好。<b>上限</b>空白＝不限量。</div>
+      ${groups.length ? groups.map(section).join("") : `<div class="mnote" style="margin-top:18px;white-space:normal">這一場還沒有餐點。可以從下面的「餐點範本」載入，或先「加一個群組」。</div>`}
+
+      <details class="opfold">
+        <summary>＋ 加一個新群組（例如「點心」）</summary>
+        <div class="help">加了之後報名的人就要在這個群組各選一項。</div>
+        <div class="opadd" style="flex-wrap:wrap">
+          <input type="text" id="m_newgrp" placeholder="群組名稱，例如：點心" style="flex:1 1 160px">
+          <input type="text" id="m_newgrpitem" placeholder="第一個選項，例如：布丁" style="flex:1 1 160px">
+          <button type="button" class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="addGroup(${postId})">建立</button>
+        </div>
+      </details>
+      <details class="opfold">
+        <summary>🍱 餐點範本（${MEAL_TPL.length} 套）：整套載入／存成範本</summary>
         ${MEAL_TPL.length ? MEAL_TPL.map(t => `
           <div class="tplrow">
             <div style="flex:1;min-width:0">
               <div class="tn">${esc(t.name)}</div>
               <div class="mnote">${t.count} 個選項　・　${t.groups.map(esc).join("、")}</div>
             </div>
-            <button class="mbtn" style="flex:none;color:var(--blue-500)" onclick="loadTpl('${escAttr(t.name)}', ${postId})">載入</button>
-            <button class="mbtn" style="flex:none" onclick="delTpl('${escAttr(t.name)}', ${postId})">刪</button>
+            <button type="button" class="mbtn" style="flex:none;color:var(--blue-500)" onclick="loadTpl('${escAttr(t.name)}', ${postId})">載入</button>
+            <button type="button" class="mbtn" style="flex:none" onclick="delTpl('${escAttr(t.name)}', ${postId})">刪</button>
           </div>`).join("")
           : `<div class="mnote" style="padding:9px 0;white-space:normal">還沒有範本。先把這一場的餐點建好，再存成範本，下個月就不用重建。</div>`}
         <div class="tplsave">
           <input type="text" id="m_tplname" placeholder="範本名稱，例如：標準月例會">
-          <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="saveTpl(${postId})">存成範本</button>
+          <button type="button" class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="saveTpl(${postId})">存成範本</button>
         </div>
         <div class="help" style="margin-top:7px">
-          <b>載入</b>會把範本的品項<b>加到這一場</b>，不會蓋掉現有的。<br>
-          載入前先把這一場不要的選項刪掉（沒人選過的就刪得掉），才不會出現一堆重複的。<br>
+          <b>載入</b>會把範本的品項<b>加到這一場</b>，不會蓋掉現有的；載入前先把這一場不要的刪掉，才不會重複。<br>
           用同一個名字再存一次＝覆蓋那套範本。範本改了不會影響已經辦過的活動。
         </div>
-      </div>
-      ${groups.map(section).join("")}
-      <div class="field" style="margin-top:26px">
-        <label>加一個新群組</label>
-        <div class="help">例如「點心」。加了之後報名的人就要各選一項。不必改程式</div>
-        <div class="opadd" style="flex-wrap:wrap">
-          <input type="text" id="m_newgrp" placeholder="群組名稱，例如：點心" style="flex:1 1 160px">
-          <input type="text" id="m_newgrpitem" placeholder="第一個選項，例如：布丁" style="flex:1 1 160px">
-          <button class="mbtn" style="flex:none;color:var(--blue-500);border-style:dashed" onclick="addGroup(${postId})">建立</button>
+      </details>
+      <details class="opfold">
+        <summary>使用說明</summary>
+        <div class="help" style="line-height:1.8">
+          ・每個月的菜色不一樣，在這裡改就好，不必找人改程式。<br>
+          ・<b>上限</b>平常留空白（不限量）；真的限量才填數字（例如手工甜點只做 10 份），選完會自動顯示「已額滿」。<br>
+          ・點每一行最右邊的 <b>⋯</b>：上移、下移、停用、刪除。群組名稱旁的 ↑ ↓ 是整組換位置（例如餐點排在飲品前面）。<br>
+          ・<b>已經有人選過的品項只能停用、不能刪</b>——刪了，以前報名的人點了什麼就查不到。
         </div>
+      </details>
+
+      <div class="opsave" id="m_bar" role="status" aria-live="polite">
+        <span id="m_barmsg" style="flex:1;min-width:0"></span>
+        <button type="button" class="btn btn-primary" id="m_savebtn" style="flex:none" onclick="mealSaveAll(${postId})">儲存變更</button>
       </div>
     </div>`;
-}
-// 勾了「不限量」就把數字框整個藏起來——留在那裡的話，placeholder 的灰字
-// 會被讀成「已經填了 10」。⛔ 用 style.display 不用 hidden 屬性：
-// [hidden]{display:none} 優先度最低，會被別的規則蓋掉，屬性設了畫面照顯示。
-function stockToggle(cb){
-  const n = cb.closest(".opcard").querySelector(".mi-stock");
-  n.disabled = cb.checked;
-  n.style.display = cb.checked ? "none" : "block";
-  if(!cb.checked) n.focus();
-}
-// 讀一張卡上填的值。「不限量」＝ stock -1，總務不必知道 -1 這個約定。
-function mealCardValues(card){
-  const nolimit = card.querySelector(".mi-nolimit").checked;
-  return {
-    label: card.querySelector(".mi-label").value.trim(),
-    price: Math.max(0, Number(card.querySelector(".mi-price").value) || 0),
-    stock: nolimit ? -1 : Math.max(0, Number(card.querySelector(".mi-stock").value) || 0),
-  };
-}
-async function saveMeal(id, postId, btn){
-  const card = btn.closest(".opcard");
-  const v = mealCardValues(card);
-  if(!v.label){ alert("名稱不能空白"); card.querySelector(".mi-label").focus(); return; }
-  const m = MEAL_ALL.find(x => x.id === id);
-  btn.disabled = true; btn.textContent = "…";
-  const res = await signupApi("opt_save", {id, post_id: postId, grp: m.grp, sort: m.sort, ...v});
-  btn.disabled = false; btn.textContent = "儲存";
-  if(!res || !res.ok){ alert((res && res.message) || "存檔失敗"); return; }
-  MEAL_SAVED = id;                       // re-render 之後那張卡會顯示「✓ 已儲存」
-  await reloadSeats(); await openMeals(postId);
-}
-async function toggleMeal(id, active, postId){
-  const res = await signupApi("opt_toggle", {id, active});
-  if(!res || !res.ok){ alert("失敗"); return; }
-  MEAL_SAVED = 0;
-  await reloadSeats(); await openMeals(postId);
+  mealBar();
 }
 // ⛔ 只刪沒人選過的。有人選過的話，報名紀錄裡存的是選項 id，
 //    刪掉之後名單上那一格就變成查不到的孤兒——後端會再擋一次（含已取消的報名）。
 async function delMeal(id, label, postId){
   if(!confirm(`確定刪掉「${label}」嗎？\n沒有人選過它，刪掉不影響任何報名紀錄。`)) return;
+  if(!(await mealFlush(postId))) return;
   const res = await signupApi("opt_delete", {id});
   if(!res || !res.ok){ alert((res && res.message) || "刪不掉"); return; }
-  MEAL_SAVED = 0;
+  MEAL_DRAFT = null; MEAL_MORE = 0;
   await reloadSeats(); await openMeals(postId);
-}
-// ── 排序：↑ ↓ 一律換算成「整場重排一次」，總務不用碰數字 ──────────
-function mealOrder(postId){
-  const mine = MEAL_ALL.filter(m => m.post_id === postId), gmin = {};
-  mine.forEach(m => { gmin[m.grp] = Math.min(gmin[m.grp] ?? 9e9, m.sort); });
-  const groups = [...new Set(mine.map(m => m.grp))]
-    .sort((a, b) => (gmin[a] - gmin[b]) || a.localeCompare(b));
-  return { groups, byGrp: g => mine.filter(m => m.grp === g).sort((a, b) => a.sort - b.sort) };
-}
-async function applyMealOrder(groups, byGrp, postId){
-  const ids = [];
-  groups.forEach(g => byGrp(g).forEach(m => ids.push(m.id)));
-  const res = await signupApi("opt_reorder", {post_id: postId, ids});
-  if(!res || !res.ok){ alert((res && res.message) || "排序沒改成功"); return; }
-  MEAL_SAVED = 0;
-  await reloadSeats(); await openMeals(postId);
-}
-async function moveMeal(id, dir, postId){
-  const { groups, byGrp } = mealOrder(postId);
-  const m = MEAL_ALL.find(x => x.id === id); if(!m) return;
-  const items = byGrp(m.grp), i = items.findIndex(x => x.id === id), j = i + dir;
-  if(i < 0 || j < 0 || j >= items.length) return;
-  [items[i], items[j]] = [items[j], items[i]];
-  await applyMealOrder(groups, g => (g === m.grp ? items : byGrp(g)), postId);
-}
-async function moveGroup(grp, dir, postId){
-  const { groups, byGrp } = mealOrder(postId);
-  const i = groups.indexOf(grp), j = i + dir;
-  if(i < 0 || j < 0 || j >= groups.length) return;
-  const gs = groups.slice(); [gs[i], gs[j]] = [gs[j], gs[i]];
-  await applyMealOrder(gs, byGrp, postId);
 }
 // ⛔ 新增一律用頁面內的輸入框，不要用 prompt()：
 //    LINE 內建瀏覽器 iOS／Android 兩邊都不會跳，而且不報錯，使用者只會覺得「按了沒反應」。
@@ -3346,11 +3393,11 @@ async function addMeal(grp, postId, inputId){
   const box = el(inputId);
   const label = (box && box.value || "").trim();
   if(!label){ alert("請先填選項名稱"); if(box) box.focus(); return; }
+  if(!(await mealFlush(postId))) return;
   const sameGrp = MEAL_ALL.filter(m => m.grp === grp);
   const sort = (sameGrp.length ? Math.max(...sameGrp.map(m => m.sort)) : 0) + 10;
   const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
   if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
-  MEAL_SAVED = 0;
   await reloadSeats(); await openMeals(postId);
 }
 async function addGroup(postId){
@@ -3358,10 +3405,10 @@ async function addGroup(postId){
   const label = (el("m_newgrpitem").value || "").trim();
   if(!grp){ alert("請填群組名稱"); el("m_newgrp").focus(); return; }
   if(!label){ alert("請填這個群組的第一個選項，例如「布丁」"); el("m_newgrpitem").focus(); return; }
+  if(!(await mealFlush(postId))) return;
   const sort = (MEAL_ALL.length ? Math.max(...MEAL_ALL.map(m => m.sort)) : 0) + 100;
   const res = await signupApi("opt_save", {post_id: postId, grp, label, price: 0, stock: -1, sort});
   if(!res || !res.ok){ alert((res && res.message) || "新增失敗"); return; }
-  MEAL_SAVED = 0;
   await reloadSeats(); await openMeals(postId);
 }
 
@@ -3599,6 +3646,13 @@ function closeDrawer(){
 function goFromDrawer(v){ closeDrawer(); go(v); }
 
 function go(v, btn){
+  // 餐點管理還有沒存的變更就要離開：先問一聲（返回鍵、側欄、底部導覽都走這裡）
+  // ⚠️ openMeals 自己也會呼叫 go("form")：只有「離開表單頁」才算離開，不然草稿一畫好就被清掉
+  if(v !== "form"){
+    if(MEAL_DRAFT && el("m_bar") && el("v-form").classList.contains("on") && mealPending()
+       && !confirm("餐點還有變更沒有儲存，確定要離開嗎？\n（要存的話按「取消」，再按最下面的「儲存變更」）")) return;
+    MEAL_DRAFT = null;
+  }
   // 進表單之前先記下現在在哪
   if(v === "form"){
     const cur = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
@@ -3617,7 +3671,8 @@ document.querySelectorAll(".nav button").forEach(b=> b.onclick = ()=> go(b.datas
 /* ── 登入 ───────────────────────────────── */
 function lineLogin(){
   const state = Math.random().toString(36).slice(2);
-  localStorage.setItem("tc8_state", state);   // 用 localStorage：LINE 授權可能換分頁，sessionStorage 會遺失
+  localStorage.setItem("tc8_state", state);
+  try{ if(location.hash) localStorage.setItem("tc8_hash", location.hash); }catch(e){}   // 用 localStorage：LINE 授權可能換分頁，sessionStorage 會遺失
   location.href = "https://access.line.me/oauth2/v2.1/authorize?response_type=code"
     + "&client_id=" + LINE_CHANNEL_ID
     + "&redirect_uri=" + encodeURIComponent(REDIRECT)
@@ -5300,6 +5355,7 @@ async function reloadComments(){
 
 function openNeedDetail(id){
   const n = NEEDS.find(x=>x.id===id); if(!n) return;
+  CUR_NEED = id;
   const mine = ME && (n.member_id===ME.id || ME.role==="officer");
   const done = !!n.closed_at;
   const [ul,uc] = URG[n.urgency||"mid"];
@@ -5870,6 +5926,7 @@ function filterCases(){
 
 function openCase(id){
   const c=CASES.find(x=>x.id===id); if(!c) return;
+  CUR_CASE = id;
   const mine = ME && (c.member_id===ME.id || ME.role==="officer");
   // ⛔ none 不能對到字串：字串是 truthy，下面的 ${share?...} 會照樣渲染成
   //    「願意分享：暫時不方便／有同樣困擾的夥伴可以找他」，意思完全相反
@@ -6062,6 +6119,7 @@ function filterMembers(){
 
 function openMember(id){
   const m = MEMBERS.find(x=>x.id===id); if(!m) return;
+  CUR_MEMBER = id;
   const blk = (l,v)=> v ? `<div class="block"><div class="lbl">${l}</div><p>${esc(v)}</p></div>` : "";
   el("v-mdetail").innerHTML = `
     <button class="back" onclick="go('members')"><svg width="17" height="17"><use href="#i-back"/></svg>夥伴</button>
@@ -6204,6 +6262,54 @@ async function loadMe(){
   }
   return r.status;
 }
+// ── 每一頁有自己的分頁名稱與網址（2026-11-17 羅伯特：「每一頁上面的名稱都要不同，現在哪次打開都同一網址」）──
+// 網址用 #：#acts、#post/49、#case/12、#member/5、#need/3。貼給別人點開就是那一頁。
+// ⛔ 只用 replaceState、不用 pushState：不新增瀏覽紀錄，手機返回鍵的行為維持原樣。
+// ⚠️ 不能只掛在 go()：openPostDetail 這類函式自己切 .view 的 class，不經過 go——
+//    所以改成監看所有 .view，不管誰切的頁都會跟著改。
+const PAGE_NAME = {home:"首頁", notices:"公告", acts:"活動", buys:"團購", cases:"AI 案例", needs:"Q&A",
+  members:"夥伴", me:"我的", help:"使用說明", admin:"分會管理", claim:"綁定身分"};
+let CUR_CASE = 0, CUR_MEMBER = 0, CUR_NEED = 0;
+function syncPage(){
+  const v = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
+  if(!v) return;
+  const k = v.id.slice(2);
+  const head = sel => { const h = v.querySelector(sel); return h ? h.textContent.replace(/\s+/g, " ").trim() : ""; };
+  let name = PAGE_NAME[k] || "", hash = k === "home" ? "" : "#" + k;
+  if(k === "pdetail"){ const p = POSTS.find(x => x.id === PDETAIL_ID); name = p ? p.title : "活動"; hash = "#post/" + PDETAIL_ID; }
+  else if(k === "cdetail"){ name = head("h2") || "AI 案例"; hash = "#case/" + CUR_CASE; }
+  else if(k === "mdetail"){ const m = MEMBERS.find(x => x.id === CUR_MEMBER); name = m ? m.name : "夥伴"; hash = "#member/" + CUR_MEMBER; }
+  else if(k === "ndetail"){ name = head("h2") || "Q&A"; hash = "#need/" + CUR_NEED; }
+  // 表單類（報名名單、餐點管理、編輯…）共用 v-form，名稱取畫面上的標題；網址留在上一頁（重新整理回上一頁）
+  else if(k === "form"){ name = head("h1, h2, .form > div[style*='font-weight:800']"); hash = null; }
+  document.title = k === "home" || !name ? "CXO TC8｜AI 案例與活動中心" : `${name}｜CXO TC8`;
+  if(hash !== null && location.hash !== hash)
+    history.replaceState(history.state, "", location.pathname + location.search + hash);
+}
+let SYNC_Q = false;
+const PAGE_OBS = new MutationObserver(() => {
+  if(SYNC_Q) return; SYNC_Q = true;
+  setTimeout(() => { SYNC_Q = false; syncPage(); }, 0);
+});
+document.querySelectorAll(".view").forEach(x =>
+  PAGE_OBS.observe(x, {attributes: true, attributeFilter: ["class"], childList: true}));
+// 打開網址就直接到那一頁。找不到（已刪、沒權限看的隱藏活動）就回 false，照常進首頁
+function routeHash(h){
+  const m = (h || "").match(/^#(post|case|member|need)\/(\d+)$/);
+  if(m){
+    const id = Number(m[2]);
+    if(m[1] === "post" && POSTS.some(x => x.id === id)){ PDETAIL_FROM = "home"; openPostDetail(id); return true; }
+    if(m[1] === "case" && CASES.some(x => x.id === id)){ openCase(id); return true; }
+    if(m[1] === "member" && MEMBERS.some(x => x.id === id)){ openMember(id); return true; }
+    if(m[1] === "need" && NEEDS.some(x => x.id === id)){ openNeedDetail(id); return true; }
+    return false;
+  }
+  const v = (h || "").slice(1);
+  if(!PAGE_NAME[v] || v === "home" || v === "claim" || !el("v-" + v)) return false;
+  if((v === "admin" && !isOfficer()) || (v === "me" && !ME)) return false;
+  go(v); return true;
+}
+
 (async function init(){
   DBG("啟動", {網址:location.href, 有通行證:!!token(), 有授權碼:new URLSearchParams(location.search).has("code")});
   el("v-home").innerHTML = '<div class="busy">載入中…</div>';
@@ -6260,6 +6366,9 @@ async function loadMe(){
   // 簽完才回首頁；沒簽也能按返回離開，首頁紅卡會一直提醒（羅伯特 2026-09-13）
   const pc = pendingConsents();
   if(ME && pc.length){ PDETAIL_FROM = "home"; openPostDetail(pc[0].id); return; }
+  let want = START_HASH;
+  try{ want = want || localStorage.getItem("tc8_hash") || ""; localStorage.removeItem("tc8_hash"); }catch(e){}
+  if(routeHash(want)) return;
   go("home");
 })();
 const _go = go;
