@@ -883,13 +883,14 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-notices"></main>
 <main class="wrap view" id="v-buys"></main>
 <main class="wrap view" id="v-admin"></main>
+<main class="wrap view" id="v-decks"></main>
 <main class="wrap view" id="v-form"></main>
 <main class="wrap view" id="v-cdetail"></main>
 <main class="wrap view" id="v-pdetail"></main>
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-17 23:09</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-26 00:26</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2570,6 +2571,7 @@ async function renderAdmin(){
       <div class="arow" onclick="openLeaveAdmin()">
         <span>🗓 請假審核</span>
         ${leavePending ? `<span class="abadge">${leavePending}</span>` : ""}<span class="ago">›</span></div>
+      <div class="arow" onclick="go('decks')"><span>📑 月會簡報</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -2579,6 +2581,27 @@ async function renderAdmin(){
         <span class="mnote">${x.score} 分　臨時取消 ${x.late_count} 次</span></div>`).join("")}
       ${bad.length > 8 ? `<div class="arow" onclick="openCreditAll()"><span class="mnote">還有 ${bad.length - 8} 位…</span><span class="ago">›</span></div>` : ""}
     </div>` : ""}`;
+}
+
+// ── 月會簡報（每月一份網頁簡報，放在 decks/YYYYMM/）─────────
+// 加新月份：讀書會夾跑 上平台.py，再在這裡最上面加一行。
+// ⛔ decks/ 是公開檔：來賓姓名與報到碼不可寫進去，簡報開啟時才用幹部登入向 checkin/board 讀。
+// ⛔ 用同一個分頁開，不用新分頁：LINE 內建瀏覽器會擋。
+const DECKS = [
+  {ym:"202611", label:"2026 年 11 月", note:"11/26（四）月會　10 頁"},
+];
+function renderDecks(){
+  if(!isOfficer()){
+    el("v-decks").innerHTML = `<div class="card"><div class="empty">這一頁只有幹部看得到</div></div>`;
+    return;
+  }
+  el("v-decks").innerHTML = `
+    <div class="backbar"><button class="back" onclick="go('admin')">回分會管理</button></div>
+    <div class="sec"><h2>月會簡報</h2></div>
+    <div class="card admincard">
+      ${DECKS.map(d => `<div class="arow" onclick="location.href='decks/${d.ym}/index.html'">
+        <span>📑 ${esc(d.label)}</span><span class="mnote">${esc(d.note)}　›</span></div>`).join("")}
+    </div>`;
 }
 
 // ── 出席信用分數（S8 #21）────────────────────────────
@@ -3775,6 +3798,7 @@ function paintMe(){
 function render(v){
   if(v==="home") el("v-home").innerHTML = homeHTML();
   if(v==="admin") renderAdmin();
+  if(v==="decks") renderDecks();
   if(v==="buys") renderBuys();
   if(v==="acts") renderActs();
   if(v==="notices") renderNotices();
@@ -6324,7 +6348,7 @@ async function loadMe(){
 // ⚠️ 不能只掛在 go()：openPostDetail 這類函式自己切 .view 的 class，不經過 go——
 //    所以改成監看所有 .view，不管誰切的頁都會跟著改。
 const PAGE_NAME = {home:"首頁", notices:"公告", acts:"活動", buys:"團購", cases:"AI 案例", needs:"Q&A",
-  members:"夥伴", me:"我的", help:"使用說明", admin:"分會管理", claim:"綁定身分"};
+  members:"夥伴", me:"我的", help:"使用說明", admin:"分會管理", decks:"月會簡報", claim:"綁定身分"};
 let CUR_CASE = 0, CUR_MEMBER = 0, CUR_NEED = 0;
 function syncPage(){
   const v = [...document.querySelectorAll(".view")].find(x => x.classList.contains("on"));
@@ -6362,7 +6386,7 @@ function routeHash(h){
   }
   const v = (h || "").slice(1);
   if(!PAGE_NAME[v] || v === "home" || v === "claim" || !el("v-" + v)) return false;
-  if((v === "admin" && !isOfficer()) || (v === "me" && !ME)) return false;
+  if(((v === "admin" || v === "decks") && !isOfficer()) || (v === "me" && !ME)) return false;
   go(v); return true;
 }
 

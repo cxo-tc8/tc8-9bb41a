@@ -1,0 +1,209 @@
+<!doctype html><html lang="zh-Hant"><head><meta name="robots" content="noindex"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TC8 月會 11/26</title>
+<style>
+:root{--bg:#050b1f;--w:#eaf0f8;--gold:#e7c675;--cy:#4fc3ff;--sub:#c2d0ee;--line:#2f7fc4;--card:rgba(10,30,74,.72);--z:1}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#000;overflow:hidden;font-family:"PingFang TC","Noto Sans TC",sans-serif;color:var(--w)}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:0 0}
+section{position:absolute;inset:0;background:var(--bg) center/cover;padding:88px 110px 44px;display:none;flex-direction:column;overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
+section.on{display:flex;animation:in .45s ease-out}
+@keyframes in{from{opacity:0}}
+section.a{background-image:url(img/a.png)}section.b{background-image:url(img/b.png)}section.c{background-image:url(img/c.png)}
+section::after{content:"";position:absolute;right:60px;top:24px;width:160px;height:160px;background:url(img/logo.png) center/contain no-repeat}
+h1{flex:none;align-self:flex-start;margin:0 200px 48px 0;font:600 calc(60px*var(--z))/1.2 "Songti TC",serif;padding-left:30px;border-left:9px solid var(--gold);letter-spacing:2px}
+.foot{flex:none;margin-top:auto;padding-top:30px;text-align:center;color:var(--gold);font:600 calc(36px*var(--z)) "Songti TC",serif}
+.row{display:flex;gap:40px;flex:1 0 auto}
+.card{flex:1;position:relative;background:var(--card);border:2px solid var(--line);border-radius:20px;padding:44px;display:flex;flex-direction:column;gap:20px;justify-content:center}
+.card::before{content:"";position:absolute;left:44px;top:-4px;width:130px;height:6px;background:var(--cy);box-shadow:0 0 16px var(--cy)}
+.mid{align-items:center;text-align:center}
+.g{color:var(--gold);font-weight:600}.s{color:var(--sub)}
+.t1{font-size:calc(56px*var(--z))}.t2{font-size:calc(36px*var(--z))}.t3{font-size:calc(32px*var(--z));line-height:1.45}
+.poster{border:2px solid var(--cy);box-shadow:0 0 28px rgba(79,195,255,.25);object-fit:contain;max-width:100%}
+.code{font:700 calc(64px*var(--z))/1 "SF Mono",Menlo,monospace;letter-spacing:4px;white-space:nowrap}
+.flow{list-style:none;padding:0 0 30px;margin:0 auto;width:1300px;flex:1 0 auto;gap:20px;display:flex;flex-direction:column;justify-content:space-between;position:relative}
+.flow::before{content:"";position:absolute;left:11px;top:24px;bottom:24px;width:3px;background:var(--line)}
+.flow li{display:flex;align-items:center;font-size:calc(40px*var(--z));position:relative;padding-left:70px}
+.flow li::before{content:"";position:absolute;left:0;width:25px;height:25px;border-radius:50%;background:var(--gold)}
+.flow b{width:300px;color:var(--gold)}.flow .hot{font-weight:600;color:var(--gold)}
+.q3s{flex:1 0 auto;display:flex;flex-direction:column;gap:36px;padding-bottom:30px}.card.q3{flex-direction:row;align-items:center;justify-content:flex-start;gap:44px;padding:26px 44px}
+.qn{flex:none;width:calc(84px*var(--z));height:calc(84px*var(--z));border-radius:50%;background:var(--gold);color:#071029;font-size:calc(48px*var(--z));font-weight:700;display:grid;place-items:center}.qh{flex:none;width:4.3em}.qq{font-size:calc(46px*var(--z));font-weight:600;line-height:1.35;margin-bottom:8px}
+.guests{display:grid;grid-template-columns:auto auto auto;gap:24px 46px;font-size:calc(38px*var(--z));align-items:baseline;justify-content:start;white-space:nowrap}
+.guests i{font-style:normal;color:var(--sub);font-size:calc(30px*var(--z))}
+.dia{display:flex;flex-direction:column;align-items:center;gap:10px;width:900px;font-size:calc(24px*var(--z));color:var(--sub);text-align:center}
+.dia div.n{border:2px solid var(--cy);border-radius:14px;background:rgba(11,42,85,.85);padding:10px 30px;line-height:1.4}
+.dia b{display:block;color:var(--w);font-size:calc(31px*var(--z))}.dia div.gd{border-color:var(--gold);background:var(--card)}
+.dia .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}.ar{color:var(--cy);font-size:calc(24px*var(--z));line-height:1}
+#pg{position:fixed;right:20px;bottom:14px;color:#7f93bd;font-size:15px}
+#bar{position:fixed;left:0;top:0;height:3px;background:var(--cy)}
+
+.nt{display:none}
+#ntbox{position:fixed;left:0;right:0;bottom:0;max-height:42vh;overflow:auto;background:rgba(0,0,0,.92);border-top:2px solid var(--gold);padding:16px 28px 22px;font-size:21px;line-height:1.6;display:none;z-index:20;white-space:pre-line}
+body.notes #ntbox{display:block}
+.ctl{position:fixed;right:16px;top:12px;z-index:15;display:flex;gap:8px;opacity:.1;transition:opacity .2s}.ctl:hover,.ctl:focus-within{opacity:1}
+.ctl button,.ovtop button{background:#0b1a4a;color:var(--gold);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:600 15px "PingFang TC",sans-serif;cursor:pointer}
+.ov{position:fixed;inset:0;z-index:30;background:var(--bg);overflow-y:auto;padding:18px 24px 60px;display:none}.ov.show{display:block}
+.ovtop{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;color:var(--gold);font-weight:700;position:sticky;top:-18px;background:var(--bg);padding:10px 0;z-index:2}
+.ovtop span{color:var(--sub);font-weight:400}#ovx{margin-left:auto}
+.ovg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.ovt{cursor:grab;border:3px solid transparent;border-radius:10px;position:relative;user-select:none}.ovt.cur{border-color:var(--gold)}.ovt.drag{opacity:.35}
+.ovt.dropL::before,.ovt.dropR::after{content:"";position:absolute;top:0;bottom:0;width:6px;background:var(--cy);border-radius:3px;box-shadow:0 0 14px var(--cy)}.ovt.dropL::before{left:-13px}.ovt.dropR::after{right:-13px}
+.ovb{aspect-ratio:16/9;overflow:hidden;border-radius:8px;position:relative;background:#000}.ovi{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;pointer-events:none}.ovi section{display:flex!important;animation:none}
+.ovl{padding:6px 4px;color:var(--sub);font-size:15px}.ovl b{color:var(--gold);margin-right:8px}
+body.dragging,body.dragging .ovt{cursor:grabbing}
+@page{size:1920px 1080px;margin:0}
+@media print{html,body{height:auto;overflow:visible}#stage{position:static;transform:none!important;height:auto}section{display:flex!important;position:relative;width:1920px;height:1080px;break-after:page;animation:none!important}section:last-child{break-after:auto}#pg,#bar,.ctl,.ov,#ntbox{display:none!important}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body><div id="bar"></div><div id="stage">
+
+<!-- 1 封面 -->
+<section class="slide a" data-id="s01" data-sec="封面" style="padding-top:70px"><div class="nt">一進場就開著這頁。
+請大家拿手機掃左邊 QR，按「報到」輸入碼。
+掃不到、手機沒電：到報到台找幹部打勾；來賓由介紹人或幹部代為報到。</div>
+ <div class="row" style="gap:50px">
+  <div style="width:560px;display:flex;flex-direction:column;gap:22px">
+   <div style="font:600 calc(64px*var(--z)) 'Songti TC',serif">TC 8 讀書會</div>
+   <div class="g" style="font-size:calc(42px*var(--z))">11/26（四）19:00</div>
+   <img src="img/qr.png" alt="掃我報到" style="width:340px;height:340px;background:#fff;border:2px solid var(--cy)">
+   <div class="g t2" style="width:340px;text-align:center">掃我報到</div>
+   <div class="card" style="flex:none;padding:30px 44px"><div class="g t3">今天的報到碼</div><div class="code"></div></div>
+   <div class="s" style="font-size:calc(26px*var(--z))">CXO TC8 · 斯巴達分會</div>
+  </div>
+  <div class="card mid" style="margin-top:112px;padding:28px"><img class="poster" src="img/joy.jpg" alt="" style="width:100%;height:auto"><div class="t2"><span class="g">01</span>　Joy 蔡雅嫻</div></div>
+  <div class="card mid" style="margin-top:112px;padding:28px"><img class="poster" src="img/evelyn.jpg" alt="" style="width:100%"><div class="t2"><span class="g">02</span>　Evelyn 林宛瑩</div></div>
+ </div>
+</section>
+
+<!-- 2 流程 -->
+<section class="slide b" data-id="s02" data-sec="當天流程"><div class="nt">8:10 議題討論，8:25 來賓介紹（每位 2 分鐘，討論不要拖到來賓時間）。</div><h1>當天流程</h1><ul class="flow">
+ <li><b>7:00–7:10</b>開場 · 掃碼報到</li>
+ <li><b>7:10–7:40</b>Joy｜你的公司真的 AI 化了嗎？</li>
+ <li><b>7:40–8:10</b>Evelyn｜AI 很厲害，然後呢？</li>
+ <li><b>8:10–8:25</b>議題討論｜公司 AI 化，會卡在哪？</li>
+ <li><b>8:25–8:40</b>來賓 &amp; 新夥伴介紹</li>
+ <li><b>8:40–8:48</b>分會現況</li>
+ <li><b>8:48–8:58</b>宣導事項</li>
+ <li><b>9:00–</b>自由交流</li></ul></section>
+
+<!-- 3 演講 -->
+<section class="slide b" data-id="s03" data-sec="專題演講"><div class="nt">Joy：成緯數位創意總監。走進中小企業，找出最浪費時間的那一段，改成工具，再陪員工用到會。
+Evelyn：數學出身，寫過程式、做過資料分析，後來走進醫療科技做產品規劃。
+一場講「怎麼導入」，一場講「導入之後」。講者上台用自己的簡報。</div><h1>專題演講</h1><div class="row">
+ <div class="card mid" style="padding:30px"><img class="poster" src="img/joy.jpg" alt="" style="height:560px"><div class="t1 g">Joy 蔡雅嫻</div></div>
+ <div class="card mid" style="padding:30px"><img class="poster" src="img/evelyn.jpg" alt="" style="height:560px"><div class="t1 g">Evelyn 林宛瑩</div></div>
+</div><div class="foot">公司買了 AI，然後呢？</div></section>
+
+<!-- 討論 -->
+<section class="slide b" data-id="s05" data-sec="議題討論"><div class="nt">8:10–8:25，共 15 分鐘。上台的人現場選。
+① 4 分鐘：請大家舉手，只收集問題，不急著回答。
+② 6 分鐘：從①挑 1～2 個問題，讓兩位答，再問台下有沒有不同答案。
+③ 5 分鐘：請工廠或已經導入的人回答，讓兩位答。
+灰字是追問，現場冷掉再用。8:25 要交給來賓。</div><h1>議題討論 － 公司 AI 化，你覺得會卡在哪？</h1>
+<div class="q3s"><div class="card q3"><div class="qn">1</div><div class="g t1 qh">卡在哪</div><div><div class="qq">公司導入 AI，你遇到的問題是什麼？</div><div class="s t3">人、流程、資料，還是老闆？</div></div></div><div class="card q3"><div class="qn">2</div><div class="g t1 qh">怎麼解</div><div><div class="qq">這一題你會怎麼回答？有沒有人答案不一樣？</div><div class="s t3">員工不想用怎麼帶？流程沒理清楚能直接上嗎？哪些資料能給 AI？</div></div></div><div class="card q3"><div class="qn">3</div><div class="g t1 qh">導入之後</div><div><div class="qq">已經導入的人，又冒出什麼新問題、新想法？</div><div class="s t3">怎麼知道真的有省到？老闆自己不用，叫得動員工嗎？</div></div></div></div></section>
+
+<!-- 4 來賓 -->
+<section class="slide b" data-id="s04" data-sec="來賓 &amp; 新夥伴"><div class="nt">6 位來賓，每位 2 分鐘，照名單順序請。
+介紹人可以先幫忙講一句再交給來賓。
+最後請新夥伴上台打招呼。</div><h1>來賓 &amp; 新夥伴介紹</h1><div class="row">
+ <div class="card mid" style="flex:0 0 480px"><div class="t1 g">歡迎新夥伴</div><div class="t3">本月新加入的夥伴<br>請上台跟大家打聲招呼</div></div>
+ <div class="card"><div class="t1 g" style="text-align:center;margin-bottom:10px">歡迎來賓<span id="gn"></span></div><div class="guests"><span class="s">幹部登入後顯示</span></div></div>
+</div><div class="foot" style="font-family:inherit;font-size:calc(32px*var(--z))">每位 2 分鐘：姓名 &amp; 公司 / 職業　｜　目前如何使用 AI？　｜　今天參加 TC8 的心得？</div></section>
+
+<!-- 6 分會現況 -->
+<section class="slide b" data-id="s06" data-sec="分會現況"><div class="nt">夥伴 87、報名 29、來賓 6，現場共 35（報名數，實到看報到板）。
+餐點：累計 2 次臨時取消，下次停餐一次。</div><h1>分會現況 － 人數與來賓</h1><div class="row">
+ <div class="card" style="justify-content:flex-start;padding-top:80px"><div class="t1 g">夥伴 87 位</div><div class="t2 g">本月報名 29 位 · 33%</div><div class="t3">來賓 6 位，現場共 35 人</div></div>
+ <div class="card" style="justify-content:flex-start;padding-top:80px"><div class="t1 g">來賓每次 $1,000</div><div class="t2 g">請交給財務長 馬怪</div><div class="t3">每一次都收，為了維護品質</div></div>
+ <div class="card" style="justify-content:flex-start;padding-top:80px"><div class="t1 g">出席與請假</div><div class="t2 g">連續三次未到，取消會籍</div><div class="t3">單次不到，不用 LINE 幹部<br>會連續三次不到，先請假</div></div>
+</div><div class="card" style="flex:none;margin-top:40px;padding:34px 44px"><div class="t3"><span class="g">取消餐點</span>　前一天自己上網站取消；當天 12:00 前 LINE 幹部　｜　累計 2 次臨時取消，下次停餐一次</div></div>
+<div class="foot">位置要留給真的會用的人</div></section>
+
+<!-- 7 我們一起建立的東西 -->
+<section class="slide b" data-id="s07" data-sec="我們一起建立的東西" style="padding-top:60px"><div class="nt"></div><h1>我們一起建立的東西</h1><div class="row" style="align-items:center;justify-content:space-between">
+ <div style="font-size:calc(46px*var(--z));line-height:1.9;white-space:nowrap"><b>你自己的 AI 邏輯、框架、資安規範</b><br><b>資料檔案在你能掌控下，</b><br>安全的運用世界的資源，<br>訓練成為你的「跨平台 AI」，<br><span class="g" style="font-size:calc(60px*var(--z))">變成你的最佳秘書</span></div>
+ <div class="dia"><div class="n"><b>你</b>講一句話</div><div class="ar">↓</div>
+  <div class="n gd"><b>Claude ＝ 總部</b>判斷這件事該誰做 · 幫你寫好要外派的指令 · 最後把關</div><div>分派出去</div>
+  <div class="g2"><div class="n"><b>Gemini</b>讀超長的文件、看影片<br>查資料、翻譯、摘要</div><div class="n"><b>GPT</b>生圖、改圖<br>想點子、一起發想</div><div class="n"><b>grok</b>X（推特）上現在在吵什麼<br>講話直、敢給第二意見</div><div class="n"><b>爬蟲</b>自己上網把資料抓回來<br>十幾個來源一起追</div></div>
+  <div class="n gd"><b>總部自己做</b>判斷、整合 · 口徑、決策</div><div class="ar">↓</div>
+  <div class="n"><b>結果全部回總部</b>總部抽查 → 存進資料夾 → 更動紀錄記一行</div></div>
+</div></section>
+
+<!-- 8 宣導 -->
+<section class="slide b" data-id="s08" data-sec="宣導事項"><div class="nt">12/5（六）歲末聚會再邀請一次。
+1/15（五）TC8 聚餐，先留時間。</div><h1>宣導事項</h1><div class="row">
+ <div class="card mid"><div class="g" style="font-size:calc(110px*var(--z));line-height:1.1">12/5（六）</div><div class="t1 g">CXO 台中歲末聚會</div><div class="t2">09:30–17:00<br>台中萊特薇庭 3F 釜宮</div><div class="t3 s">再邀請大家一次，報名連結在 TC8 網站</div></div>
+ <div class="card mid"><div class="g" style="font-size:calc(110px*var(--z));line-height:1.1">1/15（五）</div><div class="t1 g">TC8 聚餐</div><div class="t2">先把這天留下來</div></div>
+</div><div class="foot">我們現場見</div></section>
+
+<!-- 9 精神 -->
+<section class="slide c" data-id="s09" data-sec="TC8 精神"><div class="nt"></div><h1>TC8 精神</h1><div style="font:600 calc(92px*var(--z)) 'Songti TC',serif;text-align:center;margin:60px 0 90px">「 輸出，逼自己輸入 」</div>
+<div class="row" style="flex:none;height:300px;padding:0 100px">
+ <div class="card mid"><div class="t1 g" style="font-size:calc(46px*var(--z))">學長姐制</div><div class="s" style="font-size:calc(29px*var(--z));line-height:1.5">私訊夥伴或請幹部協助連結<br>互助成長</div></div>
+ <div class="card mid"><div class="t1 g" style="font-size:calc(46px*var(--z))">不定期小聚</div><div class="s" style="font-size:calc(29px*var(--z));line-height:1.5">10–15 人的主題交流<br>時間另行公告<br>請注意群組訊息</div></div>
+ <div class="card mid"><div class="t1 g" style="font-size:calc(46px*var(--z))">現場掃碼報到</div><div class="s" style="font-size:calc(29px*var(--z));line-height:1.5">自己用手機完成<br>報名沒報到，視同缺席</div></div>
+</div><div class="foot" style="font-family:inherit">No Warrior Left Behind · TC8 共同前進</div></section>
+
+<!-- 10 結尾 -->
+<section class="slide c" data-id="s10" data-sec="結尾"><div class="nt">還沒報到的現在掃。下次見面 12/28（一）19:00。</div><div style="text-align:center;margin-top:130px"><div style="font:600 calc(120px*var(--z)) 'Songti TC',serif">感謝大家</div><div class="t1" style="margin-top:40px;font-size:calc(46px*var(--z))">下次見面　12/28（一）19:00　12 月月會</div></div>
+<div class="card" style="position:absolute;left:80px;bottom:70px;padding:34px 44px"><div class="g t3">今天的報到碼</div><div class="code"></div></div>
+<img src="img/qr.png" alt="掃我報到" style="position:absolute;right:80px;bottom:70px;width:320px;background:#fff;border:2px solid var(--cy)"></section>
+
+</div><div id="pg"></div>
+<div id="ntbox"></div>
+<div class="ctl"><button onclick="location.href='../../app.html#decks'">‹ 月會簡報</button><button id="zm" title="字小一點（−）">A−</button><button id="zp" title="字大一點（＋）">A＋</button><button id="nb" title="講者備忘（N）">備忘</button><button id="obn" title="總覽（G）">總覽</button></div>
+<div class="ov" id="ov"><div class="ovtop">總覽<span>拖一張到別張左右放開＝換位置　·　點一下＝跳過去　·　G／Esc 關掉</span><b id="ovmsg"></b><button id="ovcopy">複製排序給 Claude</button><button id="ovreset">還原排序</button><button id="ovx">關掉</button></div><div class="ovg" id="ovg"></div></div>
+<script>
+// 行為照 106 夾 說明會簡報.html：簡報筆、A−A＋、備忘、總覽拖拉
+const CODE='登入後顯示';
+document.querySelectorAll('.code').forEach(e=>e.textContent=CODE);
+const $=x=>document.getElementById(x),st=$('stage'),OV=$('ov'),OVG=$('ovg'),KEY='tc8-1126-';
+const mem={get(k){try{return localStorage.getItem(KEY+k)}catch(e){return null}},set(k,v){try{v===null?localStorage.removeItem(KEY+k):localStorage.setItem(KEY+k,v)}catch(e){}}};
+const list=()=>[...st.querySelectorAll(':scope>section')];
+const ORIG=list().map(x=>x.dataset.id);let S=list(),i=0,z=+mem.get('zoom')||1;
+function arrange(ids){const cur=S[i];ids.filter(d=>ORIG.includes(d)).concat(ORIG.filter(d=>!ids.includes(d))).forEach(d=>st.appendChild(S.find(x=>x.dataset.id===d)));S=list();i=Math.max(0,S.indexOf(cur))}
+if(mem.get('order')&&!/HeadlessChrome/.test(navigator.userAgent))arrange(mem.get('order').split(','));i=0;
+function fit(){const k=Math.min(innerWidth/1920,innerHeight/1080);st.style.transform=`scale(${k}) translate(-50%,-50%)`;ovScale()}
+function show(n){i=Math.max(0,Math.min(S.length-1,n));S.forEach((s,j)=>s.classList.toggle('on',j===i));S[i].scrollTop=0;$('pg').textContent=(i+1)+' / '+S.length;$('bar').style.width=(i+1)/S.length*100+'%';$('ntbox').textContent=S[i].querySelector('.nt').textContent||'（這頁沒有備忘）';try{sessionStorage.setItem(KEY+'i',i);history.replaceState(null,'','#'+(i+1))}catch(e){}}
+function zoom(d){z=Math.max(.7,Math.min(1.5,Math.round((z+d)*10)/10));mem.set('zoom',z);fitZ()}
+// 字放大時，每頁各自停在裝得下的最大字級
+function fitZ(){S.forEach(s=>{const d=s.style.display;s.style.display='flex';let q=z;const bad=()=>s.scrollHeight>1082||s.scrollWidth>1922||[...s.querySelectorAll('.card,.n')].some(c=>c.scrollHeight>c.clientHeight+2||c.scrollWidth>c.clientWidth+2);s.style.setProperty('--z',q);while(q>.7&&bad()){q=Math.round((q-.02)*100)/100;s.style.setProperty('--z',q)}s.style.display=d})}
+const notes=()=>document.body.classList.toggle('notes');
+// 總覽＋拖拉（追滑鼠，不用瀏覽器內建拖放，Safari 也行）
+function ovScale(){const b=OVG.querySelector('.ovb');if(b)OVG.querySelectorAll('.ovi').forEach(x=>x.style.transform=`scale(${b.clientWidth/1920})`)}
+function ovBuild(){OVG.innerHTML='';S.forEach((s,k)=>{const t=document.createElement('div');t.className='ovt'+(k===i?' cur':'');t.dataset.k=k;t.innerHTML='<div class="ovb"><div class="ovi"></div></div><div class="ovl"><b>'+(k+1)+'</b></div>';t.querySelector('.ovl').append(s.dataset.sec);t.querySelector('.ovi').append(s.cloneNode(true));t.onclick=()=>{if(!dJust){show(k);ovToggle(false)}};t.addEventListener('pointerdown',e=>{if(e.button)return;dk=k;dx=e.clientX;dy=e.clientY;moved=false;if(e.pointerType==='mouse')e.preventDefault()});OVG.append(t)});ovScale()}
+function ovToggle(on=!OV.classList.contains('show')){OV.classList.toggle('show',on);if(on){ovBuild();const c=OVG.querySelector('.cur');c&&c.scrollIntoView({block:'center'})}}
+let dk=null,dx,dy,moved,over=null,left,dJust=false;
+const marks=()=>OVG.querySelectorAll('.dropL,.dropR').forEach(x=>x.classList.remove('dropL','dropR'));
+addEventListener('pointermove',e=>{if(dk===null)return;if(!moved&&Math.abs(e.clientX-dx)+Math.abs(e.clientY-dy)<8)return;if(!moved){moved=true;OVG.children[dk].classList.add('drag');document.body.classList.add('dragging')}marks();over=null;const el=document.elementFromPoint(e.clientX,e.clientY),o=el&&el.closest('.ovt');if(o&&+o.dataset.k!==dk){const r=o.getBoundingClientRect();left=e.clientX<r.left+r.width/2;o.classList.add(left?'dropL':'dropR');over=o}if(e.clientY<70)OV.scrollTop-=18;else if(e.clientY>innerHeight-70)OV.scrollTop+=18});
+addEventListener('pointerup',()=>{if(dk===null)return;const from=dk,o=over;dk=over=null;document.body.classList.remove('dragging');marks();OVG.querySelectorAll('.drag').forEach(x=>x.classList.remove('drag'));if(!moved)return;dJust=true;setTimeout(()=>dJust=false,0);if(!o)return;
+ const ids=S.map(x=>x.dataset.id),to=ids[+o.dataset.k],mv=ids.splice(from,1)[0];ids.splice(ids.indexOf(to)+(left?0:1),0,mv);arrange(ids);mem.set('order',ids.join(','));const y=OV.scrollTop;ovBuild();OV.scrollTop=y;show(i);$('ovmsg').textContent='✅ 已換位置，這台電腦會記住'});
+addEventListener('pointercancel',()=>{dk=over=null;marks();document.body.classList.remove('dragging')});
+$('ovcopy').onclick=()=>{const t='套用簡報排序：'+S.map(x=>x.dataset.id).join(',');(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>$('ovmsg').textContent='✅ 已複製，貼給 Claude 就會寫進檔案',()=>$('ovmsg').textContent=t)};
+$('ovreset').onclick=()=>{arrange(ORIG);mem.set('order',null);ovBuild();show(i);$('ovmsg').textContent='已還原'};
+$('ovx').onclick=()=>ovToggle(false);$('obn').onclick=()=>ovToggle(true);$('zm').onclick=()=>zoom(-.1);$('zp').onclick=()=>zoom(.1);$('nb').onclick=notes;
+document.querySelectorAll('button').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();b.blur()}));OV.addEventListener('click',e=>e.stopPropagation());$('ntbox').addEventListener('click',e=>e.stopPropagation());
+// 簡報筆：各牌送的鍵不同，全部接。網址加 ?keys=1 會顯示收到哪個鍵
+let kd=null;if(/[?&]keys=1/.test(location.search)){kd=document.body.appendChild(document.createElement('div'));kd.style.cssText='position:fixed;left:24px;bottom:60px;z-index:40;background:#e7c675;color:#111;padding:6px 14px;border-radius:999px;font:600 18px monospace'}
+addEventListener('load',()=>window.focus());
+addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key;if(kd)kd.textContent='收到：'+(k===' '?'Space':k)+'（'+e.code+'）';
+ if(/^[gGoO]$/.test(k))return ovToggle();
+ if(OV.classList.contains('show')){if(k==='Escape')ovToggle(false);return}
+ if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].includes(k)){e.preventDefault();show(i+1)}
+ else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(k)){e.preventDefault();show(i-1)}
+ else if(k==='F5'||k==='Escape'&&!document.fullscreenElement){e.preventDefault();if(!document.fullscreenElement)document.documentElement.requestFullscreen()}
+ else if(k==='.'||/^[bB]$/.test(k))document.body.style.opacity=document.body.style.opacity==='0'?'':'0';
+ else if(k==='Home')show(0);else if(k==='End')show(S.length-1);
+ else if(/^[nN]$/.test(k))notes();else if(k==='-')zoom(-.1);else if(k==='='||k==='+')zoom(.1);
+ else if(/^[fF]$/.test(k))document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()});
+document.addEventListener('click',e=>show(e.clientX<innerWidth/3?i-1:i+1));
+let x0;st.addEventListener('touchstart',e=>x0=e.touches[0].clientX);st.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>60){e.preventDefault();show(i+(d<0?1:-1))}});
+addEventListener('resize',fit);addEventListener('load',fitZ);addEventListener('hashchange',()=>show((parseInt(location.hash.slice(1))||1)-1));
+zoom(0);fit();let h=parseInt(location.hash.slice(1));if(!h)try{h=+sessionStorage.getItem(KEY+'i')+1}catch(e){}show((h||1)-1);
+
+// 來賓與報到碼：不寫進公開檔，用幹部登入向平台讀
+(async()=>{const FIX={"16": "Joy", "18": "Claire"};let t=null;try{t=localStorage.getItem('tc8_token')}catch(e){}if(!t)return;
+try{const r=await(await fetch('https://fehubnmhohnkftjbozls.supabase.co/functions/v1/checkin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({action:'board',post_id:50})})).json();if(!r.ok)return;
+if(r.code)document.querySelectorAll('.code').forEach(e=>e.textContent=r.code);
+const gs=r.guests||[],box=document.querySelector('.guests'),H=n=>{const m=(n||'').match(/[（(]([^）)]+)[）)]/);return m?m[1]:(n||'')};
+const host=g=>FIX[g.id]||H(g.host_name||g.host||((r.members||[]).find(m=>m.id===g.host_id)||{}).name);
+box.textContent='';gs.forEach(g=>{[['span',g.name],['span',(g.company||'').replace(/(股份)?有限公司$/,'')],['i',host(g)?'／'+host(g):'']].forEach(([k,v])=>{const e=document.createElement(k);e.textContent=v;box.append(e)})});
+document.getElementById('gn').textContent='（'+gs.length+' 位）';fitZ()}catch(e){console.error(e)}})();
+</script></body></html>
