@@ -25,6 +25,7 @@ h1{flex:none;align-self:flex-start;margin:0 200px 48px 0;font:600 calc(60px*var(
 .flow li{display:flex;align-items:center;font-size:calc(40px*var(--z));position:relative;padding-left:70px}
 .flow li::before{content:"";position:absolute;left:0;width:25px;height:25px;border-radius:50%;background:var(--gold)}
 .flow b{width:300px;color:var(--gold)}.flow .hot{font-weight:600;color:var(--gold)}
+.bn{font-size:calc(72px*var(--z));font-weight:700;line-height:1.2;white-space:nowrap}
 .q3s{flex:1 0 auto;display:flex;flex-direction:column;gap:36px;padding-bottom:30px}.card.q3{flex-direction:row;align-items:center;justify-content:flex-start;gap:44px;padding:26px 44px}
 .qn{flex:none;width:calc(84px*var(--z));height:calc(84px*var(--z));border-radius:50%;background:var(--gold);color:#071029;font-size:calc(48px*var(--z));font-weight:700;display:grid;place-items:center}.qh{flex:none;width:4.3em}.qq{font-size:calc(46px*var(--z));font-weight:600;line-height:1.35;margin-bottom:8px}
 .guests{display:grid;grid-template-columns:auto auto auto;gap:24px 46px;font-size:calc(38px*var(--z));align-items:baseline;justify-content:start;white-space:nowrap}
@@ -117,8 +118,20 @@ Evelyn：數學出身，寫過程式、做過資料分析，後來走進醫療�
 <div class="foot">位置要留給真的會用的人</div></section>
 
 <!-- 7 我們一起建立的東西 -->
-<section class="slide b" data-id="s07" data-sec="我們一起建立的東西" style="padding-top:60px"><div class="nt"></div><h1>我們一起建立的東西</h1><div class="row" style="align-items:center;justify-content:space-between">
- <div style="font-size:calc(46px*var(--z));line-height:1.9;white-space:nowrap"><b>你自己的 AI 邏輯、框架、資安規範</b><br><b>資料檔案在你能掌控下，</b><br>安全的運用世界的資源，<br>訓練成為你的「跨平台 AI」，<br><span class="g" style="font-size:calc(60px*var(--z))">變成你的最佳秘書</span></div>
+<section class="slide b" data-id="s11" data-sec="把全世界縮成 10,000 人"><div class="nt">一個點＝一個人，總共 10,000 個點。
+暗色 6,110：還沒每個月用生成式 AI。藍色 3,890：有在用。右下角那一小撮金色 44 顆：用 AI 代理，而且不只一種工具（粗估 9～44 人）。
+39% 可能含重複帳號；0.1%～0.4% 是粗估，不是正式統計，被問到就照實講。</div><h1>把全世界縮成 10,000 人</h1>
+<div class="row" style="align-items:center;gap:60px">
+ <div style="flex:none;position:relative"><img src="img/dots.png" alt="10,000 個點：6,110 暗、3,890 藍、其中 44 金" style="width:1080px;display:block"><div class="g t3" style="position:absolute;right:120px;bottom:-58px;white-space:nowrap">就這一小撮 ↗</div></div>
+ <div style="flex:1;display:flex;flex-direction:column;gap:46px">
+  <div><div class="bn s">約 6,110 人</div><div class="t3">還沒每月使用生成式 AI</div></div>
+  <div><div class="bn" style="color:var(--cy)">約 3,890 人</div><div class="t3">有在用（約 39%）</div></div>
+  <div><div class="bn g">約 9～44 人</div><div class="t3">用 AI 代理，而且不只一種工具<br><span class="s">粗估 0.1%～0.4%</span></div></div>
+ </div></div>
+<div class="s" style="flex:none;margin-top:auto;padding-top:60px;font-size:20px">39%：DataReportal 2026/10，可能含重複帳號。0.1%～0.4%：依 SlashData、JetBrains、Pragmatic Engineer 開發者調查粗估，非正式統計。</div></section>
+
+<section class="slide b" data-id="s07" data-sec="來找羅伯特聊聊" style="padding-top:60px"><div class="nt"></div><h1>歡迎來找羅伯特聊聊</h1><div class="row" style="align-items:center;justify-content:space-between">
+ <div style="font-size:calc(46px*var(--z));line-height:1.9;white-space:nowrap"><span class="g" style="font-size:calc(38px*var(--z))">我們可以一起建立</span><br><b>你自己的 AI 邏輯、框架、資安規範</b><br><b>資料檔案在你能掌控下</b><br>一句話，分派給不同的 AI 去做<br><span class="g" style="font-size:calc(60px*var(--z))">變成你的最佳秘書</span><br><span class="s" style="font-size:calc(34px*var(--z))">會後來找我，說說你最想交給 AI 的那件事</span></div>
  <div class="dia"><div class="n"><b>你</b>講一句話</div><div class="ar">↓</div>
   <div class="n gd"><b>Claude ＝ 總部</b>判斷這件事該誰做 · 幫你寫好要外派的指令 · 最後把關</div><div>分派出去</div>
   <div class="g2"><div class="n"><b>Gemini</b>讀超長的文件、看影片<br>查資料、翻譯、摘要</div><div class="n"><b>GPT</b>生圖、改圖<br>想點子、一起發想</div><div class="n"><b>grok</b>X（推特）上現在在吵什麼<br>講話直、敢給第二意見</div><div class="n"><b>爬蟲</b>自己上網把資料抓回來<br>十幾個來源一起追</div></div>
@@ -158,7 +171,7 @@ const $=x=>document.getElementById(x),st=$('stage'),OV=$('ov'),OVG=$('ovg'),KEY=
 const mem={get(k){try{return localStorage.getItem(KEY+k)}catch(e){return null}},set(k,v){try{v===null?localStorage.removeItem(KEY+k):localStorage.setItem(KEY+k,v)}catch(e){}}};
 const list=()=>[...st.querySelectorAll(':scope>section')];
 const ORIG=list().map(x=>x.dataset.id);let S=list(),i=0,z=+mem.get('zoom')||1;
-function arrange(ids){const cur=S[i];ids.filter(d=>ORIG.includes(d)).concat(ORIG.filter(d=>!ids.includes(d))).forEach(d=>st.appendChild(S.find(x=>x.dataset.id===d)));S=list();i=Math.max(0,S.indexOf(cur))}
+function arrange(ids){const cur=S[i];ids=ids.filter(d=>ORIG.includes(d));ORIG.forEach((d,n)=>{if(!ids.includes(d))ids.splice(n?ids.indexOf(ORIG[n-1])+1:0,0,d)});ids.forEach(d=>st.appendChild(S.find(x=>x.dataset.id===d)));S=list();i=Math.max(0,S.indexOf(cur))}
 if(mem.get('order')&&!/HeadlessChrome/.test(navigator.userAgent))arrange(mem.get('order').split(','));i=0;
 function fit(){const k=Math.min(innerWidth/1920,innerHeight/1080);st.style.transform=`scale(${k}) translate(-50%,-50%)`;ovScale()}
 function show(n){i=Math.max(0,Math.min(S.length-1,n));S.forEach((s,j)=>s.classList.toggle('on',j===i));S[i].scrollTop=0;$('pg').textContent=(i+1)+' / '+S.length;$('bar').style.width=(i+1)/S.length*100+'%';$('ntbox').textContent=S[i].querySelector('.nt').textContent||'（這頁沒有備忘）';try{sessionStorage.setItem(KEY+'i',i);history.replaceState(null,'','#'+(i+1))}catch(e){}}
