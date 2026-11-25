@@ -890,7 +890,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-26 00:26</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-26 00:29</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -907,6 +907,7 @@ a.btn{text-decoration:none}
   <button data-v="help" class="deskonly"><svg class="ic" width="21" height="21"><use href="#i-form"/></svg>使用說明</button>
   <div class="navsep" id="nav-sep" style="display:none"></div>
   <button data-v="admin" id="nav-admin" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-shield"/></svg>分會管理</button>
+  <button data-v="decks" id="nav-decks" class="deskonly" style="display:none"><svg class="ic" width="21" height="21"><use href="#i-form"/></svg>月會簡報</button>
 </nav>
 
 <script>
@@ -2571,7 +2572,6 @@ async function renderAdmin(){
       <div class="arow" onclick="openLeaveAdmin()">
         <span>🗓 請假審核</span>
         ${leavePending ? `<span class="abadge">${leavePending}</span>` : ""}<span class="ago">›</span></div>
-      <div class="arow" onclick="go('decks')"><span>📑 月會簡報</span><span class="ago">›</span></div>
     </div>
 
     ${bad.length ? `<div class="sec" style="margin-top:22px"><h2>需要關心的夥伴</h2></div>
@@ -2596,7 +2596,6 @@ function renderDecks(){
     return;
   }
   el("v-decks").innerHTML = `
-    <div class="backbar"><button class="back" onclick="go('admin')">回分會管理</button></div>
     <div class="sec"><h2>月會簡報</h2></div>
     <div class="card admincard">
       ${DECKS.map(d => `<div class="arow" onclick="location.href='decks/${d.ym}/index.html'">
@@ -3627,6 +3626,7 @@ function syncAdminNav(){
   //    這裡只負責「非幹部完全不出現」
   b.style.display = isOfficer() ? "" : "none";
   if(sep) sep.style.display = isOfficer() ? "" : "none";
+  if(el("nav-decks")) el("nav-decks").style.display = b.style.display;
 }
 // 點圖放大。⛔ 不用 window.open：LINE 內建瀏覽器會擋開新分頁，
 //    而且跳出去之後使用者要按上一頁才回得來。
@@ -3700,6 +3700,7 @@ const DRAWER_ITEMS = [
   ["me",      "i-me",     "我的",   false],
   ["help",    "i-form",   "使用說明", false],
   ["admin",   "i-shield", "分會管理", true],
+  ["decks",   "i-form",   "月會簡報", true],
 ];
 function openDrawer(){
   el("drawerlist").innerHTML = DRAWER_ITEMS
