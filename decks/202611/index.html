@@ -217,7 +217,7 @@ addEventListener('resize',fit);addEventListener('load',fitZ);addEventListener('h
 zoom(0);fit();let h=parseInt(location.hash.slice(1));if(!h)try{h=+sessionStorage.getItem(KEY+'i')+1}catch(e){}show((h||1)-1);
 
 // 來賓與報到碼：不寫進公開檔，用幹部登入向平台讀
-(async()=>{const FIX={"16": "Joy", "18": "Claire"};let t=null;try{t=localStorage.getItem('tc8_token')}catch(e){}if(!t)return;
+(async()=>{const FIX={"16": "Joy", "18": "Anna"};let t=null;try{t=localStorage.getItem('tc8_token')}catch(e){}if(!t)return;
 try{const r=await(await fetch('https://fehubnmhohnkftjbozls.supabase.co/functions/v1/checkin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({action:'board',post_id:50})})).json();if(!r.ok)return;
 if(r.code)document.querySelectorAll('.code').forEach(e=>e.textContent=r.code);
 const gs=r.guests||[],box=document.querySelector('.guests'),H=n=>{const m=(n||'').match(/[（(]([^）)]+)[）)]/);return m?m[1]:(n||'')};
