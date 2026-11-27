@@ -890,7 +890,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-26 23:45</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-27 16:21</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2620,7 +2620,7 @@ async function openMyCredit(){
         <div class="clight">${L[0]} ${L[1]}</div></div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:10px;line-height:1.8">
         本會期（${esc(r.since)} 起）計算。<br>
-        <b>出席只看簽到紀錄</b>（自己簽到或幹部代勾）。以下各扣 12.5 分：當日 12:00 之後才取消、報名了沒簽到、月例會沒報名也沒到（請假核准的不算）。<br>
+        <b>出席只看簽到紀錄</b>（自己簽到或幹部代勾）。<b>報了名（訂了餐）卻沒簽到、或當日 12:00 之後才取消</b>，扣 12.5 分。<br>沒報名的月例會缺席不扣分，改看連續缺席燈號：連續 2 次 🟡、連續 3 次 🔴（請假核准的不算）。<br>
         更早取消、生病意外都不扣分。生病意外一個會期最多免責 2 次。<br>
         <b>累計 2 次臨時取消／未到，下一次報名停止餐點 1 次</b>（會籍規則第四條）。${MEAL_OWED > 0 ? `<br><span style="color:#b4261a;font-weight:700">你目前欠 ${MEAL_OWED} 次停餐，下次報名將不訂餐。</span>` : ""}<br>
         <span class="mnote">餐點是提前訂的，太晚說會造成浪費——這就是為什麼有這個分數。</span>
@@ -2633,8 +2633,7 @@ async function openMyCredit(){
     </div>`;
   go("form");
 }
-// absent＝系統判定（月例會沒報名也沒簽到），不放進 ABSENCE——那是幹部可選的清單
-const absLabel = k => k === "absent" ? "月例會沒報名、沒到" : (ABSENCE.find(a => a[0] === k) || [,"—"])[1];
+const absLabel = k => (ABSENCE.find(a => a[0] === k) || [,"—"])[1];
 
 async function openCreditAll(){
   if(!isOfficer()) return;
