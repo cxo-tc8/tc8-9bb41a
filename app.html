@@ -890,7 +890,7 @@ a.btn{text-decoration:none}
 <main class="wrap view" id="v-ndetail"></main>
 <main class="wrap view" id="v-help"></main>
 
-<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-27 16:21</div>
+<div id="verline" style="text-align:center;font-size:.7rem;color:var(--muted);padding:18px 0 8px">版本 2026-11-28 23:48</div>
 <nav class="nav" role="navigation">
   <div class="brand">
     <img src="logo.png" alt="CXO TC8" width="72" height="72">
@@ -2646,15 +2646,18 @@ async function openCreditAll(){
       <div style="font-weight:800;font-size:1.15rem">全體出席信用</div>
       <div style="color:var(--muted);font-size:.85rem;margin-top:6px">
         本會期（${esc(r.since)} 起）。分數低的排前面。
+        <br>分數只扣「報了名沒來」；沒報名的缺席看「月例會連續沒到」（目前數得到 ${STREAK_SESSIONS} 場）。
         <b style="color:var(--orange-dark)">${bad.length}</b> 位需要關心。
         <br><span class="mnote">這份只有幹部看得到，夥伴看不到彼此的分數。</span>
       </div>
       <div class="rosterwrap" style="margin-top:14px"><table class="roster">
-        <thead><tr><th>姓名</th><th>分數</th><th>燈號</th><th>臨時取消</th><th>生病意外</th><th>餐點損失</th></tr></thead>
+        <thead><tr><th>姓名</th><th>分數</th><th>燈號</th><th>月例會連續沒到</th><th>臨時取消</th><th>生病意外</th><th>餐點損失</th></tr></thead>
         <tbody>${r.list.map(x => {
           const L = LIGHT[x.light] || LIGHT.ok;
+          // 沒報名的缺席不扣分（羅伯特 2026-11-27），只記在連續缺席——這欄讓幹部看得到「誰沒來」
+          const n = STREAK[x.id] || 0;
           return `<tr><td>${esc(x.name)}</td><td><b>${x.score}</b></td><td>${L[0]} ${L[1]}</td>
-            <td>${x.late_count}</td><td>${x.excused_count}</td><td>${x.meal_loss}</td></tr>`;
+            <td>${n >= 3 ? "🔴 " : n >= 2 ? "🟡 " : ""}${n}</td><td>${x.late_count}</td><td>${x.excused_count}</td><td>${x.meal_loss}</td></tr>`;
         }).join("")}</tbody>
       </table></div>
     </div>`;
@@ -5373,11 +5376,11 @@ async function reloadStreak(){
   }catch(e){ console.error("連續缺席讀取失敗", e); }
 }
 // 退社提醒的燈：連續 3 次沒到就是要談的對象，2 次先預警。
-// ⛔ 母數不足時一律不亮——系統才上線、只數得到 1 場的時候，
-//    每個沒來過的人都會是「連續 1 次」，那不是資訊，是雜訊。
+// ⛔ 母數不足時一律不亮——只數得到 1 場時，每個沒來的人都是「連續 1 次」，那是雜訊。
+//    原本門檻 3 場，但 2 場都沒到就是真的連續 2 次（🟡），藏起來害幹部看不到誰沒來（2026-11-28 改 2）。
 function streakTag(memberId){
   const n = STREAK[memberId] || 0;
-  if(STREAK_SESSIONS < 3 || n < 2) return "";
+  if(STREAK_SESSIONS < 2 || n < 2) return "";
   return n >= 3
     ? `<span class="stag red">🔴 連續 ${n} 次沒到</span>`
     : `<span class="stag amber">🟡 連續 2 次沒到</span>`;
